@@ -334,7 +334,10 @@ void IpcServer::start() {
 void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
+    // Worker thread will break out of WaitForMultipleObjects
+    // Client threads will finish their current request and exit
     if (thread_.joinable()) thread_.join();
+    // Join client threads - they should exit after current request completes
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
         for (auto& t : client_threads_) {

@@ -229,6 +229,16 @@ public partial class TaskEditorWindow : Window
             return;
         }
 
+        bool hasRunAsUser = !string.IsNullOrWhiteSpace(RunAsUserBox.Text);
+        bool hasNewPassword = RunAsPasswordBox.SecurePassword.Length > 0;
+        bool hasExistingPassword = !string.IsNullOrEmpty(_existingPasswordEncrypted);
+
+        if (hasRunAsUser && !hasNewPassword && !hasExistingPassword)
+        {
+            MessageBox.Show("Указан пользователь для запуска, но пароль не задан. Введите пароль.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var dto = new TaskDto
         {
             Id = _existing?.Id ?? Guid.Empty,

@@ -8,22 +8,54 @@ namespace json {
 std::string escape(const std::string& s) {
     std::string out;
     out.reserve(s.size() + 8);
-    for (char c : s) {
-        switch (c) {
-        case '"': out += "\\\""; break;
-        case '\\': out += "\\\\"; break;
-        case '\b': out += "\\b"; break;
-        case '\f': out += "\\f"; break;
-        case '\n': out += "\\n"; break;
-        case '\r': out += "\\r"; break;
-        case '\t': out += "\\t"; break;
-        default:
-            if (static_cast<unsigned char>(c) < 0x20) {
+    size_t i = 0;
+    while (i < s.size()) {
+        unsigned char c = static_cast<unsigned char>(s[i]);
+        if (c < 0x80) {
+            // ASCII
+            switch (s[i]) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c < 0x20) {
+                    char buf[8];
+                    snprintf(buf, sizeof(buf), "\\u%04x", c);
+                    out += buf;
+                } else {
+                    out += s[i];
+                }
+            }
+            ++i;
+        } else {
+            // Decode UTF-8 codepoint
+            unsigned int codepoint = 0;
+            int extra = 0;
+            if ((c & 0xE0) == 0xC0) { codepoint = c & 0x1F; extra = 1; }
+            else if ((c & 0xF0) == 0xE0) { codepoint = c & 0x0F; extra = 2; }
+            else if ((c & 0xF8) == 0xF0) { codepoint = c & 0x07; extra = 3; }
+            else { out += '?'; ++i; continue; }
+            for (int j = 0; j < extra && i + 1 < s.size(); ++j) {
+                ++i;
+                unsigned char next = static_cast<unsigned char>(s[i]);
+                if ((next & 0xC0) == 0x80) codepoint = (codepoint << 6) | (next & 0x3F);
+            }
+            ++i;
+            if (codepoint <= 0xFFFF) {
                 char buf[8];
-                snprintf(buf, sizeof(buf), "\\u%04x", c);
+                snprintf(buf, sizeof(buf), "\\u%04x", codepoint);
                 out += buf;
             } else {
-                out += c;
+                // Supplementary plane: surrogate pair
+                codepoint -= 0x10000;
+                char buf[16];
+                snprintf(buf, sizeof(buf), "\\u%04x\\u%04x",
+                    0xD800 + (codepoint >> 10), 0xDC00 + (codepoint & 0x3FF));
+                out += buf;
             }
         }
     }
@@ -49,8 +81,29 @@ std::string unescape(const std::string& s) {
                     unsigned int codepoint;
                     auto [_, ec] = std::from_chars(s.data() + i + 1, s.data() + i + 5, codepoint, 16);
                     if (ec == std::errc()) {
-                        if (codepoint < 128) out += static_cast<char>(codepoint);
-                        else out += '?'; // skip non-ascii for simplicity
+                        if (codepoint < 0x80) {
+                            out += static_cast<char>(codepoint);
+                        } else if (codepoint < 0x800) {
+                            out += static_cast<char>(0xC0 | (codepoint >> 6));
+                            out += static_cast<char>(0x80 | (codepoint & 0x3F));
+                        } else if (codepoint < 0x10000) {
+                            out += static_cast<char>(0xE0 | (codepoint >> 12));
+                            out += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                            out += static_cast<char>(0x80 | (codepoint & 0x3F));
+                        } else {
+                            // Supplementary plane
+                            codepoint -= 0x10000;
+                            unsigned int hi = 0xD800 + (codepoint >> 10);
+                            unsigned int lo = 0xDC00 + (codepoint & 0x3FF);
+                            out += static_cast<char>(0xF0 | (hi >> 18));
+                            out += static_cast<char>(0x80 | ((hi >> 12) & 0x3F));
+                            out += static_cast<char>(0x80 | ((hi >> 6) & 0x3F));
+                            out += static_cast<char>(0x80 | (hi & 0x3F));
+                            out += static_cast<char>(0xF0 | (lo >> 18));
+                            out += static_cast<char>(0x80 | ((lo >> 12) & 0x3F));
+                            out += static_cast<char>(0x80 | ((lo >> 6) & 0x3F));
+                            out += static_cast<char>(0x80 | (lo & 0x3F));
+                        }
                         i += 4;
                     }
                 }

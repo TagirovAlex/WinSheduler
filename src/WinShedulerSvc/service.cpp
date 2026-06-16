@@ -16,8 +16,11 @@ Service& Service::instance() {
 }
 
 void Service::stop() {
-    if (g_ipc) { g_ipc->stop(); delete g_ipc; g_ipc = nullptr; }
+    // 1. Stop scheduler first (no new tasks launched)
     if (g_sched) { g_sched->stop(); delete g_sched; g_sched = nullptr; }
+    // 2. Stop IPC (close pipe, join worker + client threads)
+    if (g_ipc) { g_ipc->stop(); delete g_ipc; g_ipc = nullptr; }
+    // 3. Now safe to close database (all threads joined)
     if (g_db) { g_db->close(); delete g_db; g_db = nullptr; }
 
     if (stop_event_) { SetEvent(stop_event_); CloseHandle(stop_event_); stop_event_ = nullptr; }
