@@ -3,7 +3,7 @@ chcp 1251 >nul
 set "DIR=%~dp0"
 
 echo Installing WinSheduler service...
-sc create WinSheduler binPath="%DIR%service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"
+sc create WinSheduler binPath="%DIR%published\service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"
 
 if %ERRORLEVEL% equ 0 (
     echo Service created successfully.
@@ -14,6 +14,6 @@ if %ERRORLEVEL% equ 0 (
 )
 
 echo.
-echo To launch UI: %DIR%ui\WinSheduler.UI.exe
+echo To launch UI: %DIR%published\ui\WinSheduler.UI.exe
 echo To uninstall: sc stop WinSheduler ^&^& sc delete WinSheduler
 pause

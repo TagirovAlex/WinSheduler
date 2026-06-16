@@ -156,7 +156,7 @@ dotnet publish src\WinSheduler.UI\WinSheduler.UI.csproj -c Release -o published\
 
 Или вручную:
 ```powershell
-sc create WinSheduler binPath="C:\WinSheduler\service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"
+sc create WinSheduler binPath="C:\WinSheduler\published\service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"
 sc start WinSheduler
 ```
 
