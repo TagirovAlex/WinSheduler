@@ -24,7 +24,10 @@ public partial class HistoryWindow : Window
                 HistoryList.ItemsSource = history;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadHistory error: {ex.Message}");
+        }
     }
 }
 

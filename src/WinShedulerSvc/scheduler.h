@@ -14,6 +14,7 @@ public:
     void start();
     void stop();
     ServiceStatus get_status();
+    void launch_task(const TaskDefinition& task);
 
     // Called by IPC server for status
     int task_count() const;
@@ -23,7 +24,6 @@ private:
     void worker_thread();
     void tick();
     bool is_in_window(const TimeWindow& w, const std::chrono::system_clock::time_point& now);
-    void launch_task(const TaskDefinition& task);
     DWORD run_process(const TaskDefinition& task, const std::wstring& output_path);
     void check_timeouts();
     void process_pending_queue();

@@ -13,5 +13,6 @@
     <BitmapImage x:Key="IconCancel" UriSource="pack://application:,,,/;component/Resources/Icons/cancel.png"/>
     <BitmapImage x:Key="IconOk" UriSource="pack://application:,,,/;component/Resources/Icons/ok.png"/>
     <BitmapImage x:Key="IconTrigger" UriSource="pack://application:,,,/;component/Resources/Icons/trigger.png"/>
+    <BitmapImage x:Key="IconStart" UriSource="pack://application:,,,/;component/Resources/Icons/start.png"/>
 
 </ResourceDictionary>

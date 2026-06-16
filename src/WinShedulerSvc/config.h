@@ -28,10 +28,7 @@ inline std::wstring u2ws(const std::string& s) {
 inline constexpr const wchar_t* PIPE_NAME = L"\\\\.\\pipe\\WinSheduler";
 inline constexpr int PIPE_BUFFER_SIZE = 65536;
 inline constexpr int SCHEDULER_TICK_MS = 1000;
-inline constexpr int CACHE_INVALIDATE_SEC = 5;
 inline constexpr int MAX_HISTORY_FETCH = 100;
-inline constexpr int MAX_RETRY_COUNT = 10;
-inline constexpr int RETRY_DELAY_MS = 5000;
 
 // Enums matching C# WinSheduler.Shared
 enum class WindowStyle : int { Normal = 0, Hidden = 1, Minimized = 2, Maximized = 3 };

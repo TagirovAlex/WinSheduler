@@ -4,6 +4,8 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <vector>
+#include <mutex>
 
 class IpcServer {
 public:
@@ -33,6 +35,8 @@ private:
     std::thread thread_;
     std::atomic<bool> running_{ false };
     HANDLE stop_event_ = nullptr;
+    std::vector<std::thread> client_threads_;
+    std::mutex client_threads_mutex_;
 };
 
 // JSON serialization helpers used by both IPC and Scheduler

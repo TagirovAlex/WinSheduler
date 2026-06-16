@@ -128,6 +128,7 @@ struct Parser {
         if (c == '[') return parse_array();
         if (c == 't' || c == 'f') return parse_bool();
         if (c == 'n') return parse_null();
+        if (c == '\0') return Value(nullptr); // unexpected end
         return parse_number();
     }
 
@@ -135,11 +136,13 @@ struct Parser {
         Object obj;
         if (!expect('{')) return obj;
         if (peek() == '}') { advance(); return obj; }
-        while (true) {
+        while (pos < input.size()) {
             auto key = parse_string();
+            if (key.empty() && peek() != ':') break; // no progress
             if (!expect(':')) break;
             obj[key] = parse_value();
-            if (!expect(',')) break;
+            if (peek() != ',') break;
+            advance(); // skip ','
         }
         expect('}');
         return obj;
@@ -149,9 +152,12 @@ struct Parser {
         Array arr;
         if (!expect('[')) return arr;
         if (peek() == ']') { advance(); return arr; }
-        while (true) {
+        while (pos < input.size()) {
+            size_t prev = pos;
             arr.push_back(parse_value());
-            if (!expect(',')) break;
+            if (pos == prev) break; // no progress
+            if (peek() != ',') break;
+            advance(); // skip ','
         }
         expect(']');
         return arr;

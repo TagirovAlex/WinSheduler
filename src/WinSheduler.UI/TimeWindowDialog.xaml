@@ -131,7 +131,8 @@
             <StackPanel Margin="0,4,0,0">
                 <!-- Повторять каждые -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                    <CheckBox x:Name="RepeatEveryCheck" Content="Повторять задачу каждые" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <CheckBox x:Name="RepeatEveryCheck" Content="Повторять задачу каждые" VerticalAlignment="Center" Margin="0,0,8,0"
+                              Checked="RepeatEveryCheck_Changed" Unchecked="RepeatEveryCheck_Changed"/>
                     <TextBox x:Name="RepeatEveryValueBox" Width="35" Text="1" VerticalAlignment="Center" IsEnabled="False"/>
                     <ComboBox x:Name="RepeatEveryUnitBox" Width="55" VerticalAlignment="Center" IsEnabled="False">
                         <ComboBoxItem Content="ч." IsSelected="True"/>
@@ -149,7 +150,8 @@
 
                 <!-- Остановить через -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                    <CheckBox x:Name="StopAfterCheck" Content="Остановить задачу через" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <CheckBox x:Name="StopAfterCheck" Content="Остановить задачу через" VerticalAlignment="Center" Margin="0,0,8,0"
+                              Checked="StopAfterCheck_Changed" Unchecked="StopAfterCheck_Changed"/>
                     <TextBox x:Name="StopAfterValueBox" Width="35" Text="3" VerticalAlignment="Center" IsEnabled="False"/>
                     <ComboBox x:Name="StopAfterUnitBox" Width="55" VerticalAlignment="Center" IsEnabled="False">
                         <ComboBoxItem Content="дн." IsSelected="True"/>
@@ -159,7 +161,8 @@
 
                 <!-- Срок действия -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                    <CheckBox x:Name="ExpirationCheck" Content="Срок действия" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <CheckBox x:Name="ExpirationCheck" Content="Срок действия" VerticalAlignment="Center" Margin="0,0,8,0"
+                              Checked="ExpirationCheck_Changed" Unchecked="ExpirationCheck_Changed"/>
                     <DatePicker x:Name="ExpirationDatePicker" Width="120" VerticalAlignment="Center" IsEnabled="False"/>
                     <TextBox x:Name="ExpirationTimeBox" Width="55" Text="23:59" VerticalAlignment="Center" IsEnabled="False"/>
                     <CheckBox Content="Синхр. по поясам" Margin="8,0,0,0" IsEnabled="False"/>

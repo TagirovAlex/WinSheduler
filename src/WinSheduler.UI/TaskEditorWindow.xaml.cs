@@ -17,6 +17,7 @@ public partial class TaskEditorWindow : Window
     private readonly IpcClient _ipc;
     private readonly TaskDefinitionViewModel? _existing;
     private readonly List<TimeWindowEditModel> _windows = [];
+    private string? _existingPasswordEncrypted;
 
     public TaskEditorWindow(IpcClient ipc, TaskDefinitionViewModel? existing)
     {
@@ -69,6 +70,7 @@ public partial class TaskEditorWindow : Window
         {
             RunAsUserBox.Text = task.RunAsUser;
             RunAsDomainBox.Text = task.RunAsDomain ?? "";
+            _existingPasswordEncrypted = task.RunAsPasswordEncrypted;
         }
 
         if (task.OnError == Shared.OnErrorAction.Retry)
@@ -239,7 +241,9 @@ public partial class TaskEditorWindow : Window
             WindowStyle = (Shared.WindowStyle)WindowStyleBox.SelectedIndex,
             RunAsUser = string.IsNullOrWhiteSpace(RunAsUserBox.Text) ? null : RunAsUserBox.Text.Trim(),
             RunAsDomain = string.IsNullOrWhiteSpace(RunAsDomainBox.Text) ? null : RunAsDomainBox.Text.Trim(),
-            RunAsPasswordEncrypted = RunAsPasswordBox.SecurePassword.Length > 0 ? CryptoHelper.Encrypt(RunAsPasswordBox.Password) : null,
+            RunAsPasswordEncrypted = RunAsPasswordBox.SecurePassword.Length > 0
+                ? CryptoHelper.Encrypt(RunAsPasswordBox.Password)
+                : _existingPasswordEncrypted,
             OnError = (Shared.OnErrorAction)OnErrorBox.SelectedIndex,
             RetryCount = int.TryParse(RetryCountBox.Text, out var rc) ? rc : 0,
             OnOverlap = (Shared.OnOverlapAction)OnOverlapBox.SelectedIndex,

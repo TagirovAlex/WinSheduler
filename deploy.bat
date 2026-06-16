@@ -1,6 +1,7 @@
 @echo off
 chcp 1251 >nul
 set "DIR=%~dp0"
+:: %~dp0 always ends with \
 
 echo Installing WinSheduler service...
 sc create WinSheduler binPath="%DIR%published\service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"

@@ -20,6 +20,13 @@ static void run_standalone(const std::wstring& db_path, const std::wstring& log_
             auto status = sched.get_status();
             return IpcResponse{ true, L"", u2ws(json_helpers::status_to_json(status)) };
         }
+        if (req.action == L"RunNow") {
+            auto task_opt = db.get_task(req.payload);
+            if (!task_opt.has_value())
+                return IpcResponse{ false, L"Task not found", L"" };
+            sched.launch_task(task_opt.value());
+            return IpcResponse{ true, L"", L"{}" };
+        }
         return IpcResponse{ false, L"Unhandled", L"" };
     });
 

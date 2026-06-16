@@ -335,6 +335,13 @@ void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
     if (thread_.joinable()) thread_.join();
+    {
+        std::lock_guard<std::mutex> lock(client_threads_mutex_);
+        for (auto& t : client_threads_) {
+            if (t.joinable()) t.join();
+        }
+        client_threads_.clear();
+    }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
 }
 
@@ -374,9 +381,12 @@ void IpcServer::worker_thread() {
         }
 
         // Handle client in a separate thread, immediately listen for next client
-        std::thread([this, pipe]() {
-            handle_client(pipe);
-        }).detach();
+        {
+            std::lock_guard<std::mutex> lock(client_threads_mutex_);
+            client_threads_.emplace_back([this, pipe]() {
+                handle_client(pipe);
+            });
+        }
 
         CloseHandle(ov.hEvent);
     }
@@ -399,6 +409,13 @@ void IpcServer::handle_client_core(HANDLE pipe) {
         }
     }
 
+    // Drain remaining data if buffer overflow
+    if (total >= PIPE_BUFFER_SIZE) {
+        char drain[4096];
+        DWORD drained;
+        while (ReadFile(pipe, drain, sizeof(drain), &drained, NULL) && drained > 0) {}
+    }
+
     if (total == 0) goto cleanup;
 
     {
@@ -413,7 +430,7 @@ void IpcServer::handle_client_core(HANDLE pipe) {
         }
 
         IpcResponse resp;
-        if (req->action == L"GetStatus") {
+        if (req->action == L"GetStatus" || req->action == L"RunNow") {
             resp = scheduler_handler_(req.value());
         } else {
             resp = process_request(req.value());

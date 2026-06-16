@@ -44,6 +44,27 @@ static std::wstring s2ws_impl(const std::string& s) {
 std::string Database::ws2s(const std::wstring& ws) { return ws2s_impl(ws); }
 std::wstring Database::s2ws(const std::string& s) { return s2ws_impl(s); }
 
+static const char* safe_col_text(sqlite3_stmt* stmt, int col) {
+    auto* p = sqlite3_column_text(stmt, col);
+    return p ? reinterpret_cast<const char*>(p) : "";
+}
+
+static void check_prepare(sqlite3* db, int rc, sqlite3_stmt* stmt) {
+    if (rc != SQLITE_OK) {
+        std::string msg = sqlite3_errmsg(db);
+        if (stmt) sqlite3_finalize(stmt);
+        throw std::runtime_error("SQLite prepare failed: " + msg);
+    }
+}
+
+static void check_step(sqlite3* db, int rc, sqlite3_stmt* stmt) {
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
+        std::string msg = sqlite3_errmsg(db);
+        sqlite3_finalize(stmt);
+        throw std::runtime_error("SQLite step failed: " + msg);
+    }
+}
+
 void Database::exec(const std::string& sql) {
     char* err = nullptr;
     if (sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err) != SQLITE_OK) {
@@ -139,23 +160,26 @@ std::vector<TaskDefinition> Database::list_tasks() {
     std::vector<TaskDefinition> tasks;
     auto sql = "SELECT * FROM tasks ORDER BY name";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return tasks;
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
+    while (true) {
+        int rc = sqlite3_step(stmt);
+        if (rc == SQLITE_DONE) break;
+        check_step(db_, rc, stmt);
         TaskDefinition t;
-        t.id = s2ws((const char*)sqlite3_column_text(stmt, 0));
-        t.name = s2ws((const char*)sqlite3_column_text(stmt, 1));
-        t.description = s2ws((const char*)sqlite3_column_text(stmt, 2));
+        t.id = s2ws(safe_col_text(stmt, 0));
+        t.name = s2ws(safe_col_text(stmt, 1));
+        t.description = s2ws(safe_col_text(stmt, 2));
         t.enabled = sqlite3_column_int(stmt, 3) != 0;
-        t.program_path = s2ws((const char*)sqlite3_column_text(stmt, 4));
-        t.arguments = s2ws((const char*)sqlite3_column_text(stmt, 5));
-        t.working_directory = s2ws((const char*)sqlite3_column_text(stmt, 6));
+        t.program_path = s2ws(safe_col_text(stmt, 4));
+        t.arguments = s2ws(safe_col_text(stmt, 5));
+        t.working_directory = s2ws(safe_col_text(stmt, 6));
         t.window_style = static_cast<WindowStyle>(sqlite3_column_int(stmt, 7));
-        auto user = sqlite3_column_text(stmt, 8);
+        auto* user = sqlite3_column_text(stmt, 8);
         if (user) {
             RunAsCredentials cred;
             cred.user_name = s2ws((const char*)user);
-            cred.domain = s2ws((const char*)sqlite3_column_text(stmt, 9));
-            auto pwd = sqlite3_column_text(stmt, 10);
+            cred.domain = s2ws(safe_col_text(stmt, 9));
+            auto* pwd = sqlite3_column_text(stmt, 10);
             cred.encrypted_password = pwd ? s2ws((const char*)pwd) : L"";
             t.run_as_user = cred;
         }
@@ -167,8 +191,8 @@ std::vector<TaskDefinition> Database::list_tasks() {
         t.kill_on_timeout = sqlite3_column_int(stmt, 15) != 0;
         t.log_output = sqlite3_column_int(stmt, 16) != 0;
         t.max_history_records = sqlite3_column_int(stmt, 17);
-        t.created_at = s2ws((const char*)sqlite3_column_text(stmt, 18));
-        t.modified_at = s2ws((const char*)sqlite3_column_text(stmt, 19));
+        t.created_at = s2ws(safe_col_text(stmt, 18));
+        t.modified_at = s2ws(safe_col_text(stmt, 19));
         tasks.push_back(std::move(t));
     }
     sqlite3_finalize(stmt);
@@ -178,28 +202,29 @@ std::vector<TaskDefinition> Database::list_tasks() {
 std::optional<TaskDefinition> Database::get_task(const std::wstring& id) {
     auto sql = "SELECT * FROM tasks WHERE id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) return std::nullopt;
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto id_u8 = ws2s(id);
     sqlite3_bind_text(stmt, 1, id_u8.c_str(), -1, SQLITE_TRANSIENT);
     TaskDefinition t;
     bool found = false;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
+    int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
         found = true;
         t.id = id;
-        t.name = s2ws((const char*)sqlite3_column_text(stmt, 1));
-        t.description = s2ws((const char*)sqlite3_column_text(stmt, 2));
+        t.name = s2ws(safe_col_text(stmt, 1));
+        t.description = s2ws(safe_col_text(stmt, 2));
         t.enabled = sqlite3_column_int(stmt, 3) != 0;
-        t.program_path = s2ws((const char*)sqlite3_column_text(stmt, 4));
-        t.arguments = s2ws((const char*)sqlite3_column_text(stmt, 5));
-        t.working_directory = s2ws((const char*)sqlite3_column_text(stmt, 6));
+        t.program_path = s2ws(safe_col_text(stmt, 4));
+        t.arguments = s2ws(safe_col_text(stmt, 5));
+        t.working_directory = s2ws(safe_col_text(stmt, 6));
         t.window_style = static_cast<WindowStyle>(sqlite3_column_int(stmt, 7));
-        auto user = sqlite3_column_text(stmt, 8);
+        auto* user = sqlite3_column_text(stmt, 8);
         if (user) {
             RunAsCredentials cred;
             cred.user_name = s2ws((const char*)user);
-            auto dom = sqlite3_column_text(stmt, 9);
+            auto* dom = sqlite3_column_text(stmt, 9);
             cred.domain = dom ? s2ws((const char*)dom) : L"";
-            auto pwd = sqlite3_column_text(stmt, 10);
+            auto* pwd = sqlite3_column_text(stmt, 10);
             cred.encrypted_password = pwd ? s2ws((const char*)pwd) : L"";
             t.run_as_user = cred;
         }
@@ -211,8 +236,8 @@ std::optional<TaskDefinition> Database::get_task(const std::wstring& id) {
         t.kill_on_timeout = sqlite3_column_int(stmt, 15) != 0;
         t.log_output = sqlite3_column_int(stmt, 16) != 0;
         t.max_history_records = sqlite3_column_int(stmt, 17);
-        t.created_at = s2ws((const char*)sqlite3_column_text(stmt, 18));
-        t.modified_at = s2ws((const char*)sqlite3_column_text(stmt, 19));
+        t.created_at = s2ws(safe_col_text(stmt, 18));
+        t.modified_at = s2ws(safe_col_text(stmt, 19));
     }
     sqlite3_finalize(stmt);
     if (found) return t;
@@ -225,7 +250,7 @@ void Database::insert_task(const TaskDefinition& task) {
         "on_overlap,timeout_minutes,kill_on_timeout,log_output,max_history_records,created_at,modified_at) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto id_u8 = ws2s(task.id);
     sqlite3_bind_text(stmt, 1, id_u8.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, ws2s(task.name).c_str(), -1, SQLITE_TRANSIENT);
@@ -250,7 +275,7 @@ void Database::insert_task(const TaskDefinition& task) {
     sqlite3_bind_int(stmt, 18, task.max_history_records);
     sqlite3_bind_text(stmt, 19, ws2s(task.created_at).c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 20, ws2s(task.modified_at).c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
@@ -260,7 +285,7 @@ void Database::update_task(const TaskDefinition& task) {
         "on_error=?,retry_count=?,on_overlap=?,timeout_minutes=?,kill_on_timeout=?,log_output=?,"
         "max_history_records=?,modified_at=? WHERE id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     sqlite3_bind_text(stmt, 1, ws2s(task.name).c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, ws2s(task.description).c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int(stmt, 3, task.enabled ? 1 : 0);
@@ -288,28 +313,28 @@ void Database::update_task(const TaskDefinition& task) {
     sqlite3_bind_text(stmt, 18, ws2s(task.modified_at).c_str(), -1, SQLITE_TRANSIENT);
     auto id_u8 = ws2s(task.id);
     sqlite3_bind_text(stmt, 19, id_u8.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
 void Database::delete_task(const std::wstring& id) {
     auto sql = "DELETE FROM tasks WHERE id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto id_u8 = ws2s(id);
     sqlite3_bind_text(stmt, 1, id_u8.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
 void Database::set_task_enabled(const std::wstring& id, bool enabled) {
     auto sql = "UPDATE tasks SET enabled=? WHERE id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     sqlite3_bind_int(stmt, 1, enabled ? 1 : 0);
     auto id_u8 = ws2s(id);
     sqlite3_bind_text(stmt, 2, id_u8.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
@@ -319,46 +344,49 @@ std::vector<TimeWindow> Database::get_time_windows(const std::wstring& task_id) 
     std::vector<TimeWindow> windows;
     auto sql = "SELECT * FROM time_windows WHERE task_id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto tid_u8 = ws2s(task_id);
     sqlite3_bind_text(stmt, 1, tid_u8.c_str(), -1, SQLITE_TRANSIENT);
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    while (true) {
+        int rc = sqlite3_step(stmt);
+        if (rc == SQLITE_DONE) break;
+        check_step(db_, rc, stmt);
         TimeWindow w;
-        w.id = s2ws((const char*)sqlite3_column_text(stmt, 0));
+        w.id = s2ws(safe_col_text(stmt, 0));
         w.task_id = task_id;
         w.type = static_cast<TimeWindowType>(sqlite3_column_int(stmt, 2));
-        auto sd = sqlite3_column_text(stmt, 3);
+        auto* sd = sqlite3_column_text(stmt, 3);
         if (sd) w.start_date = s2ws((const char*)sd);
-        auto ed = sqlite3_column_text(stmt, 4);
+        auto* ed = sqlite3_column_text(stmt, 4);
         if (ed) w.end_date = s2ws((const char*)ed);
         // Parse JSON arrays for list fields
-        auto dow_str = (const char*)sqlite3_column_text(stmt, 5);
+        auto* dow_str = sqlite3_column_text(stmt, 5);
         if (dow_str) {
-            auto j = json::parse(dow_str);
+            auto j = json::parse((const char*)dow_str);
             if (j.is_array()) for (auto& v : j.as_array()) w.days_of_week.push_back(v.as_int());
         }
-        auto dom_str = (const char*)sqlite3_column_text(stmt, 6);
+        auto* dom_str = sqlite3_column_text(stmt, 6);
         if (dom_str) {
-            auto j = json::parse(dom_str);
+            auto j = json::parse((const char*)dom_str);
             if (j.is_array()) for (auto& v : j.as_array()) w.days_of_month.push_back(v.as_int());
         }
-        auto sd_str = (const char*)sqlite3_column_text(stmt, 7);
+        auto* sd_str = sqlite3_column_text(stmt, 7);
         if (sd_str) {
-            auto j = json::parse(sd_str);
+            auto j = json::parse((const char*)sd_str);
             if (j.is_array()) for (auto& v : j.as_array()) w.specific_dates.push_back(s2ws(v.as_string()));
         }
-        auto et_str = (const char*)sqlite3_column_text(stmt, 8);
+        auto* et_str = sqlite3_column_text(stmt, 8);
         if (et_str) {
-            auto j = json::parse(et_str);
+            auto j = json::parse((const char*)et_str);
             if (j.is_array()) for (auto& v : j.as_array()) w.exact_times.push_back(s2ws(v.as_string()));
         }
-        auto st = sqlite3_column_text(stmt, 9);
+        auto* st = sqlite3_column_text(stmt, 9);
         if (st) w.start_time = s2ws((const char*)st);
-        auto et = sqlite3_column_text(stmt, 10);
+        auto* et = sqlite3_column_text(stmt, 10);
         if (et) w.end_time = s2ws((const char*)et);
         if (sqlite3_column_type(stmt, 11) != SQLITE_NULL)
             w.repeat_interval_minutes = sqlite3_column_int(stmt, 11);
-        auto ru = sqlite3_column_text(stmt, 12);
+        auto* ru = sqlite3_column_text(stmt, 12);
         if (ru) w.repeat_until = s2ws((const char*)ru);
         windows.push_back(std::move(w));
     }
@@ -369,10 +397,10 @@ std::vector<TimeWindow> Database::get_time_windows(const std::wstring& task_id) 
 void Database::delete_time_windows(const std::wstring& task_id) {
     auto sql = "DELETE FROM time_windows WHERE task_id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto tid_u8 = ws2s(task_id);
     sqlite3_bind_text(stmt, 1, tid_u8.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
@@ -381,7 +409,7 @@ void Database::insert_time_window(const TimeWindow& tw) {
         "specific_dates,exact_times,start_time,end_time,repeat_interval_minutes,repeat_until) "
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
 
     auto to_json_arr = [](const auto& vec, auto conv) -> std::string {
         json::Array arr;
@@ -420,7 +448,7 @@ void Database::insert_time_window(const TimeWindow& tw) {
     if (tw.repeat_until) sqlite3_bind_text(stmt, 13, ws2s(*tw.repeat_until).c_str(), -1, SQLITE_TRANSIENT);
     else sqlite3_bind_null(stmt, 13);
 
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
@@ -430,7 +458,7 @@ void Database::insert_history(const RunHistory& h) {
     auto sql = "INSERT INTO run_history (id,task_id,start_time,end_time,exit_code,pid,status,error_message,output_path) "
         "VALUES (?,?,?,?,?,?,?,?,?)";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     sqlite3_bind_text(stmt, 1, ws2s(h.id).c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, ws2s(h.task_id).c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 3, ws2s(h.start_time).c_str(), -1, SQLITE_TRANSIENT);
@@ -443,14 +471,14 @@ void Database::insert_history(const RunHistory& h) {
     sqlite3_bind_text(stmt, 8, ws2s(h.error_message).c_str(), -1, SQLITE_TRANSIENT);
     if (h.output_path) sqlite3_bind_text(stmt, 9, ws2s(*h.output_path).c_str(), -1, SQLITE_TRANSIENT);
     else sqlite3_bind_null(stmt, 9);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
 void Database::update_history(const RunHistory& h) {
     auto sql = "UPDATE run_history SET end_time=?,exit_code=?,pid=?,status=?,error_message=?,output_path=? WHERE id=?";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     if (h.end_time) sqlite3_bind_text(stmt, 1, ws2s(*h.end_time).c_str(), -1, SQLITE_TRANSIENT);
     else sqlite3_bind_null(stmt, 1);
     if (h.exit_code) sqlite3_bind_int(stmt, 2, *h.exit_code);
@@ -461,7 +489,7 @@ void Database::update_history(const RunHistory& h) {
     if (h.output_path) sqlite3_bind_text(stmt, 6, ws2s(*h.output_path).c_str(), -1, SQLITE_TRANSIENT);
     else sqlite3_bind_null(stmt, 6);
     sqlite3_bind_text(stmt, 7, ws2s(h.id).c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }
 
@@ -469,22 +497,25 @@ std::vector<RunHistory> Database::get_history(const std::wstring& task_id, int l
     std::vector<RunHistory> history;
     auto sql = "SELECT * FROM run_history WHERE task_id=? COLLATE NOCASE ORDER BY start_time DESC LIMIT ?";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr), stmt);
     auto tid_u8 = ws2s(task_id);
     sqlite3_bind_text(stmt, 1, tid_u8.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int(stmt, 2, limit);
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    while (true) {
+        int rc = sqlite3_step(stmt);
+        if (rc == SQLITE_DONE) break;
+        check_step(db_, rc, stmt);
         RunHistory h;
-        h.id = s2ws((const char*)sqlite3_column_text(stmt, 0));
+        h.id = s2ws(safe_col_text(stmt, 0));
         h.task_id = task_id;
-        h.start_time = s2ws((const char*)sqlite3_column_text(stmt, 2));
-        auto et = sqlite3_column_text(stmt, 3);
+        h.start_time = s2ws(safe_col_text(stmt, 2));
+        auto* et = sqlite3_column_text(stmt, 3);
         if (et) h.end_time = s2ws((const char*)et);
         if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) h.exit_code = sqlite3_column_int(stmt, 4);
         h.pid = sqlite3_column_int(stmt, 5);
         h.status = static_cast<RunStatus>(sqlite3_column_int(stmt, 6));
-        h.error_message = s2ws((const char*)sqlite3_column_text(stmt, 7));
-        auto op = sqlite3_column_text(stmt, 8);
+        h.error_message = s2ws(safe_col_text(stmt, 7));
+        auto* op = sqlite3_column_text(stmt, 8);
         if (op) h.output_path = s2ws((const char*)op);
         history.push_back(std::move(h));
     }
@@ -495,7 +526,7 @@ std::vector<RunHistory> Database::get_history(const std::wstring& task_id, int l
 void Database::trim_history(const std::wstring& task_id, int max_records) {
     auto count_sql = "SELECT COUNT(*) FROM run_history WHERE task_id=? COLLATE NOCASE";
     sqlite3_stmt* stmt = nullptr;
-    sqlite3_prepare_v2(db_, count_sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, count_sql, -1, &stmt, nullptr), stmt);
     auto tid_u8 = ws2s(task_id);
     sqlite3_bind_text(stmt, 1, tid_u8.c_str(), -1, SQLITE_TRANSIENT);
     int count = 0;
@@ -505,9 +536,9 @@ void Database::trim_history(const std::wstring& task_id, int max_records) {
 
     auto del_sql = "DELETE FROM run_history WHERE id IN "
         "(SELECT id FROM run_history WHERE task_id=? ORDER BY start_time ASC LIMIT ?)";
-    sqlite3_prepare_v2(db_, del_sql, -1, &stmt, nullptr);
+    check_prepare(db_, sqlite3_prepare_v2(db_, del_sql, -1, &stmt, nullptr), stmt);
     sqlite3_bind_text(stmt, 1, tid_u8.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_int(stmt, 2, count - max_records);
-    sqlite3_step(stmt);
+    check_step(db_, sqlite3_step(stmt), stmt);
     sqlite3_finalize(stmt);
 }

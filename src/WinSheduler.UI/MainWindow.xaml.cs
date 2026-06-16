@@ -76,10 +76,26 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void RefreshBtn_Click(object sender, RoutedEventArgs e) => await Refresh();
-    private async void AddBtn_Click(object sender, RoutedEventArgs e) => await OpenEditor(null);
-    private async void EditBtn_Click(object sender, RoutedEventArgs e) => await OpenEditor(GetSelected());
-    private async void TaskListView_MouseDoubleClick(object sender, MouseButtonEventArgs e) => await OpenEditor(GetSelected());
+    private async void RefreshBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try { await Refresh(); }
+        catch (Exception ex) { StatusBarText.Text = $"Ошибка: {ex.Message}"; }
+    }
+    private async void AddBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try { await OpenEditor(null); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+    private async void EditBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try { await OpenEditor(GetSelected()); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+    private async void TaskListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        try { await OpenEditor(GetSelected()); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
 
     private TaskDefinitionViewModel? GetSelected() => TaskListView.SelectedItem as TaskDefinitionViewModel;
 
@@ -99,12 +115,31 @@ public partial class MainWindow : Window
             MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result == MessageBoxResult.Yes)
         {
-            await _ipc.SendAsync(new IpcRequest { Action = "DeleteTask", Payload = task.Id.ToString() });
-            await Refresh();
+            try
+            {
+                await _ipc.SendAsync(new IpcRequest { Action = "DeleteTask", Payload = task.Id.ToString() });
+                await Refresh();
+            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
     }
 
-    private async void HistoryBtn_Click(object sender, RoutedEventArgs e)
+    private async void RunNowBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var task = GetSelected();
+        if (task == null) return;
+        try
+        {
+            var resp = await _ipc.SendAsync(new IpcRequest { Action = "RunNow", Payload = task.Id.ToString() });
+            if (resp.Success)
+                MessageBox.Show($"Задача \"{task.Name}\" запущена", "Запуск", MessageBoxButton.OK, MessageBoxImage.Information);
+            else
+                MessageBox.Show($"Ошибка запуска: {resp.Error}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private void HistoryBtn_Click(object sender, RoutedEventArgs e)
     {
         var task = GetSelected();
         if (task == null) return;

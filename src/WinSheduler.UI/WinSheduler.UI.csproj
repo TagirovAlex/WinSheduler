@@ -14,6 +14,7 @@
     <Resource Include="Resources\Icons\ok.png" />
     <Resource Include="Resources\Icons\refresh.png" />
     <Resource Include="Resources\Icons\save.png" />
+    <Resource Include="Resources\Icons\start.png" />
     <Resource Include="Resources\Icons\trigger.png" />
   </ItemGroup>
 

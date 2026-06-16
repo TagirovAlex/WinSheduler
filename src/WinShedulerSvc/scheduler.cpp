@@ -5,6 +5,7 @@
 #include <rpc.h>
 #include <rpcdce.h>
 #include <fstream>
+#include <cmath>
 
 #pragma comment(lib, "rpcrt4.lib")
 #pragma comment(lib, "crypt32.lib")
@@ -137,7 +138,15 @@ ServiceStatus Scheduler::get_status() {
 }
 
 int Scheduler::task_count() const {
-    return (int)db_.list_tasks().size();
+    // Use COUNT query instead of loading all tasks
+    auto sql = "SELECT COUNT(*) FROM tasks";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_.get_db(), sql, -1, &stmt, nullptr) != SQLITE_OK)
+        return (int)db_.list_tasks().size(); // fallback
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) count = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return count;
 }
 
 int Scheduler::running_task_count() const {
@@ -188,11 +197,16 @@ void Scheduler::tick() {
                 if (!is_in_window(w, now)) continue;
 
                 if (w.type == TimeWindowType::ExactTimes) {
+                    EnterCriticalSection(&lock_);
                     auto it = last_run_minute_.find(task.id);
                     int last_min = (it != last_run_minute_.end()) ? it->second : -1;
-                    if (last_min == current_minute) continue;
-                    should_run = true;
+                    if (last_min == current_minute) {
+                        LeaveCriticalSection(&lock_);
+                        continue;
+                    }
                     last_run_minute_[task.id] = current_minute;
+                    LeaveCriticalSection(&lock_);
+                    should_run = true;
                     break;
                 } else {
                     should_run = true;
@@ -263,7 +277,7 @@ bool Scheduler::is_in_window(const TimeWindow& w, const std::chrono::system_cloc
     if (w.type == TimeWindowType::ExactTimes) {
         for (auto& et : w.exact_times) {
             int et_minutes = (int)time_to_minutes(et);
-            if (abs(current_minutes - et_minutes) < 1) return true;
+            if (std::abs(current_minutes - et_minutes) < 1) return true;
         }
         return false;
     }

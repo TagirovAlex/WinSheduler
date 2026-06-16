@@ -1,8 +1,7 @@
 #pragma once
 #include "config.h"
 #include <functional>
-
-struct sqlite3;
+#include "sqlite3.h"
 
 class Database {
 public:
@@ -30,6 +29,8 @@ public:
     void update_history(const RunHistory& h);
     std::vector<RunHistory> get_history(const std::wstring& task_id, int limit = 100);
     void trim_history(const std::wstring& task_id, int max_records);
+
+    sqlite3* get_db() const { return db_; }
 
 private:
     sqlite3* db_ = nullptr;

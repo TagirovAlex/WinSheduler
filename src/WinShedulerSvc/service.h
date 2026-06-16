@@ -24,6 +24,7 @@ private:
     std::wstring log_dir_;
     SERVICE_STATUS_HANDLE status_handle_ = nullptr;
     SERVICE_STATUS status_ = {};
+    HANDLE stop_event_ = nullptr;
 };
 
 // Global callback wrappers

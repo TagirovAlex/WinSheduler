@@ -16,9 +16,11 @@ Service& Service::instance() {
 }
 
 void Service::stop() {
-    if (g_ipc) g_ipc->stop();
-    if (g_sched) g_sched->stop();
-    if (g_db) g_db->close();
+    if (g_ipc) { g_ipc->stop(); delete g_ipc; g_ipc = nullptr; }
+    if (g_sched) { g_sched->stop(); delete g_sched; g_sched = nullptr; }
+    if (g_db) { g_db->close(); delete g_db; g_db = nullptr; }
+
+    if (stop_event_) { SetEvent(stop_event_); CloseHandle(stop_event_); stop_event_ = nullptr; }
 
     if (status_handle_) {
         status_.dwCurrentState = SERVICE_STOPPED;
@@ -78,6 +80,13 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
                 auto json_str = json_helpers::status_to_json(status);
                 return IpcResponse{ true, L"", u2ws(json_str) };
             }
+            if (req.action == L"RunNow") {
+                auto task_opt = g_db->get_task(req.payload);
+                if (!task_opt.has_value())
+                    return IpcResponse{ false, L"Task not found", L"" };
+                g_sched->launch_task(task_opt.value());
+                return IpcResponse{ true, L"", L"{}" };
+            }
             return IpcResponse{ false, L"Unhandled by scheduler", L"" };
         });
 
@@ -88,12 +97,11 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
         SetServiceStatus(svc.status_handle_, &svc.status_);
 
         // Wait for stop signal
-        HANDLE wait_events[2] = { CreateEventW(nullptr, TRUE, FALSE, nullptr), CreateEventW(nullptr, TRUE, FALSE, nullptr) };
-        WaitForMultipleObjects(2, wait_events, FALSE, INFINITE);
-        CloseHandle(wait_events[0]);
-        CloseHandle(wait_events[1]);
+        svc.stop_event_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        WaitForSingleObject(svc.stop_event_, INFINITE);
 
     } catch (...) {
+        svc.stop();
         svc.status_.dwCurrentState = SERVICE_STOPPED;
         svc.status_.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
         SetServiceStatus(svc.status_handle_, &svc.status_);
@@ -111,7 +119,7 @@ DWORD WINAPI Service::service_ctrl(DWORD ctrl, DWORD type, void* context, void* 
         svc.status_.dwCurrentState = SERVICE_STOP_PENDING;
         svc.status_.dwWaitHint = 10000;
         SetServiceStatus(svc.status_handle_, &svc.status_);
-        svc.stop();
+        if (svc.stop_event_) SetEvent(svc.stop_event_);
         break;
     case SERVICE_CONTROL_INTERROGATE:
         SetServiceStatus(svc.status_handle_, &svc.status_);

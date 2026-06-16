@@ -42,6 +42,12 @@
                     <TextBlock Text="Журнал" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
+            <Button x:Name="RunNowBtn" Click="RunNowBtn_Click" Width="110" Margin="10,0,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconStart}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Запустить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
 
         <ListView x:Name="TaskListView" Grid.Row="1"
