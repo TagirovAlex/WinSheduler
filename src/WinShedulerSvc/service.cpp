@@ -1,0 +1,130 @@
+#include "service.h"
+#include "database.h"
+#include "scheduler.h"
+#include "ipc.h"
+#include <sstream>
+#include <iomanip>
+
+static Service* g_service = nullptr;
+static Database* g_db = nullptr;
+static Scheduler* g_sched = nullptr;
+static IpcServer* g_ipc = nullptr;
+
+Service& Service::instance() {
+    static Service s;
+    return s;
+}
+
+void Service::stop() {
+    if (g_ipc) g_ipc->stop();
+    if (g_sched) g_sched->stop();
+    if (g_db) g_db->close();
+
+    if (status_handle_) {
+        status_.dwCurrentState = SERVICE_STOPPED;
+        SetServiceStatus(status_handle_, &status_);
+    }
+}
+
+bool Service::run(const std::wstring& service_name,
+                  const std::wstring& db_path,
+                  const std::wstring& log_dir) {
+    db_path_ = db_path;
+    log_dir_ = log_dir;
+
+    SERVICE_TABLE_ENTRYW table[] = {
+        { const_cast<wchar_t*>(service_name.c_str()), ServiceMainWrapper },
+        { nullptr, nullptr }
+    };
+
+    return StartServiceCtrlDispatcherW(table) != FALSE;
+}
+
+void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
+    auto& svc = Service::instance();
+    svc.status_handle_ = RegisterServiceCtrlHandlerExW(
+        L"WinSheduler", ServiceCtrlHandlerEx, nullptr);
+
+    if (!svc.status_handle_) return;
+
+    svc.status_.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    svc.status_.dwCurrentState = SERVICE_START_PENDING;
+    svc.status_.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    svc.status_.dwWin32ExitCode = NO_ERROR;
+    svc.status_.dwServiceSpecificExitCode = 0;
+    svc.status_.dwCheckPoint = 0;
+    svc.status_.dwWaitHint = 5000;
+    SetServiceStatus(svc.status_handle_, &svc.status_);
+
+    // Initialize
+    try {
+        // Create directories
+        CreateDirectoryW((svc.log_dir_ + L"\\output").c_str(), nullptr);
+
+        g_db = new Database();
+        if (!g_db->open(svc.db_path_)) {
+            svc.status_.dwCurrentState = SERVICE_STOPPED;
+            svc.status_.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
+            SetServiceStatus(svc.status_handle_, &svc.status_);
+            return;
+        }
+
+        g_sched = new Scheduler(*g_db, svc.log_dir_);
+
+        g_ipc = new IpcServer(*g_db, [](const IpcRequest& req) -> IpcResponse {
+            // Handle GetStatus and other scheduler-originating requests
+            if (req.action == L"GetStatus") {
+                auto status = g_sched->get_status();
+                auto json_str = json_helpers::status_to_json(status);
+                return IpcResponse{ true, L"", u2ws(json_str) };
+            }
+            return IpcResponse{ false, L"Unhandled by scheduler", L"" };
+        });
+
+        g_sched->start();
+        g_ipc->start();
+
+        svc.status_.dwCurrentState = SERVICE_RUNNING;
+        SetServiceStatus(svc.status_handle_, &svc.status_);
+
+        // Wait for stop signal
+        HANDLE wait_events[2] = { CreateEventW(nullptr, TRUE, FALSE, nullptr), CreateEventW(nullptr, TRUE, FALSE, nullptr) };
+        WaitForMultipleObjects(2, wait_events, FALSE, INFINITE);
+        CloseHandle(wait_events[0]);
+        CloseHandle(wait_events[1]);
+
+    } catch (...) {
+        svc.status_.dwCurrentState = SERVICE_STOPPED;
+        svc.status_.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
+        SetServiceStatus(svc.status_handle_, &svc.status_);
+        return;
+    }
+
+    svc.stop();
+}
+
+DWORD WINAPI Service::service_ctrl(DWORD ctrl, DWORD type, void* context, void* raw) {
+    auto& svc = Service::instance();
+    switch (ctrl) {
+    case SERVICE_CONTROL_STOP:
+    case SERVICE_CONTROL_SHUTDOWN:
+        svc.status_.dwCurrentState = SERVICE_STOP_PENDING;
+        svc.status_.dwWaitHint = 10000;
+        SetServiceStatus(svc.status_handle_, &svc.status_);
+        svc.stop();
+        break;
+    case SERVICE_CONTROL_INTERROGATE:
+        SetServiceStatus(svc.status_handle_, &svc.status_);
+        break;
+    }
+    return NO_ERROR;
+}
+
+// Global wrappers
+void __stdcall ServiceMainWrapper(DWORD argc, wchar_t** argv) {
+    Service::service_main(argc, argv);
+}
+
+DWORD __stdcall ServiceCtrlHandlerEx(DWORD ctrl, DWORD type, void* raw1, void* raw2) {
+    return Service::service_ctrl(ctrl, type, raw1, raw2);
+}

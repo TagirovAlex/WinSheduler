@@ -1,0 +1,211 @@
+<Window x:Class="WinSheduler.UI.TimeWindowDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Создание триггера" Height="520" Width="500"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Начать задачу -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <Label Content="Начать задачу:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="TriggerTypeBox" Width="180" VerticalAlignment="Center" IsEnabled="False">
+                <ComboBoxItem Content="По расписанию" IsSelected="True"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Параметры: радио + панель -->
+        <GroupBox Grid.Row="1" Header="Параметры" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Радио-кнопки -->
+                <StackPanel Grid.Column="0" Margin="0,4,10,0">
+                    <RadioButton x:Name="RadioOnce" Content="Однократно" Margin="0,0,0,6"
+                                 IsChecked="True" Checked="Radio_Checked"/>
+                    <RadioButton x:Name="RadioDaily" Content="Ежедневно" Margin="0,0,0,6"
+                                 Checked="Radio_Checked"/>
+                    <RadioButton x:Name="RadioWeekly" Content="Еженедельно" Margin="0,0,0,6"
+                                 Checked="Radio_Checked"/>
+                    <RadioButton x:Name="RadioMonthly" Content="Ежемесячно" Margin="0,0,0,6"
+                                 Checked="Radio_Checked"/>
+                    <RadioButton x:Name="RadioInterval" Content="Интервал" Margin="0,0,0,0"
+                                 Checked="Radio_Checked"/>
+                </StackPanel>
+
+                <!-- Панель: Однократно -->
+                <StackPanel x:Name="PanelOnce" Grid.Column="1" Visibility="Visible">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,3">
+                        <Label Content="Начать:" VerticalAlignment="Center"/>
+                        <DatePicker x:Name="OnceDatePicker" Width="130" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox x:Name="OnceTimeBox" Width="60" VerticalAlignment="Center" Text="18:00"/>
+                    </StackPanel>
+                    <CheckBox Content="Синхр. по поясам" Margin="20,0,0,0"/>
+                </StackPanel>
+
+                <!-- Панель: Ежедневно -->
+                <StackPanel x:Name="PanelDaily" Grid.Column="1" Visibility="Collapsed" Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Каждые" VerticalAlignment="Center"/>
+                        <TextBox x:Name="DailyIntervalBox" Width="35" VerticalAlignment="Center" Text="1"/>
+                        <Label Content="дн." VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </StackPanel>
+                    <Label Content="Время запуска (через запятую):" Margin="0,6,0,2"/>
+                    <TextBox x:Name="DailyTimesBox" Text="09:00, 13:00, 18:00" Margin="0,0,0,0"/>
+                </StackPanel>
+
+                <!-- Панель: Еженедельно -->
+                <StackPanel x:Name="PanelWeekly" Grid.Column="1" Visibility="Collapsed" Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Каждые" VerticalAlignment="Center"/>
+                        <TextBox x:Name="WeeklyIntervalBox" Width="35" VerticalAlignment="Center" Text="1"/>
+                        <Label Content="нед." VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </StackPanel>
+                    <WrapPanel Margin="0,6,0,4">
+                        <CheckBox x:Name="MonBox" Content="Пн" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="TueBox" Content="Вт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="WedBox" Content="Ср" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="ThuBox" Content="Чт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="FriBox" Content="Пт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="SatBox" Content="Сб" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="SunBox" Content="Вс" Margin="0,0,0,0"/>
+                    </WrapPanel>
+                    <Label Content="Время запуска (через запятую):" Margin="0,0,0,2"/>
+                    <TextBox x:Name="WeeklyTimesBox" Text="09:00, 13:00, 18:00"/>
+                </StackPanel>
+
+                <!-- Панель: Ежемесячно -->
+                <StackPanel x:Name="PanelMonthly" Grid.Column="1" Visibility="Collapsed" Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="День" VerticalAlignment="Center"/>
+                        <TextBox x:Name="MonthlyDayBox" Width="35" VerticalAlignment="Center" Text="1"/>
+                        <Label Content="каждые" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        <TextBox x:Name="MonthlyIntervalBox" Width="35" VerticalAlignment="Center" Text="1"/>
+                        <Label Content="мес." VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    </StackPanel>
+                    <Label Content="Время запуска (через запятую):" Margin="0,6,0,2"/>
+                    <TextBox x:Name="MonthlyTimesBox" Text="09:00, 13:00, 18:00"/>
+                </StackPanel>
+
+                <!-- Панель: Интервал -->
+                <StackPanel x:Name="PanelInterval" Grid.Column="1" Visibility="Collapsed" Margin="0,4,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="65"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="Начало:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="IntervalStartBox" Grid.Column="1" Text="09:00" VerticalAlignment="Center" Margin="0,0,0,3"/>
+                        <Label Grid.Column="0" Content="Конец:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="IntervalEndBox" Grid.Column="1" Text="18:00" VerticalAlignment="Center" Margin="0,0,0,3"/>
+                        <Label Grid.Column="0" Content="Каждые:" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBox x:Name="IntervalRepeatBox" Width="35" Text="30" VerticalAlignment="Center"/>
+                            <Label Content="мин." VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <WrapPanel Margin="0,4,0,0">
+                        <CheckBox x:Name="IntMonBox" Content="Пн" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntTueBox" Content="Вт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntWedBox" Content="Ср" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntThuBox" Content="Чт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntFriBox" Content="Пт" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntSatBox" Content="Сб" Margin="0,0,8,0"/>
+                        <CheckBox x:Name="IntSunBox" Content="Вс"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+
+        <!-- Доп. параметры -->
+        <GroupBox Grid.Row="2" Header="Дополнительные параметры" Margin="0,0,0,8">
+            <StackPanel Margin="0,4,0,0">
+                <!-- Повторять каждые -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                    <CheckBox x:Name="RepeatEveryCheck" Content="Повторять задачу каждые" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox x:Name="RepeatEveryValueBox" Width="35" Text="1" VerticalAlignment="Center" IsEnabled="False"/>
+                    <ComboBox x:Name="RepeatEveryUnitBox" Width="55" VerticalAlignment="Center" IsEnabled="False">
+                        <ComboBoxItem Content="ч." IsSelected="True"/>
+                        <ComboBoxItem Content="мин."/>
+                    </ComboBox>
+                    <Label Content="в течение" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                    <TextBox x:Name="RepeatDurationBox" Width="35" Text="1" VerticalAlignment="Center" IsEnabled="False"/>
+                    <ComboBox x:Name="RepeatDurationUnitBox" Width="55" VerticalAlignment="Center" IsEnabled="False">
+                        <ComboBoxItem Content="дн." IsSelected="True"/>
+                        <ComboBoxItem Content="ч."/>
+                    </ComboBox>
+                </StackPanel>
+                <CheckBox x:Name="RepeatStopAllCheck" Content="Останавливать все задачи по истечении срока повторов"
+                          Margin="24,0,0,3" IsEnabled="False"/>
+
+                <!-- Остановить через -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                    <CheckBox x:Name="StopAfterCheck" Content="Остановить задачу через" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox x:Name="StopAfterValueBox" Width="35" Text="3" VerticalAlignment="Center" IsEnabled="False"/>
+                    <ComboBox x:Name="StopAfterUnitBox" Width="55" VerticalAlignment="Center" IsEnabled="False">
+                        <ComboBoxItem Content="дн." IsSelected="True"/>
+                        <ComboBoxItem Content="ч."/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Срок действия -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                    <CheckBox x:Name="ExpirationCheck" Content="Срок действия" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <DatePicker x:Name="ExpirationDatePicker" Width="120" VerticalAlignment="Center" IsEnabled="False"/>
+                    <TextBox x:Name="ExpirationTimeBox" Width="55" Text="23:59" VerticalAlignment="Center" IsEnabled="False"/>
+                    <CheckBox Content="Синхр. по поясам" Margin="8,0,0,0" IsEnabled="False"/>
+                </StackPanel>
+
+                <!-- Включено -->
+                <CheckBox x:Name="EnabledCheck" Content="Включено" IsChecked="True" Margin="0,4,0,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Дата начала / конца / повторять до (общая секция для всех типов) -->
+        <GroupBox Grid.Row="3" Header="Ограничения по времени" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Label Grid.Row="0" Grid.Column="0" Content="Дата начала:"/>
+                <DatePicker x:Name="StartDatePicker" Grid.Row="0" Grid.Column="1" Margin="0,0,12,3"/>
+                <Label Grid.Row="0" Grid.Column="2" Content="Дата конца:"/>
+                <DatePicker x:Name="EndDatePicker" Grid.Row="0" Grid.Column="3" Margin="0,0,0,3"/>
+                <Label Grid.Row="1" Grid.Column="0" Content="Повторять до:"/>
+                <DatePicker x:Name="RepeatUntilPicker" Grid.Row="1" Grid.Column="1" Margin="0,0,12,0"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Кнопки -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Click="OkBtn_Click" Width="100" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconOk}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="OK" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Click="CancelBtn_Click" Width="100">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconCancel}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Отмена" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

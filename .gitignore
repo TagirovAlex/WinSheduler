@@ -1,0 +1,19 @@
+# Build outputs
+bin/
+obj/
+tmp/
+published/
+
+# VS user files
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# IDE
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store

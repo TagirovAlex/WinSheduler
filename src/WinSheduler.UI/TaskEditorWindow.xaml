@@ -1,0 +1,191 @@
+<Window x:Class="WinSheduler.UI.TaskEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Редактор задачи" Height="520" Width="620"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0" Margin="0,0,0,10">
+
+            <!-- Вкладка: Основные -->
+            <TabItem Header="Основные">
+                <ScrollViewer Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Grid.Column="0" Content="Название:"/>
+                        <TextBox x:Name="NameBox" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5"/>
+
+                        <Label Grid.Row="1" Grid.Column="0" Content="Описание:"/>
+                        <TextBox x:Name="DescBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5"/>
+
+                        <Label Grid.Row="2" Grid.Column="0" Content="Программа:"/>
+                        <TextBox x:Name="PathBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,5"/>
+                        <Button x:Name="BrowseBtn" Grid.Row="2" Grid.Column="2" Width="40" Margin="0,0,0,5" Click="BrowseBtn_Click">
+                            <Image Source="{StaticResource IconBrowse}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                        </Button>
+
+                        <Label Grid.Row="3" Grid.Column="0" Content="Аргументы:"/>
+                        <TextBox x:Name="ArgsBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5"/>
+
+                        <Label Grid.Row="4" Grid.Column="0" Content="Раб. папка:"/>
+                        <TextBox x:Name="WorkDirBox" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5"/>
+
+                        <Label Grid.Row="5" Grid.Column="0" Content="Окно:"/>
+                        <ComboBox x:Name="WindowStyleBox" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Normal"/>
+                            <ComboBoxItem Content="Hidden"/>
+                            <ComboBoxItem Content="Minimized"/>
+                            <ComboBoxItem Content="Maximized"/>
+                        </ComboBox>
+
+                        <!-- Учётные данные -->
+                        <GroupBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Header="Запуск от пользователя" Margin="0,5,0,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Label Grid.Row="0" Grid.Column="0" Content="Пользователь:"/>
+                                <TextBox x:Name="RunAsUserBox" Grid.Row="0" Grid.Column="1" Margin="0,0,0,3"/>
+                                <Label Grid.Row="1" Grid.Column="0" Content="Домен:"/>
+                                <TextBox x:Name="RunAsDomainBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,3"/>
+                                <Label Grid.Row="2" Grid.Column="0" Content="Пароль:"/>
+                                <PasswordBox x:Name="RunAsPasswordBox" Grid.Row="2" Grid.Column="1"/>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Вкладка: Расписание -->
+            <TabItem Header="Расписание">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                        <Button x:Name="AddTimeBtn" Click="AddTimeBtn_Click" Width="170" Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconAdd}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                                <TextBlock Text="Добавить триггер" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EditTimeBtn" Click="EditTimeBtn_Click" Width="120" Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconEdit}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                                <TextBlock Text="Изменить" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RemoveTimeBtn" Click="RemoveTimeBtn_Click" Width="110">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconDelete}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                                <TextBlock Text="Удалить" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <ListView x:Name="TimeWindowList" Grid.Row="1" MouseDoubleClick="TimeWindowList_MouseDoubleClick">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Тип" DisplayMemberBinding="{Binding TypeDisplay}" Width="100"/>
+                                <GridViewColumn Header="Расписание" DisplayMemberBinding="{Binding Summary}" Width="450"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+
+            <!-- Вкладка: Параметры -->
+            <TabItem Header="Параметры">
+                <ScrollViewer Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Grid.Column="0" Content="При ошибке:"/>
+                        <ComboBox x:Name="OnErrorBox" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5" SelectionChanged="OnErrorBox_SelectionChanged">
+                            <ComboBoxItem Content="Пропустить"/>
+                            <ComboBoxItem Content="Повторить"/>
+                            <ComboBoxItem Content="Остановить"/>
+                        </ComboBox>
+
+                        <Label x:Name="RetryLabel" Grid.Row="1" Grid.Column="0" Content="Повторов:" Visibility="Collapsed"/>
+                        <TextBox x:Name="RetryCountBox" Grid.Row="1" Grid.Column="1" Width="50" HorizontalAlignment="Left" Margin="0,0,0,5" Visibility="Collapsed"/>
+
+                        <Label Grid.Row="2" Grid.Column="0" Content="При наложении:"/>
+                        <ComboBox x:Name="OnOverlapBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Ждать завершения"/>
+                            <ComboBoxItem Content="Пропустить"/>
+                            <ComboBoxItem Content="Запустить ещё"/>
+                        </ComboBox>
+
+                        <Label Grid.Row="3" Grid.Column="0" Content="Таймаут (мин):"/>
+                        <TextBox x:Name="TimeoutBox" Grid.Row="3" Grid.Column="1" Width="50" HorizontalAlignment="Left" Margin="0,0,0,5"/>
+
+                        <CheckBox x:Name="KillOnTimeoutBox" Grid.Row="4" Grid.Column="1" Content="Завершать при таймауте" Margin="0,0,0,5"/>
+
+                        <CheckBox x:Name="LogOutputBox" Grid.Row="5" Grid.Column="1" Content="Сохранять вывод процесса" Margin="0,0,0,5"/>
+
+                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+                            <Label Content="Записей в журнале:"/>
+                            <TextBox x:Name="MaxHistoryBox" Width="60" Text="50"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- Кнопки -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="SaveBtn" Click="SaveBtn_Click" Width="140" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconSave}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Сохранить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="CancelBtn" Click="CancelBtn_Click" Width="120">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconCancel}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Отмена" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

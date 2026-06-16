@@ -1,0 +1,73 @@
+﻿<Window x:Class="WinSheduler.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinSheduler - Управление заданиями" Height="600" Width="980"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock x:Name="StatusText" Text="Статус: проверка..." VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="Bold"/>
+            <Button x:Name="RefreshBtn" Click="RefreshBtn_Click" Width="130" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconRefresh}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Обновить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="AddBtn" Click="AddBtn_Click" Width="130" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconAdd}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Добавить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="EditBtn" Click="EditBtn_Click" Width="130" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconEdit}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Изменить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="DeleteBtn" Click="DeleteBtn_Click" Width="110" Margin="0,0,10,0">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconDelete}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Удалить" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="HistoryBtn" Click="HistoryBtn_Click" Width="110">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconHistory}" Width="32" Height="32" Margin="0,0,5,0" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    <TextBlock Text="Журнал" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <ListView x:Name="TaskListView" Grid.Row="1"
+                  SelectionMode="Single"
+                  MouseDoubleClick="TaskListView_MouseDoubleClick">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Название" DisplayMemberBinding="{Binding Name}" Width="200"/>
+                    <GridViewColumn Header="Программа" DisplayMemberBinding="{Binding ProgramPath}" Width="250"/>
+                    <GridViewColumn Header="Статус" Width="80">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Enabled, Converter={StaticResource BoolToStatusConverter}}" Foreground="{Binding Enabled, Converter={StaticResource BoolToColorConverter}}"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Расписание" DisplayMemberBinding="{Binding ScheduleSummary}" Width="200"/>
+                    <GridViewColumn Header="Посл. запуск" DisplayMemberBinding="{Binding LastRun}" Width="120"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <StatusBar Grid.Row="2" Margin="0,10,0,0">
+            <StatusBarItem>
+                <TextBox x:Name="StatusBarText" Text="Готов" IsReadOnly="True" BorderThickness="0" Background="Transparent" IsTabStop="False"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
