@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <chrono>
 #include <cwctype>
+#include <future>
 
 // ---- JSON helpers ----
 
@@ -334,14 +335,16 @@ void IpcServer::start() {
 void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
-    // Worker thread will break out of WaitForMultipleObjects
-    // Client threads will finish their current request and exit
-    if (thread_.joinable()) thread_.join();
-    // Join client threads - they should exit after current request completes
+    // Worker thread: join with timeout to avoid hanging
+    if (thread_.joinable()) {
+        auto fut = std::async(std::launch::async, [this]() { thread_.join(); });
+        fut.wait_for(std::chrono::seconds(3));
+    }
+    // Client threads: detach - they check running_ before WriteFile
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
         for (auto& t : client_threads_) {
-            if (t.joinable()) t.join();
+            if (t.joinable()) t.detach();
         }
         client_threads_.clear();
     }
@@ -362,6 +365,10 @@ void IpcServer::worker_thread() {
             Sleep(100);
             continue;
         }
+
+        // Set write timeout to prevent WriteFile from blocking forever
+        // Only works for PIPE_WAIT mode pipes (not applicable to message mode)
+        // Instead, we rely on running_ flag check in handle_client_core
 
         OVERLAPPED ov = {};
         ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
@@ -425,10 +432,12 @@ void IpcServer::handle_client_core(HANDLE pipe) {
         std::string request_str(buf, total);
         auto req = json_helpers::request_from_json(request_str);
         if (!req.has_value()) {
-            auto resp = IpcResponse{ false, L"Invalid request", L"" };
-            auto resp_str = json_helpers::response_to_json(resp);
-            DWORD written;
-            WriteFile(pipe, resp_str.data(), (DWORD)resp_str.size(), &written, nullptr);
+            if (running_) {
+                auto resp = IpcResponse{ false, L"Invalid request", L"" };
+                auto resp_str = json_helpers::response_to_json(resp);
+                DWORD written;
+                WriteFile(pipe, resp_str.data(), (DWORD)resp_str.size(), &written, nullptr);
+            }
             goto cleanup;
         }
 
@@ -439,9 +448,11 @@ void IpcServer::handle_client_core(HANDLE pipe) {
             resp = process_request(req.value());
         }
 
-        auto resp_str = json_helpers::response_to_json(resp);
-        DWORD written;
-        WriteFile(pipe, resp_str.data(), (DWORD)resp_str.size(), &written, nullptr);
+        if (running_) {
+            auto resp_str = json_helpers::response_to_json(resp);
+            DWORD written;
+            WriteFile(pipe, resp_str.data(), (DWORD)resp_str.size(), &written, nullptr);
+        }
     }
 
 cleanup:

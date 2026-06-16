@@ -6,6 +6,7 @@
 #include <rpcdce.h>
 #include <fstream>
 #include <cmath>
+#include <future>
 
 #pragma comment(lib, "rpcrt4.lib")
 #pragma comment(lib, "crypt32.lib")
@@ -118,7 +119,10 @@ void Scheduler::stop() {
         if (rp.thread_handle) CloseHandle(rp.thread_handle);
     }
 
-    if (thread_.joinable()) thread_.join();
+    if (thread_.joinable()) {
+        auto fut = std::async(std::launch::async, [this]() { thread_.join(); });
+        fut.wait_for(std::chrono::seconds(3));
+    }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
     if (tick_timer_) { CloseHandle(tick_timer_); tick_timer_ = nullptr; }
 }
