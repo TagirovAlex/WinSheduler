@@ -4,7 +4,6 @@
 #include <iomanip>
 #include <chrono>
 #include <cwctype>
-#include <future>
 
 // ---- JSON helpers ----
 
@@ -335,17 +334,11 @@ void IpcServer::start() {
 void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
-    // Worker thread: join with timeout to avoid hanging
-    if (thread_.joinable()) {
-        auto fut = std::async(std::launch::async, [this]() { thread_.join(); });
-        fut.wait_for(std::chrono::seconds(3));
-    }
-    // Client threads: detach - they check running_ before WriteFile
+    // Don't join any threads - they check running_ before WriteFile.
+    // Trying to join can deadlock on pipe I/O.
+    // The process will be terminated by SCM anyway.
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
-        for (auto& t : client_threads_) {
-            if (t.joinable()) t.detach();
-        }
         client_threads_.clear();
     }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }

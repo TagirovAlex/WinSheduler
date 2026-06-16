@@ -158,8 +158,16 @@ struct Parser {
                         unsigned int codepoint;
                         auto [_, ec] = std::from_chars(input.data() + pos, input.data() + pos + 4, codepoint, 16);
                         if (ec == std::errc()) {
-                            if (codepoint < 128) result += static_cast<char>(codepoint);
-                            else result += '?';
+                            if (codepoint < 0x80) {
+                                result += static_cast<char>(codepoint);
+                            } else if (codepoint < 0x800) {
+                                result += static_cast<char>(0xC0 | (codepoint >> 6));
+                                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+                            } else if (codepoint < 0x10000) {
+                                result += static_cast<char>(0xE0 | (codepoint >> 12));
+                                result += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+                                result += static_cast<char>(0x80 | (codepoint & 0x3F));
+                            }
                             pos += 4;
                         }
                     }

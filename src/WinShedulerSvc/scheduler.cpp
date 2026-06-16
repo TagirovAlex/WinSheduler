@@ -1,3 +1,5 @@
+#define WINVER 0x0601
+#define _WIN32_WINNT 0x0601
 #include "scheduler.h"
 #include "json.h"
 #include <sstream>
@@ -6,10 +8,11 @@
 #include <rpcdce.h>
 #include <fstream>
 #include <cmath>
-#include <future>
+#include <userenv.h>
 
 #pragma comment(lib, "rpcrt4.lib")
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "userenv.lib")
 
 static void log_msg(const std::wstring& log_dir, const std::string& msg) {
     std::ofstream f(log_dir + L"\\scheduler.log", std::ios::app);
@@ -105,24 +108,25 @@ void Scheduler::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
 
-    // Kill all running processes
-    EnterCriticalSection(&lock_);
-    auto running = running_map_;
-    running_map_.clear();
-    LeaveCriticalSection(&lock_);
+    // Don't join the worker thread - it will check running_ and exit on its own.
+    // Trying to join can deadlock if the thread is inside a DB call.
+    // The process will be terminated by SCM anyway.
 
-    for (auto& [id, rp] : running) {
-        if (rp.process_handle) {
-            TerminateProcess(rp.process_handle, 1);
-            CloseHandle(rp.process_handle);
+    // Kill all running processes (try lock, skip if held)
+    if (TryEnterCriticalSection(&lock_)) {
+        auto running = running_map_;
+        running_map_.clear();
+        LeaveCriticalSection(&lock_);
+
+        for (auto& [id, rp] : running) {
+            if (rp.process_handle) {
+                TerminateProcess(rp.process_handle, 1);
+                CloseHandle(rp.process_handle);
+            }
+            if (rp.thread_handle) CloseHandle(rp.thread_handle);
         }
-        if (rp.thread_handle) CloseHandle(rp.thread_handle);
     }
 
-    if (thread_.joinable()) {
-        auto fut = std::async(std::launch::async, [this]() { thread_.join(); });
-        fut.wait_for(std::chrono::seconds(3));
-    }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
     if (tick_timer_) { CloseHandle(tick_timer_); tick_timer_ = nullptr; }
 }
@@ -367,15 +371,20 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
     }
 
     BOOL result;
-    std::wstring working_dir = task.working_directory.empty() ? std::wstring() : task.working_directory;
+    std::wstring working_dir = task.working_directory;
+    if (working_dir.empty()) {
+        working_dir = task.program_path;
+        auto pos = working_dir.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) working_dir.resize(pos);
+    }
     std::wstring command_line = command; // non-const copy needed
 
     if (task.run_as_user.has_value()) {
-        // Launch with alternate credentials
+        // Launch with alternate credentials using LogonUser + CreateProcessAsUser
         std::wstring password;
         if (!task.run_as_user->encrypted_password.empty()) {
             if (!decrypt_password(task.run_as_user->encrypted_password, password)) {
-                // Failed to decrypt
+                log_msg(log_dir_, "Failed to decrypt password for user: " + ws2u(task.run_as_user->user_name));
                 if (hStdoutWrite) CloseHandle(hStdoutWrite);
                 return 0;
             }
@@ -384,32 +393,64 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
         std::wstring domain = task.run_as_user->domain;
         std::wstring username = task.run_as_user->user_name;
 
-        // CreateProcessWithLogonW requires a modifiable buffer
-        std::vector<wchar_t> cmd_buf(command_line.begin(), command_line.end());
-        cmd_buf.push_back(0);
-
-        std::vector<wchar_t> dir_buf(working_dir.begin(), working_dir.end());
-        dir_buf.push_back(0);
-
-        result = CreateProcessWithLogonW(
+        HANDLE hToken = nullptr;
+        BOOL logged_on = LogonUserW(
             username.c_str(),
             domain.empty() ? nullptr : domain.c_str(),
             password.c_str(),
-            LOGON_WITH_PROFILE,
-            nullptr, // application name
-            cmd_buf.data(), // command line
-            CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | (task.window_style == WindowStyle::Hidden ? CREATE_NO_WINDOW : 0),
-            nullptr, // environment
-            working_dir.empty() ? nullptr : dir_buf.data(),
-            &si, &pi);
+            LOGON32_LOGON_INTERACTIVE,
+            LOGON32_PROVIDER_DEFAULT,
+            &hToken);
 
         // Clear password from memory
         if (!password.empty()) {
             SecureZeroMemory(&password[0], password.size() * sizeof(wchar_t));
             password.clear();
         }
+
+        if (!logged_on || !hToken) {
+            DWORD err = GetLastError();
+            log_msg(log_dir_, "LogonUser failed: error=" + std::to_string(err) + " user=" + ws2u(username));
+            if (hStdoutWrite) CloseHandle(hStdoutWrite);
+            return 0;
+        }
+
+        // Load user profile and environment
+        PROFILEINFOW pi_profile = {};
+        pi_profile.dwSize = sizeof(pi_profile);
+        pi_profile.lpUserName = const_cast<wchar_t*>(username.c_str());
+        pi_profile.dwFlags = PI_NOUI;
+        LoadUserProfile(hToken, &pi_profile);
+
+        LPVOID env_block = nullptr;
+        CreateEnvironmentBlock(&env_block, hToken, FALSE);
+
+        // CreateProcessAsUser requires a modifiable command line buffer
+        std::vector<wchar_t> cmd_buf(command_line.begin(), command_line.end());
+        cmd_buf.push_back(0);
+
+        std::vector<wchar_t> dir_buf(working_dir.begin(), working_dir.end());
+        dir_buf.push_back(0);
+
+        result = CreateProcessAsUserW(
+            hToken,
+            nullptr, // application name
+            cmd_buf.data(), // command line
+            nullptr, nullptr, TRUE,
+            CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | (task.window_style == WindowStyle::Hidden ? CREATE_NO_WINDOW : 0),
+            env_block,
+            dir_buf.data(),
+            &si, &pi);
+
+        if (!result) {
+            DWORD err = GetLastError();
+            log_msg(log_dir_, "CreateProcessAsUser failed: error=" + std::to_string(err) + " cmd=" + ws2u(command_line));
+        }
+
+        if (env_block) DestroyEnvironmentBlock(env_block);
+        CloseHandle(hToken);
     } else {
-        // Launch as SYSTEM (current user)
+        // Launch as current user
         std::vector<wchar_t> cmd_buf(command_line.begin(), command_line.end());
         cmd_buf.push_back(0);
 
@@ -421,13 +462,20 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
             nullptr, nullptr, TRUE,
             CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | (task.window_style == WindowStyle::Hidden ? CREATE_NO_WINDOW : 0),
             nullptr,
-            working_dir.empty() ? nullptr : dir_buf.data(),
+            dir_buf.data(),
             &si, &pi);
     }
 
     if (hStdoutWrite) CloseHandle(hStdoutWrite);
 
-    if (!result) return 0;
+    if (!result) {
+        DWORD err = GetLastError();
+        log_msg(log_dir_, "CreateProcess failed: error=" + std::to_string(err) + " cmd=" + ws2u(command_line));
+        if (hStdoutWrite) CloseHandle(hStdoutWrite);
+        return 0;
+    }
+
+    log_msg(log_dir_, "CreateProcess OK: pid=" + std::to_string(pi.dwProcessId) + " cmd=" + ws2u(command_line) + " dir=" + ws2u(working_dir));
 
     CloseHandle(pi.hThread);
     DWORD pid = pi.dwProcessId;
@@ -446,52 +494,64 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
 }
 
 void Scheduler::check_timeouts() {
-    EnterCriticalSection(&lock_);
     auto now = std::chrono::system_clock::now();
 
+    // Phase 1: Under lock, copy what we need, release lock immediately
+    struct TaskInfo { std::wstring task_id; RunningProcess rp; };
+    std::vector<TaskInfo> to_check;
+
+    EnterCriticalSection(&lock_);
+    for (auto& [task_id, rp] : running_map_) {
+        to_check.push_back({task_id, rp});
+    }
+    LeaveCriticalSection(&lock_);
+
+    // Phase 2: Outside lock - do all DB calls and process checks
     std::vector<std::wstring> exited_tasks;
     std::vector<std::wstring> timed_out_tasks;
-    for (auto& [task_id, rp] : running_map_) {
-        auto task = db_.get_task(task_id);
+
+    for (auto& info : to_check) {
+        auto task = db_.get_task(info.task_id);
         if (!task.has_value()) continue;
 
-        // Check if process has exited
         DWORD exit_code = 0;
-        bool exited = GetExitCodeProcess(rp.process_handle, &exit_code) && exit_code != STILL_ACTIVE;
+        bool exited = GetExitCodeProcess(info.rp.process_handle, &exit_code) && exit_code != STILL_ACTIVE;
 
         if (exited) {
-            exited_tasks.push_back(task_id);
-            auto history_list = db_.get_history(task_id, 1);
+            exited_tasks.push_back(info.task_id);
+            log_msg(log_dir_, "Process exited: task=" + ws2u(info.task_id) + " pid=" + std::to_string(info.rp.process_handle ? GetProcessId(info.rp.process_handle) : 0) + " exit_code=" + std::to_string(exit_code));
+            auto history_list = db_.get_history(info.task_id, 1);
             if (!history_list.empty()) {
                 history_list[0].end_time = now_to_string();
                 history_list[0].exit_code = static_cast<int>(exit_code);
                 history_list[0].status = RunStatus::Completed;
                 db_.update_history(history_list[0]);
             }
-            CloseHandle(rp.process_handle);
+            CloseHandle(info.rp.process_handle);
             continue;
         }
 
-        // Check timeout
         if (!task->timeout_minutes.has_value()) continue;
-        auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - rp.start_time);
+        auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - info.rp.start_time);
         if (elapsed.count() >= task->timeout_minutes.value()) {
-            timed_out_tasks.push_back(task_id);
+            timed_out_tasks.push_back(info.task_id);
         }
     }
 
-    // Erase exited tasks from running_map_
+    // Phase 3: Under lock, erase exited tasks
+    EnterCriticalSection(&lock_);
     for (auto& task_id : exited_tasks) {
         running_map_.erase(task_id);
     }
     LeaveCriticalSection(&lock_);
 
-    // Handle timeouts outside the lock
+    // Phase 4: Handle timeouts outside lock
     for (auto& task_id : timed_out_tasks) {
+        RunningProcess rp;
         EnterCriticalSection(&lock_);
         auto it = running_map_.find(task_id);
         if (it == running_map_.end()) { LeaveCriticalSection(&lock_); continue; }
-        auto rp = it->second;
+        rp = it->second;
         running_map_.erase(it);
         LeaveCriticalSection(&lock_);
 
@@ -502,7 +562,6 @@ void Scheduler::check_timeouts() {
             TerminateProcess(rp.process_handle, 1);
         }
 
-        // Update history
         auto history_list = db_.get_history(task_id, 1);
         if (!history_list.empty()) {
             history_list[0].end_time = now_to_string();

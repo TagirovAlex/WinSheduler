@@ -16,15 +16,8 @@ Service& Service::instance() {
 }
 
 void Service::stop() {
-    // 1. Stop scheduler first (no new tasks launched)
-    if (g_sched) { g_sched->stop(); delete g_sched; g_sched = nullptr; }
-    // 2. Stop IPC (close pipe, join worker + client threads)
-    if (g_ipc) { g_ipc->stop(); delete g_ipc; g_ipc = nullptr; }
-    // 3. Now safe to close database (all threads joined)
-    if (g_db) { g_db->close(); delete g_db; g_db = nullptr; }
-
-    if (stop_event_) { SetEvent(stop_event_); CloseHandle(stop_event_); stop_event_ = nullptr; }
-
+    if (g_sched) g_sched->stop();
+    if (g_ipc) g_ipc->stop();
     if (status_handle_) {
         status_.dwCurrentState = SERVICE_STOPPED;
         SetServiceStatus(status_handle_, &status_);
@@ -63,7 +56,6 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
 
     // Initialize
     try {
-        // Create directories
         CreateDirectoryW((svc.log_dir_ + L"\\output").c_str(), nullptr);
 
         g_db = new Database();
@@ -77,7 +69,6 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
         g_sched = new Scheduler(*g_db, svc.log_dir_);
 
         g_ipc = new IpcServer(*g_db, [](const IpcRequest& req) -> IpcResponse {
-            // Handle GetStatus and other scheduler-originating requests
             if (req.action == L"GetStatus") {
                 auto status = g_sched->get_status();
                 auto json_str = json_helpers::status_to_json(status);
@@ -99,19 +90,16 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
         svc.status_.dwCurrentState = SERVICE_RUNNING;
         SetServiceStatus(svc.status_handle_, &svc.status_);
 
-        // Wait for stop signal
         svc.stop_event_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         WaitForSingleObject(svc.stop_event_, INFINITE);
 
     } catch (...) {
         svc.stop();
-        svc.status_.dwCurrentState = SERVICE_STOPPED;
-        svc.status_.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
-        SetServiceStatus(svc.status_handle_, &svc.status_);
-        return;
+        ExitProcess(0);
     }
 
     svc.stop();
+    ExitProcess(0);
 }
 
 DWORD WINAPI Service::service_ctrl(DWORD ctrl, DWORD type, void* context, void* raw) {
