@@ -17,3 +17,13 @@ published/
 # OS
 Thumbs.db
 .DS_Store
+
+# opencode / RAG / skills
+.opencode/
+.rag/
+skills/
+
+# Temp files
+query
+stop
+screen.png
