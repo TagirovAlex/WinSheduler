@@ -575,7 +575,15 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
     ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
     task->modified_at = u2ws(ss.str());
 
+    log_msg(log_dir_, "UpdateTask: id=" + ws2u(task->id) + " name=" + ws2u(task->name));
+
     db_.update_task(task.value());
+
+    auto verify = db_.get_task(task->id);
+    if (verify.has_value())
+        log_msg(log_dir_, "UpdateTask: verified task exists after update, name=" + ws2u(verify->name));
+    else
+        log_msg(log_dir_, "UpdateTask: WARNING task NOT FOUND after update! id=" + ws2u(task->id));
 
     // Re-save time windows
     auto payload_str = ws2u(payload);
@@ -608,6 +616,9 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
                 " sd=" + std::to_string(w.specific_dates.size()));
         }
         sqlite3_exec(db_.get_db(), "COMMIT", nullptr, nullptr, nullptr);
+
+        auto after = db_.get_time_windows(task->id);
+        log_msg(log_dir_, "UpdateTask: VERIFY after commit: task=" + ws2u(task->id) + " count=" + std::to_string(after.size()));
     } else {
         log_msg(log_dir_, "UpdateTask: NO TimeWindows in payload");
     }

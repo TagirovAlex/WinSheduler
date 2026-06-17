@@ -151,6 +151,7 @@ public partial class TimeWindowDialog : Window
             { MessageBox.Show("Введите время запуска", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
             ExactTimes = DailyTimesBox.Text.Trim();
             if (int.TryParse(DailyIntervalBox.Text, out var di) && di > 0) DayInterval = di;
+            SelectedDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
         }
         else if (RadioWeekly.IsChecked == true)
         {

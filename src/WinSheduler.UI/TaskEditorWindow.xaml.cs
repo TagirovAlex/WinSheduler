@@ -119,6 +119,8 @@ public partial class TaskEditorWindow : Window
                 else
                 {
                     model.Type = TimeWindowEditType.Exact;
+                    if (model.SelectedDays.Count == 0)
+                        model.SelectedDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
                 }
 
                 _windows.Add(model);
