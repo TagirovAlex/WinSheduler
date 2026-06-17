@@ -82,7 +82,7 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
                 return IpcResponse{ true, L"", L"{}" };
             }
             return IpcResponse{ false, L"Unhandled by scheduler", L"" };
-        });
+        }, svc.log_dir_);
 
         g_sched->start();
         g_ipc->start();

@@ -7,11 +7,14 @@
 #include <vector>
 #include <mutex>
 
+// Shared logging function (defined in scheduler.cpp)
+void log_msg(const std::wstring& log_dir, const std::string& msg);
+
 class IpcServer {
 public:
     using RequestHandler = std::function<IpcResponse(const IpcRequest&)>;
 
-    IpcServer(Database& db, RequestHandler scheduler_handler);
+    IpcServer(Database& db, RequestHandler scheduler_handler, const std::wstring& log_dir);
     ~IpcServer();
     void start();
     void stop();
@@ -32,10 +35,11 @@ private:
 
     Database& db_;
     RequestHandler scheduler_handler_;
+    std::wstring log_dir_;
     std::thread thread_;
     std::atomic<bool> running_{ false };
     HANDLE stop_event_ = nullptr;
-    HANDLE listener_pipe_ = INVALID_HANDLE_VALUE; // for CancelIo on stop
+    HANDLE listener_pipe_ = INVALID_HANDLE_VALUE;
     std::vector<std::thread> client_threads_;
     std::mutex client_threads_mutex_;
 };

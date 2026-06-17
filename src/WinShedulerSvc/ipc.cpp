@@ -312,8 +312,8 @@ std::string response_to_json(const IpcResponse& resp) {
 
 // ---- IpcServer ----
 
-IpcServer::IpcServer(Database& db, RequestHandler handler)
-    : db_(db), scheduler_handler_(std::move(handler)) {}
+IpcServer::IpcServer(Database& db, RequestHandler handler, const std::wstring& log_dir)
+    : db_(db), scheduler_handler_(std::move(handler)), log_dir_(log_dir) {}
 
 IpcServer::~IpcServer() { stop(); }
 
@@ -573,12 +573,16 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
     db_.update_task(task.value());
 
     // Re-save time windows
-    auto payload_obj = json::parse(ws2u(payload));
+    auto payload_str = ws2u(payload);
+    auto payload_obj = json::parse(payload_str);
     auto* tws = payload_obj.get("TimeWindows");
     if (tws && tws->is_array()) {
+        auto& arr = tws->as_array();
+        log_msg(log_dir_, "UpdateTask: TimeWindows array size=" + std::to_string(arr.size()) + " task=" + ws2u(task->id));
         db_.delete_time_windows(task->id);
         auto tw_json = json::serialize(*tws);
         auto windows = json_helpers::time_windows_from_json(tw_json);
+        log_msg(log_dir_, "UpdateTask: parsed " + std::to_string(windows.size()) + " windows");
         for (auto& w : windows) {
             w.task_id = task->id;
             if (w.id.empty() || w.id == L"00000000-0000-0000-0000-000000000000") {
@@ -592,6 +596,8 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
             }
             db_.insert_time_window(w);
         }
+    } else {
+        log_msg(log_dir_, "UpdateTask: NO TimeWindows in payload, tws=" + std::string(tws ? "exists but not array" : "null"));
     }
     return ok(L"");
 }

@@ -16,7 +16,7 @@
 
 static constexpr size_t MAX_LOG_SIZE = 512 * 1024; // 512 KB
 
-static void log_msg(const std::wstring& log_dir, const std::string& msg) {
+void log_msg(const std::wstring& log_dir, const std::string& msg) {
     auto path = log_dir + L"\\scheduler.log";
     // Rotate if too large
     {

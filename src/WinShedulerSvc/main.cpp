@@ -28,7 +28,7 @@ static void run_standalone(const std::wstring& db_path, const std::wstring& log_
             return IpcResponse{ true, L"", L"{}" };
         }
         return IpcResponse{ false, L"Unhandled", L"" };
-    });
+    }, log_dir);
 
     sched.start();
     ipc.start();
