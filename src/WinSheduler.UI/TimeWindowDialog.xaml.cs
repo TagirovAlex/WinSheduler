@@ -20,6 +20,9 @@ public partial class TimeWindowDialog : Window
     public string? OnceDate { get; private set; }
     public string? OnceTime { get; private set; }
     public bool TriggerEnabled { get; private set; } = true;
+    public bool RepeatEveryEnabled { get; private set; }
+    public int RepeatEveryMinutes { get; private set; }
+    public int RepeatDurationMinutes { get; private set; }
 
     public TimeWindowDialog()
     {
@@ -100,6 +103,24 @@ public partial class TimeWindowDialog : Window
             RepeatUntilPicker.SelectedDate = ru;
 
         if (!existing.TriggerEnabled) EnabledCheck.IsChecked = false;
+
+        if (existing.RepeatEveryEnabled)
+        {
+            RepeatEveryCheck.IsChecked = true;
+            var hours = existing.RepeatEveryMinutes >= 60 && existing.RepeatEveryMinutes % 60 == 0;
+            RepeatEveryValueBox.Text = hours
+                ? (existing.RepeatEveryMinutes / 60).ToString()
+                : existing.RepeatEveryMinutes.ToString();
+            RepeatEveryUnitBox.SelectedIndex = hours ? 0 : 1;
+            if (existing.RepeatDurationMinutes > 0)
+            {
+                var days = existing.RepeatDurationMinutes >= 1440 && existing.RepeatDurationMinutes % 1440 == 0;
+                RepeatDurationBox.Text = days
+                    ? (existing.RepeatDurationMinutes / 1440).ToString()
+                    : (existing.RepeatDurationMinutes / 60).ToString();
+                RepeatDurationUnitBox.SelectedIndex = days ? 0 : 1;
+            }
+        }
 
         Radio_Checked(null!, null!);
     }
@@ -211,6 +232,16 @@ public partial class TimeWindowDialog : Window
         EndDate = EndDatePicker.SelectedDate?.ToString("yyyy-MM-dd");
         RepeatUntil = RepeatUntilPicker.SelectedDate?.ToString("yyyy-MM-dd");
         TriggerEnabled = EnabledCheck.IsChecked == true;
+
+        RepeatEveryEnabled = RepeatEveryCheck.IsChecked == true;
+        if (RepeatEveryEnabled && int.TryParse(RepeatEveryValueBox.Text, out var rev))
+        {
+            var unit = (RepeatEveryUnitBox.SelectedIndex == 0) ? 60 : 1;
+            RepeatEveryMinutes = rev * unit;
+            var durUnit = (RepeatDurationUnitBox.SelectedIndex == 0) ? 1440 : 60;
+            if (int.TryParse(RepeatDurationBox.Text, out var rd))
+                RepeatDurationMinutes = rd * durUnit;
+        }
 
         DialogResult = true;
     }

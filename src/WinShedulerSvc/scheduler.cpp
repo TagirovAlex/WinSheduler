@@ -325,6 +325,18 @@ bool Scheduler::is_in_window(const TimeWindow& w, const std::chrono::system_cloc
         for (auto& et : w.exact_times) {
             int et_minutes = (int)time_to_minutes(et);
             if (std::abs(current_minutes - et_minutes) < 1) return true;
+
+            // Repeat after exact time
+            if (w.repeat_interval_minutes.has_value() && w.repeat_interval_minutes.value() > 0 && current_minutes > et_minutes) {
+                int elapsed = current_minutes - et_minutes;
+                if (elapsed % w.repeat_interval_minutes.value() == 0) {
+                    if (w.repeat_until.has_value()) {
+                        int ru_min = (int)time_to_minutes(w.repeat_until.value());
+                        if (current_minutes > ru_min) continue;
+                    }
+                    return true;
+                }
+            }
         }
         return false;
     }

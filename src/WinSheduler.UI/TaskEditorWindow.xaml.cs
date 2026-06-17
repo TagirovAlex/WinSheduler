@@ -97,6 +97,17 @@ public partial class TaskEditorWindow : Window
                     RepeatUntil = w.RepeatUntil,
                 };
 
+                if (w.RepeatIntervalMinutes.HasValue && w.Type != "Interval")
+                {
+                    model.RepeatEveryEnabled = true;
+                    model.RepeatEveryMinutes = w.RepeatIntervalMinutes.Value;
+                    if (w.RepeatUntil != null && DateTime.TryParse(w.RepeatUntil, out var ru))
+                    {
+                        var baseDt = w.StartDate ?? DateTime.Today;
+                        model.RepeatDurationMinutes = (int)(ru - baseDt).TotalMinutes;
+                    }
+                }
+
                 if (w.Type == "Interval")
                 {
                     model.Type = TimeWindowEditType.Interval;
@@ -226,6 +237,9 @@ public partial class TaskEditorWindow : Window
                 OnceDate = dlg.OnceDate != null && DateTime.TryParse(dlg.OnceDate, out var od) ? od : null,
                 OnceTimeStr = dlg.OnceTime,
                 TriggerEnabled = dlg.TriggerEnabled,
+                RepeatEveryEnabled = dlg.RepeatEveryEnabled,
+                RepeatEveryMinutes = dlg.RepeatEveryMinutes,
+                RepeatDurationMinutes = dlg.RepeatDurationMinutes,
             };
             UpdateTimeWindowList();
         }
@@ -298,10 +312,14 @@ public partial class TaskEditorWindow : Window
                 EndTime = w.Type == TimeWindowEditType.Interval ? w.EndTimeStr : null,
                 RepeatIntervalMinutes = w.Type == TimeWindowEditType.Interval
                     ? (int.TryParse(w.RepeatIntervalStr, out var ri) ? ri : null)
-                    : null,
+                    : (w.RepeatEveryEnabled && w.RepeatEveryMinutes > 0 ? w.RepeatEveryMinutes : null),
                 StartDate = w.StartDate != null && DateTime.TryParse(w.StartDate, out var sd) ? sd : null,
                 EndDate = w.EndDate != null && DateTime.TryParse(w.EndDate, out var ed) ? ed : null,
-                RepeatUntil = w.RepeatUntil,
+                RepeatUntil = w.RepeatEveryEnabled && w.RepeatDurationMinutes > 0
+                    ? (w.ExactTimesStr != null && w.ExactTimesStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) is { Length: > 0 } times && TimeSpan.TryParse(times[0], out var baseTime)
+                        ? (baseTime + TimeSpan.FromMinutes(w.RepeatDurationMinutes)).ToString(@"hh\:mm")
+                        : null)
+                    : w.RepeatUntil,
                 DaysOfWeek = w.Type == TimeWindowEditType.Once ? [] : w.SelectedDays,
                 DaysOfMonth = w.Type == TimeWindowEditType.ExactMonthly ? [w.MonthDay] : [],
                 SpecificDates = w.Type == TimeWindowEditType.Once && w.OnceDate.HasValue
@@ -355,6 +373,9 @@ public class TimeWindowEditModel
     public DateTime? OnceDate { get; set; }
     public string? OnceTimeStr { get; set; }
     public bool TriggerEnabled { get; set; } = true;
+    public bool RepeatEveryEnabled { get; set; }
+    public int RepeatEveryMinutes { get; set; }
+    public int RepeatDurationMinutes { get; set; }
 
     public string TypeDisplay => Type switch
     {
@@ -371,12 +392,13 @@ public class TimeWindowEditModel
         get
         {
             var days = SelectedDays.Count > 0 ? string.Join(",", SelectedDays.Select(d => d.ToString()[..2])) + " " : "";
+            var repeat = RepeatEveryEnabled ? $" повтор кажд. {RepeatEveryMinutes}мин" : "";
             return Type switch
             {
                 TimeWindowEditType.Once => $"{OnceDate:yyyy-MM-dd} {OnceTimeStr}",
-                TimeWindowEditType.Exact => $"Каждые {DayInterval}дн {ExactTimesStr}",
-                TimeWindowEditType.ExactWeekly => $"Каждые {WeekInterval}нед {days}{ExactTimesStr}",
-                TimeWindowEditType.ExactMonthly => $"День {MonthDay} кажд. {MonthInterval}мес {ExactTimesStr}",
+                TimeWindowEditType.Exact => $"Каждые {DayInterval}дн {ExactTimesStr}{repeat}",
+                TimeWindowEditType.ExactWeekly => $"Каждые {WeekInterval}нед {days}{ExactTimesStr}{repeat}",
+                TimeWindowEditType.ExactMonthly => $"День {MonthDay} кажд. {MonthInterval}мес {ExactTimesStr}{repeat}",
                 TimeWindowEditType.Interval => $"{days}{StartTimeStr}-{EndTimeStr} кажд. {RepeatIntervalStr}мин",
                 _ => ""
             };
