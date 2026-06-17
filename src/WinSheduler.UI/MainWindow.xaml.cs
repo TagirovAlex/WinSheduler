@@ -168,9 +168,28 @@ public class TaskDefinitionViewModel
 
 public class TimeWindowViewModel
 {
-    public string Summary => Type == "ExactTimes"
-        ? $"Точно: {string.Join(", ", ExactTimes)}"
-        : $"Интервал: {StartTime}-{EndTime} кажд. {RepeatIntervalMinutes}мин";
+    public string Summary
+    {
+        get
+        {
+            if (Type == "Interval")
+                return $"Интервал: {StartTime}-{EndTime} кажд. {RepeatIntervalMinutes}мин";
+
+            var times = ExactTimes?.Count > 0 ? string.Join(", ", ExactTimes) : "?";
+            var parts = new List<string>();
+
+            if (DaysOfWeek?.Count > 0)
+                parts.Add(string.Join("/", DaysOfWeek.Select(d => d.ToString()[..2])));
+            if (DaysOfMonth?.Count > 0)
+                parts.Add("дни " + string.Join(",", DaysOfMonth));
+            if (SpecificDates?.Count > 0)
+                parts.Add(string.Join(", ", SpecificDates.Select(d => d.ToString("dd.MM"))));
+
+            return parts.Count > 0
+                ? $"{times} [{string.Join(" ", parts)}]"
+                : $"Точно: {times}";
+        }
+    }
     public string Type { get; set; } = "ExactTimes";
     public List<string> ExactTimes { get; set; } = [];
     public string? StartTime { get; set; }

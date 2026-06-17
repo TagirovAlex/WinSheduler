@@ -151,8 +151,8 @@ void Scheduler::stop() {
     if (stop_event_) SetEvent(stop_event_);
     if (tick_timer_) { CancelWaitableTimer(tick_timer_); }
 
-    // Join worker thread
-    if (thread_.joinable()) thread_.join();
+    // Don't join - thread might be blocked inside tick()/DB calls.
+    // ExitProcess(0) in service_main will terminate it.
 
     // Kill all running processes
     EnterCriticalSection(&lock_);

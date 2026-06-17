@@ -98,6 +98,7 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
     }
 
     svc.stop();
+    ExitProcess(0);
 }
 
 DWORD WINAPI Service::service_ctrl(DWORD ctrl, DWORD type, void* context, void* raw) {

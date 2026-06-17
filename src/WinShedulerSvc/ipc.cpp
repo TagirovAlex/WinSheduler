@@ -196,6 +196,13 @@ std::optional<TaskDefinition> task_from_json(const std::string& json_str) {
     auto* tm_val = v.get("TimeoutMinutes");
     if (tm_val && !tm_val->is_null()) t.timeout_minutes = tm_val->as_int();
 
+    auto* kot = v.get("KillOnTimeout");
+    if (kot && kot->is_bool()) t.kill_on_timeout = kot->as_bool();
+    auto* lo = v.get("LogOutput");
+    if (lo && lo->is_bool()) t.log_output = lo->as_bool();
+    auto* mhr = v.get("MaxHistoryRecords");
+    if (mhr && mhr->is_number()) t.max_history_records = mhr->as_int();
+
     // RunAsUser
     auto* rau = v.get("RunAsUser");
     if (rau && rau->is_string() && !rau->as_string().empty()) {
@@ -338,14 +345,10 @@ void IpcServer::stop() {
     if (listener_pipe_ != INVALID_HANDLE_VALUE) {
         CancelIo(listener_pipe_);
     }
-    // Join worker thread
-    if (thread_.joinable()) thread_.join();
-    // Client threads: detach them - they check running_ before WriteFile
+    // Don't join threads - they may be blocked on pipe I/O.
+    // ExitProcess(0) in service_main will terminate them.
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
-        for (auto& t : client_threads_) {
-            if (t.joinable()) t.detach();
-        }
         client_threads_.clear();
     }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
@@ -501,7 +504,9 @@ IpcResponse IpcServer::handle_get_task(const std::wstring& payload) {
 
 IpcResponse IpcServer::handle_get_time_windows(const std::wstring& payload) {
     auto windows = db_.get_time_windows(payload);
-    return ok(u2ws(json_helpers::time_window_list_to_json(windows)));
+    auto json = json_helpers::time_window_list_to_json(windows);
+    log_msg(log_dir_, "GetTimeWindows: task=" + ws2u(payload) + " count=" + std::to_string(windows.size()) + " json_len=" + std::to_string(json.size()));
+    return ok(u2ws(json));
 }
 
 IpcResponse IpcServer::handle_get_history(const std::wstring& payload) {
@@ -579,6 +584,7 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
     if (tws && tws->is_array()) {
         auto& arr = tws->as_array();
         log_msg(log_dir_, "UpdateTask: TimeWindows array size=" + std::to_string(arr.size()) + " task=" + ws2u(task->id));
+        sqlite3_exec(db_.get_db(), "BEGIN", nullptr, nullptr, nullptr);
         db_.delete_time_windows(task->id);
         auto tw_json = json::serialize(*tws);
         auto windows = json_helpers::time_windows_from_json(tw_json);
@@ -595,9 +601,15 @@ IpcResponse IpcServer::handle_update_task(const std::wstring& payload) {
                 for (auto& c : w.id) c = towlower(c);
             }
             db_.insert_time_window(w);
+            log_msg(log_dir_, "UpdateTask: inserted tw id=" + ws2u(w.id) + " type=" + std::to_string((int)w.type) +
+                " exact=" + std::to_string(w.exact_times.size()) +
+                " dow=" + std::to_string(w.days_of_week.size()) +
+                " dom=" + std::to_string(w.days_of_month.size()) +
+                " sd=" + std::to_string(w.specific_dates.size()));
         }
+        sqlite3_exec(db_.get_db(), "COMMIT", nullptr, nullptr, nullptr);
     } else {
-        log_msg(log_dir_, "UpdateTask: NO TimeWindows in payload, tws=" + std::string(tws ? "exists but not array" : "null"));
+        log_msg(log_dir_, "UpdateTask: NO TimeWindows in payload");
     }
     return ok(L"");
 }
