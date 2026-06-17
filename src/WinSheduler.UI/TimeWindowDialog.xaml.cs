@@ -203,6 +203,7 @@ public partial class TimeWindowDialog : Window
             OnceTime = OnceTimeBox.Text.Trim();
             if (string.IsNullOrWhiteSpace(OnceTime))
             { MessageBox.Show("Введите время запуска", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            ExactTimes = OnceTime;
         }
 
         StartDate = StartDatePicker.SelectedDate?.ToString("yyyy-MM-dd");

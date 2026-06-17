@@ -334,11 +334,18 @@ void IpcServer::start() {
 void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
-    // Don't join any threads - they check running_ before WriteFile.
-    // Trying to join can deadlock on pipe I/O.
-    // The process will be terminated by SCM anyway.
+    // Cancel listener pipe to break ConnectNamedPipe
+    if (listener_pipe_ != INVALID_HANDLE_VALUE) {
+        CancelIo(listener_pipe_);
+    }
+    // Join worker thread
+    if (thread_.joinable()) thread_.join();
+    // Client threads: detach them - they check running_ before WriteFile
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
+        for (auto& t : client_threads_) {
+            if (t.joinable()) t.detach();
+        }
         client_threads_.clear();
     }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
@@ -359,9 +366,7 @@ void IpcServer::worker_thread() {
             continue;
         }
 
-        // Set write timeout to prevent WriteFile from blocking forever
-        // Only works for PIPE_WAIT mode pipes (not applicable to message mode)
-        // Instead, we rely on running_ flag check in handle_client_core
+        listener_pipe_ = pipe;
 
         OVERLAPPED ov = {};
         ov.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
@@ -369,6 +374,7 @@ void IpcServer::worker_thread() {
         BOOL connected = ConnectNamedPipe(pipe, &ov);
         if (!connected && GetLastError() != ERROR_IO_PENDING) {
             CloseHandle(pipe);
+            listener_pipe_ = INVALID_HANDLE_VALUE;
             CloseHandle(ov.hEvent);
             continue;
         }
@@ -379,9 +385,12 @@ void IpcServer::worker_thread() {
         if (wait == WAIT_OBJECT_0 + 1 || !running_) {
             CancelIo(pipe);
             CloseHandle(pipe);
+            listener_pipe_ = INVALID_HANDLE_VALUE;
             CloseHandle(ov.hEvent);
             break;
         }
+
+        listener_pipe_ = INVALID_HANDLE_VALUE;
 
         // Handle client in a separate thread, immediately listen for next client
         {

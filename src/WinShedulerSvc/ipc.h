@@ -35,6 +35,7 @@ private:
     std::thread thread_;
     std::atomic<bool> running_{ false };
     HANDLE stop_event_ = nullptr;
+    HANDLE listener_pipe_ = INVALID_HANDLE_VALUE; // for CancelIo on stop
     std::vector<std::thread> client_threads_;
     std::mutex client_threads_mutex_;
 };

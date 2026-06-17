@@ -167,6 +167,13 @@ public partial class TaskEditorWindow : Window
                 StartDate = dlg.StartDate,
                 EndDate = dlg.EndDate,
                 RepeatUntil = dlg.RepeatUntil,
+                DayInterval = dlg.DayInterval,
+                WeekInterval = dlg.WeekInterval,
+                MonthDay = dlg.MonthDay,
+                MonthInterval = dlg.MonthInterval,
+                OnceDate = dlg.OnceDate != null && DateTime.TryParse(dlg.OnceDate, out var od) ? od : null,
+                OnceTimeStr = dlg.OnceTime,
+                TriggerEnabled = dlg.TriggerEnabled,
             });
             UpdateTimeWindowList();
         }
@@ -210,6 +217,13 @@ public partial class TaskEditorWindow : Window
                 StartDate = dlg.StartDate,
                 EndDate = dlg.EndDate,
                 RepeatUntil = dlg.RepeatUntil,
+                DayInterval = dlg.DayInterval,
+                WeekInterval = dlg.WeekInterval,
+                MonthDay = dlg.MonthDay,
+                MonthInterval = dlg.MonthInterval,
+                OnceDate = dlg.OnceDate != null && DateTime.TryParse(dlg.OnceDate, out var od) ? od : null,
+                OnceTimeStr = dlg.OnceTime,
+                TriggerEnabled = dlg.TriggerEnabled,
             };
             UpdateTimeWindowList();
         }
@@ -274,7 +288,9 @@ public partial class TaskEditorWindow : Window
                     _ => Shared.TimeWindowType.ExactTimes,
                 },
                 ExactTimes = w.Type is TimeWindowEditType.Once or TimeWindowEditType.Exact or TimeWindowEditType.ExactWeekly or TimeWindowEditType.ExactMonthly
-                    ? (w.ExactTimesStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []).ToList()
+                    ? (w.Type == TimeWindowEditType.Once && !string.IsNullOrWhiteSpace(w.OnceTimeStr)
+                        ? [w.OnceTimeStr!]
+                        : (w.ExactTimesStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []).ToList())
                     : [],
                 StartTime = w.Type == TimeWindowEditType.Interval ? w.StartTimeStr : null,
                 EndTime = w.Type == TimeWindowEditType.Interval ? w.EndTimeStr : null,
@@ -285,6 +301,7 @@ public partial class TaskEditorWindow : Window
                 EndDate = w.EndDate != null && DateTime.TryParse(w.EndDate, out var ed) ? ed : null,
                 RepeatUntil = w.RepeatUntil,
                 DaysOfWeek = w.Type == TimeWindowEditType.Once ? [] : w.SelectedDays,
+                DaysOfMonth = w.Type == TimeWindowEditType.ExactMonthly ? [w.MonthDay] : [],
                 SpecificDates = w.Type == TimeWindowEditType.Once && w.OnceDate.HasValue
                     ? [w.OnceDate.Value]
                     : [],

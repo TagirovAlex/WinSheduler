@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -8,6 +9,11 @@ namespace WinSheduler.UI;
 
 public partial class MainWindow : Window
 {
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly IpcClient _ipc = new();
     private List<TaskDefinitionViewModel> _tasks = [];
 
@@ -50,7 +56,7 @@ public partial class MainWindow : Window
                     var windowsResp = await _ipc.SendAsync(new IpcRequest { Action = "GetTimeWindows", Payload = t.Id.ToString() });
                     if (windowsResp.Success)
                     {
-                        var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload) ?? [];
+                        var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload, JsonOpts) ?? [];
                         t.ScheduleSummary = windows.Count > 0
                             ? string.Join(", ", windows.Select(w => w.Summary))
                             : "Нет расписания";

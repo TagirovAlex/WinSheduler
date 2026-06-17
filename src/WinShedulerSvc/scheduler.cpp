@@ -14,8 +14,20 @@
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "userenv.lib")
 
+static constexpr size_t MAX_LOG_SIZE = 512 * 1024; // 512 KB
+
 static void log_msg(const std::wstring& log_dir, const std::string& msg) {
-    std::ofstream f(log_dir + L"\\scheduler.log", std::ios::app);
+    auto path = log_dir + L"\\scheduler.log";
+    // Rotate if too large
+    {
+        std::ifstream check(path, std::ios::binary | std::ios::ate);
+        if (check.is_open() && static_cast<size_t>(check.tellg()) > MAX_LOG_SIZE) {
+            check.close();
+            auto bak = log_dir + L"\\scheduler.log.bak";
+            MoveFileExW(path.c_str(), bak.c_str(), MOVEFILE_REPLACE_EXISTING);
+        }
+    }
+    std::ofstream f(path, std::ios::app);
     if (f) {
         auto now = std::chrono::system_clock::now();
         auto now_t = std::chrono::system_clock::to_time_t(now);
@@ -46,6 +58,36 @@ static std::wstring now_to_string() {
     std::ostringstream ss;
     ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
     return u2ws(ss.str());
+}
+
+static std::string detect_pe_architecture(const std::wstring& path) {
+    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return "unknown (file not found)";
+    IMAGE_DOS_HEADER dos = {};
+    DWORD read = 0;
+    BOOL ok = ReadFile(hFile, &dos, sizeof(dos), &read, nullptr);
+    if (!ok || read != sizeof(dos) || dos.e_magic != IMAGE_DOS_SIGNATURE) {
+        CloseHandle(hFile);
+        return "unknown (bad DOS header)";
+    }
+    SetFilePointer(hFile, dos.e_lfanew, nullptr, FILE_BEGIN);
+    DWORD pe_sig = 0;
+    ok = ReadFile(hFile, &pe_sig, sizeof(pe_sig), &read, nullptr);
+    if (!ok || read != sizeof(pe_sig) || pe_sig != IMAGE_NT_SIGNATURE) {
+        CloseHandle(hFile);
+        return "unknown (bad PE signature)";
+    }
+    IMAGE_FILE_HEADER fh = {};
+    ok = ReadFile(hFile, &fh, sizeof(fh), &read, nullptr);
+    CloseHandle(hFile);
+    if (!ok || read != sizeof(fh)) return "unknown (bad COFF header)";
+    switch (fh.Machine) {
+        case IMAGE_FILE_MACHINE_AMD64: return "x64";
+        case IMAGE_FILE_MACHINE_I386:  return "x86";
+        case IMAGE_FILE_MACHINE_ARM64: return "ARM64";
+        case IMAGE_FILE_MACHINE_ARM:   return "ARM";
+        default: return "unknown (machine=" + std::to_string(fh.Machine) + ")";
+    }
 }
 
 static long long time_to_minutes(const std::wstring& time_str) {
@@ -107,24 +149,23 @@ void Scheduler::start() {
 void Scheduler::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
+    if (tick_timer_) { CancelWaitableTimer(tick_timer_); }
 
-    // Don't join the worker thread - it will check running_ and exit on its own.
-    // Trying to join can deadlock if the thread is inside a DB call.
-    // The process will be terminated by SCM anyway.
+    // Join worker thread
+    if (thread_.joinable()) thread_.join();
 
-    // Kill all running processes (try lock, skip if held)
-    if (TryEnterCriticalSection(&lock_)) {
-        auto running = running_map_;
-        running_map_.clear();
-        LeaveCriticalSection(&lock_);
+    // Kill all running processes
+    EnterCriticalSection(&lock_);
+    auto running = running_map_;
+    running_map_.clear();
+    LeaveCriticalSection(&lock_);
 
-        for (auto& [id, rp] : running) {
-            if (rp.process_handle) {
-                TerminateProcess(rp.process_handle, 1);
-                CloseHandle(rp.process_handle);
-            }
-            if (rp.thread_handle) CloseHandle(rp.thread_handle);
+    for (auto& [id, rp] : running) {
+        if (rp.process_handle) {
+            TerminateProcess(rp.process_handle, 1);
+            CloseHandle(rp.process_handle);
         }
+        if (rp.thread_handle) CloseHandle(rp.thread_handle);
     }
 
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
@@ -192,8 +233,6 @@ void Scheduler::tick() {
         std::tm now_tm;
         localtime_s(&now_tm, &now_t);
         int current_minute = now_tm.tm_hour * 60 + now_tm.tm_min;
-
-        log_msg(log_dir_, "tick: checking " + std::to_string(tasks.size()) + " tasks");
 
         for (auto& task : tasks) {
             if (!task.enabled) continue;
@@ -379,6 +418,8 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
     }
     std::wstring command_line = command; // non-const copy needed
 
+    log_msg(log_dir_, "target arch: " + detect_pe_architecture(task.program_path) + " exe=" + ws2u(task.program_path));
+
     if (task.run_as_user.has_value()) {
         // Launch with alternate credentials using LogonUser + CreateProcessAsUser
         std::wstring password;
@@ -475,7 +516,7 @@ DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& out
         return 0;
     }
 
-    log_msg(log_dir_, "CreateProcess OK: pid=" + std::to_string(pi.dwProcessId) + " cmd=" + ws2u(command_line) + " dir=" + ws2u(working_dir));
+    log_msg(log_dir_, "CreateProcess OK: pid=" + std::to_string(pi.dwProcessId) + " cmd=" + ws2u(command_line) + " dir=" + ws2u(working_dir) + " (service=x64)");
 
     CloseHandle(pi.hThread);
     DWORD pid = pi.dwProcessId;
