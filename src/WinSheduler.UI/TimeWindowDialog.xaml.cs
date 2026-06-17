@@ -107,6 +107,11 @@ public partial class TimeWindowDialog : Window
         if (existing.RepeatEveryEnabled)
         {
             RepeatEveryCheck.IsChecked = true;
+            RepeatEveryValueBox.IsEnabled = true;
+            RepeatEveryUnitBox.IsEnabled = true;
+            RepeatDurationBox.IsEnabled = true;
+            RepeatDurationUnitBox.IsEnabled = true;
+            RepeatStopAllCheck.IsEnabled = true;
             var hours = existing.RepeatEveryMinutes >= 60 && existing.RepeatEveryMinutes % 60 == 0;
             RepeatEveryValueBox.Text = hours
                 ? (existing.RepeatEveryMinutes / 60).ToString()
@@ -172,7 +177,7 @@ public partial class TimeWindowDialog : Window
             { MessageBox.Show("Введите время запуска", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
             ExactTimes = DailyTimesBox.Text.Trim();
             if (int.TryParse(DailyIntervalBox.Text, out var di) && di > 0) DayInterval = di;
-            SelectedDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+            SelectedDays = [];
         }
         else if (RadioWeekly.IsChecked == true)
         {

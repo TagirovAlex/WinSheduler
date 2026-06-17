@@ -112,15 +112,25 @@ public partial class TaskEditorWindow : Window
                     model.Type = TimeWindowEditType.ExactMonthly;
                     model.MonthDay = w.DaysOfMonth[0];
                 }
-                else if (w.DaysOfWeek?.Count > 0)
+                else if (w.DaysOfWeek?.Count > 0 && w.DaysOfWeek.Count < 7)
                 {
                     model.Type = TimeWindowEditType.ExactWeekly;
                 }
                 else
                 {
                     model.Type = TimeWindowEditType.Exact;
-                    if (model.SelectedDays.Count == 0)
-                        model.SelectedDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+                }
+
+                if (w.RepeatIntervalMinutes.HasValue && w.Type != "Interval")
+                {
+                    model.RepeatEveryEnabled = true;
+                    model.RepeatEveryMinutes = w.RepeatIntervalMinutes.Value;
+                    if (w.RepeatUntil != null && TimeSpan.TryParse(w.RepeatUntil, out var ru))
+                    {
+                        var firstTime = w.ExactTimes?.FirstOrDefault();
+                        if (firstTime != null && TimeSpan.TryParse(firstTime, out var ft))
+                            model.RepeatDurationMinutes = (int)(ru - ft).TotalMinutes;
+                    }
                 }
 
                 _windows.Add(model);
@@ -301,7 +311,7 @@ public partial class TaskEditorWindow : Window
                 EndTime = w.Type == TimeWindowEditType.Interval ? w.EndTimeStr : null,
                 RepeatIntervalMinutes = w.Type == TimeWindowEditType.Interval
                     ? (int.TryParse(w.RepeatIntervalStr, out var ri) ? ri : null)
-                    : null,
+                    : (w.RepeatEveryEnabled && w.RepeatEveryMinutes > 0 ? w.RepeatEveryMinutes : null),
                 StartDate = w.StartDate != null && DateTime.TryParse(w.StartDate, out var sd) ? sd : null,
                 EndDate = w.EndDate != null && DateTime.TryParse(w.EndDate, out var ed) ? ed : null,
                 RepeatUntil = w.RepeatUntil,
