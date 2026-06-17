@@ -97,17 +97,6 @@ public partial class TaskEditorWindow : Window
                     RepeatUntil = w.RepeatUntil,
                 };
 
-                if (w.RepeatIntervalMinutes.HasValue && w.Type != "Interval")
-                {
-                    model.RepeatEveryEnabled = true;
-                    model.RepeatEveryMinutes = w.RepeatIntervalMinutes.Value;
-                    if (w.RepeatUntil != null && DateTime.TryParse(w.RepeatUntil, out var ru))
-                    {
-                        var baseDt = w.StartDate ?? DateTime.Today;
-                        model.RepeatDurationMinutes = (int)(ru - baseDt).TotalMinutes;
-                    }
-                }
-
                 if (w.Type == "Interval")
                 {
                     model.Type = TimeWindowEditType.Interval;
@@ -312,14 +301,10 @@ public partial class TaskEditorWindow : Window
                 EndTime = w.Type == TimeWindowEditType.Interval ? w.EndTimeStr : null,
                 RepeatIntervalMinutes = w.Type == TimeWindowEditType.Interval
                     ? (int.TryParse(w.RepeatIntervalStr, out var ri) ? ri : null)
-                    : (w.RepeatEveryEnabled && w.RepeatEveryMinutes > 0 ? w.RepeatEveryMinutes : null),
+                    : null,
                 StartDate = w.StartDate != null && DateTime.TryParse(w.StartDate, out var sd) ? sd : null,
                 EndDate = w.EndDate != null && DateTime.TryParse(w.EndDate, out var ed) ? ed : null,
-                RepeatUntil = w.RepeatEveryEnabled && w.RepeatDurationMinutes > 0
-                    ? (w.ExactTimesStr != null && w.ExactTimesStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) is { Length: > 0 } times && TimeSpan.TryParse(times[0], out var baseTime)
-                        ? (baseTime + TimeSpan.FromMinutes(w.RepeatDurationMinutes)).ToString(@"hh\:mm")
-                        : null)
-                    : w.RepeatUntil,
+                RepeatUntil = w.RepeatUntil,
                 DaysOfWeek = w.Type == TimeWindowEditType.Once ? [] : w.SelectedDays,
                 DaysOfMonth = w.Type == TimeWindowEditType.ExactMonthly ? [w.MonthDay] : [],
                 SpecificDates = w.Type == TimeWindowEditType.Once && w.OnceDate.HasValue

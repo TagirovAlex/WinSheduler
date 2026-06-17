@@ -341,14 +341,14 @@ void IpcServer::start() {
 void IpcServer::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
-    // Cancel listener pipe to break ConnectNamedPipe
     if (listener_pipe_ != INVALID_HANDLE_VALUE) {
         CancelIo(listener_pipe_);
     }
-    // Don't join threads - they may be blocked on pipe I/O.
-    // ExitProcess(0) in service_main will terminate them.
     {
         std::lock_guard<std::mutex> lock(client_threads_mutex_);
+        for (auto& t : client_threads_) {
+            if (t.joinable()) t.detach();
+        }
         client_threads_.clear();
     }
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
