@@ -103,5 +103,8 @@
   <ItemGroup>
     <ClInclude Include="*.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WinShedulerSvc.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
