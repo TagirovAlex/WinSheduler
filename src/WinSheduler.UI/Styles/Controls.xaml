@@ -273,6 +273,18 @@
         </Setter>
     </Style>
 
+    <Style x:Key="FormComboBoxItem" TargetType="ComboBoxItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+        <Setter Property="Padding" Value="8,4" />
+        <Style.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Background" Value="{DynamicResource App_SelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource App_SelectionTextBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <Style x:Key="FormComboBox" TargetType="ComboBox">
         <Setter Property="Height" Value="{StaticResource Control_Height}" />
         <Setter Property="MinWidth" Value="120" />
@@ -286,6 +298,118 @@
         <Setter Property="BorderBrush" Value="{DynamicResource App_ControlBorderBrush}" />
         <Setter Property="BorderThickness" Value="{StaticResource Border_Width}" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource Control_FocusVisual}" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource FormComboBoxItem}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource Corner_Radius}"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="24" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Left"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                                <Path Grid.Column="1"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Data="M 0 0 L 4 4 L 8 0"
+                                      Stroke="{DynamicResource App_SecondaryTextBrush}"
+                                      StrokeThickness="1.5" />
+                            </Grid>
+                        </Border>
+                        <ToggleButton x:Name="Toggle"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Focusable="False"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Popup x:Name="PART_Popup"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               Placement="Bottom"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Fade">
+                            <Border Background="{DynamicResource App_SurfaceBrush}"
+                                    BorderBrush="{DynamicResource App_BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{StaticResource Corner_Radius}"
+                                    MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Margin="0,2,0,0">
+                                <ScrollViewer>
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_SecondaryTextBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_FocusBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource App_ControlDisabledBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource App_DisabledTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="StatusBarStyle" TargetType="StatusBar">
+        <Setter Property="Background" Value="{DynamicResource App_ToolbarBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App_BorderBrush}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+
+    <Style TargetType="ListViewItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+        <Setter Property="Padding" Value="4" />
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource App_SelectionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource App_SelectionTextBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource App_SurfaceBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App_BorderBrush}" />
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+    </Style>
+
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource App_SurfaceBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource App_BorderBrush}" />
     </Style>
 
     <Style x:Key="FormCheckBox" TargetType="CheckBox">

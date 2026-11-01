@@ -164,7 +164,7 @@ foreach ($entry in $entries) {
     $guid = Get-ComponentGuid -Text $entry.Relative
     $directory = Get-DirectoryId $entry.RelativeDirectory
 
-    $script:lines.Add("      <Component Id=""$componentId"" Directory=""$directory"" Guid=""$guid"" Win64=""yes"">")
+    $script:lines.Add("      <Component Id=""$componentId"" Directory=""$directory"" Guid=""$guid"" Bitness=""always64"">")
     $script:lines.Add("        <File Id=""$fileId"" Source=""$(ConvertTo-XmlText $entry.FullName)"" KeyPath=""yes"" />")
     $script:lines.Add('      </Component>')
 }

@@ -9,23 +9,23 @@
     <!-- Нативная DLL действий; собирается из ./installer/ca. -->
     <Binary Id="WinShedulerCA" SourceFile="$(var.CaDll)" />
 
-    <CustomAction Id="ValidatePaths" BinaryKey="WinShedulerCA" DllEntry="ValidatePaths"
+    <CustomAction Id="ValidatePaths" BinaryRef="WinShedulerCA" DllEntry="ValidatePaths"
                   Execute="immediate" Return="check" />
-    <CustomAction Id="ApplySecurity" BinaryKey="WinShedulerCA" DllEntry="ApplySecurity"
+    <CustomAction Id="ApplySecurity" BinaryRef="WinShedulerCA" DllEntry="ApplySecurity"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="ConfigureService" BinaryKey="WinShedulerCA" DllEntry="ConfigureService"
+    <CustomAction Id="ConfigureService" BinaryRef="WinShedulerCA" DllEntry="ConfigureService"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="MigrateData" BinaryKey="WinShedulerCA" DllEntry="MigrateData"
+    <CustomAction Id="MigrateData" BinaryRef="WinShedulerCA" DllEntry="MigrateData"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="RemoveData" BinaryKey="WinShedulerCA" DllEntry="RemoveData"
+    <CustomAction Id="RemoveData" BinaryRef="WinShedulerCA" DllEntry="RemoveData"
                   Execute="deferred" Impersonate="no" Return="check" />
-    <CustomAction Id="LaunchUi" BinaryKey="WinShedulerCA" DllEntry="LaunchUi"
+    <CustomAction Id="LaunchUi" BinaryRef="WinShedulerCA" DllEntry="LaunchUi"
                   Execute="deferred" Impersonate="yes" Return="ignore" />
   </Fragment>
 
   <Fragment>
     <ComponentGroup Id="ServiceComponents">
-      <Component Id="ServiceComponent" Guid="{5A1D2E7C-3B48-4F69-A0C2-8D4E6F1B3A57}" Win64="yes">
+      <Component Id="ServiceComponent" Guid="{5A1D2E7C-3B48-4F69-A0C2-8D4E6F1B3A57}" Bitness="always64">
         <File Id="ServiceExe" Source="$(var.ServiceExe)" KeyPath="yes" />
         <ServiceInstall Id="ServiceInstall"
                         Name="WinSheduler"
@@ -43,7 +43,7 @@
 
   <Fragment>
     <ComponentGroup Id="DocumentationComponents">
-      <Component Id="DocumentationComponent" Guid="{2F6B9C4D-8E31-4A57-B0D9-6C3A1E5F7B28}" Win64="yes">
+      <Component Id="DocumentationComponent" Guid="{2F6B9C4D-8E31-4A57-B0D9-6C3A1E5F7B28}" Bitness="always64">
         <File Id="LicenseFile" Source="$(var.LicenseTxt)" />
         <File Id="ThirdPartyNoticesFile" Source="$(var.ThirdPartyNotices)" KeyPath="yes" />
       </Component>
@@ -52,7 +52,7 @@
 
   <Fragment>
     <ComponentGroup Id="ShortcutComponents">
-      <Component Id="ApplicationShortcutComponent" Guid="{9C4E7A2B-1D65-4F08-8B3A-5E7C9D0F1A46}" Win64="yes">
+      <Component Id="ApplicationShortcutComponent" Guid="{9C4E7A2B-1D65-4F08-8B3A-5E7C9D0F1A46}" Bitness="always64">
         <Shortcut Id="StartMenuShortcut"
                   Name="WinSheduler"
                   Description="Планировщик задач WinSheduler"

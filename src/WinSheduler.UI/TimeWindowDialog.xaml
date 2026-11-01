@@ -5,7 +5,9 @@
         Title="{loc:Loc Trigger_Title}"
         Width="540" MinWidth="460"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource App_BackgroundBrush}"
+        Foreground="{DynamicResource App_ForegroundBrush}">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

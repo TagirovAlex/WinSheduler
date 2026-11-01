@@ -5,6 +5,8 @@
         Title="{loc:Loc History_Title}" Height="520" Width="820"
         MinHeight="360" MinWidth="640"
         WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource App_BackgroundBrush}"
+        Foreground="{DynamicResource App_ForegroundBrush}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid Margin="12">
         <Grid.RowDefinitions>

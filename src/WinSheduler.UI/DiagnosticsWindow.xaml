@@ -4,7 +4,9 @@
         xmlns:loc="clr-namespace:WinSheduler.UI.Localization"
         Title="{loc:Loc Diagnostics_Title}" Width="620" MinWidth="480"
         SizeToContent="Height"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource App_BackgroundBrush}"
+        Foreground="{DynamicResource App_ForegroundBrush}">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

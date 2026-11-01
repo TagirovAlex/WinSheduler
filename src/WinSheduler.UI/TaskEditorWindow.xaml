@@ -5,6 +5,8 @@
         Title="{loc:Loc Editor_TitleNew}" Height="560" Width="660"
         MinHeight="400" MinWidth="540"
         WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource App_BackgroundBrush}"
+        Foreground="{DynamicResource App_ForegroundBrush}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid Margin="12">
         <Grid.RowDefinitions>
