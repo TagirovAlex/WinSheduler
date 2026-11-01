@@ -1,0 +1,47 @@
+{
+  "id": "2b7f4a10-6c3d-4f21-9b8e-0a1c2d3e4f50",
+  "name": "Ночной бэкап",
+  "description": "Копирование каталога данных",
+  "enabled": true,
+  "programPath": "d:/scripts/backup.cmd",
+  "arguments": "--quiet",
+  "workingDirectory": "d:/scripts",
+  "windowStyle": "Hidden",
+  "sessionMode": "Headless",
+  "runAsUser": null,
+  "runAsDomain": null,
+  "hasPassword": false,
+  "onError": "Retry",
+  "retryCount": 2,
+  "onOverlap": "WaitComplete",
+  "timeoutMinutes": 60,
+  "killOnTimeout": true,
+  "logOutput": true,
+  "maxHistoryRecords": 1000,
+  "timeWindows": [
+    {
+      "id": "5c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+      "kind": "Daily",
+      "startDate": "2026-11-01",
+      "endDate": null,
+      "daysOfWeek": [],
+      "daysOfMonth": [],
+      "specificDates": [],
+      "exactTimes": ["02:00"],
+      "startTime": null,
+      "endTime": null,
+      "repeatIntervalMinutes": null,
+      "repeatUntil": null,
+      "dayInterval": 1,
+      "weekInterval": 1,
+      "monthInterval": 1
+    }
+  ],
+  "createdAt": "2026-11-01T09:00:00Z",
+  "modifiedAt": "2026-11-01T09:00:00Z",
+  "owner": {
+    "isOwn": true,
+    "label": "Вы"
+  },
+  "isOwn": true
+}

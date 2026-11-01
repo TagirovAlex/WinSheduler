@@ -1,0 +1,11 @@
+{
+  "running": true,
+  "isAdmin": false,
+  "isOperator": true,
+  "canManageSystemTasks": false,
+  "serviceVersion": "1.2.0",
+  "startedAt": "2026-11-01T09:00:00Z",
+  "taskCount": 12,
+  "runningTaskCount": 2,
+  "dbReady": true
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "comment": "Сопоставление фикстур и JSON-схем из ./docs/contracts/schemas. Схемы ведёт Architect; пока файла нет, проверка пропускается.",
+  "fixtures": [
+    { "file": "ipc-request.json", "schema": "IpcRequest.schema.json" },
+    { "file": "ipc-response-ok.json", "schema": "IpcResponse.schema.json" },
+    { "file": "ipc-response-error.json", "schema": "IpcResponse.schema.json" },
+    { "file": "ipc-legacy-request.json", "schema": "IpcLegacyRequest.schema.json" },
+    { "file": "ipc-legacy-response.json", "schema": "IpcLegacyResponse.schema.json" },
+    { "file": "task-dto.json", "schema": "TaskDto.schema.json" },
+    { "file": "time-window-dto.json", "schema": "TimeWindowDto.schema.json" },
+    { "file": "run-history-dto.json", "schema": "RunHistoryDto.schema.json" },
+    { "file": "service-status.json", "schema": "ServiceStatus.schema.json" }
+  ]
+}
