@@ -162,7 +162,7 @@
                                 Style="{StaticResource ToolbarButton}" Click="EditTimeBtn_Click"
                                 Margin="0,0,6,0" IsEnabled="False">
                             <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource IconSchedule}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <Image Source="{StaticResource IconEditSchedule}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                                 <TextBlock Text="{loc:Loc Common_Edit}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>

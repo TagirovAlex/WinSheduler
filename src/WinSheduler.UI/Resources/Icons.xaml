@@ -9,7 +9,7 @@
 
     <BitmapImage x:Key="IconRefresh" UriSource="pack://application:,,,/;component/Resources/Icons/refresh.png"/>
     <BitmapImage x:Key="IconAdd" UriSource="pack://application:,,,/;component/Resources/Icons/add.png"/>
-    <BitmapImage x:Key="IconEdit" UriSource="pack://application:,,,/;component/Resources/Icons/task.png"/>
+    <BitmapImage x:Key="IconEdit" UriSource="pack://application:,,,/;component/Resources/Icons/edit_task.png"/>
     <BitmapImage x:Key="IconDelete" UriSource="pack://application:,,,/;component/Resources/Icons/delete.png"/>
     <BitmapImage x:Key="IconHistory" UriSource="pack://application:,,,/;component/Resources/Icons/journal.png"/>
     <BitmapImage x:Key="IconBrowse" UriSource="pack://application:,,,/;component/Resources/Icons/open_folder.png"/>
@@ -31,5 +31,7 @@
     <BitmapImage x:Key="IconSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/schedule.png"/>
     <BitmapImage x:Key="IconStop" UriSource="pack://application:,,,/;component/Resources/Icons/stop.png"/>
     <BitmapImage x:Key="IconTask" UriSource="pack://application:,,,/;component/Resources/Icons/task.png"/>
+    <BitmapImage x:Key="IconEditTask" UriSource="pack://application:,,,/;component/Resources/Icons/edit_task.png"/>
+    <BitmapImage x:Key="IconEditSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/edit_schedule.png"/>
 
 </ResourceDictionary>

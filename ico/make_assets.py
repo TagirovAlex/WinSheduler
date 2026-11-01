@@ -258,6 +258,15 @@ def plus_badge(cx=23.5, cy=23.5, r=7):
     return [C(cx, cy, r, fill=GREEN, stroke=WHITE, sw=2),
             L([(cx, cy-3.4), (cx, cy+3.4)], WHITE, 2.4), L([(cx-3.4, cy), (cx+3.4, cy)], WHITE, 2.4)]
 
+def pencil_badge(cx=23.5, cy=23.5, r=7):
+    return [C(cx, cy, r, fill=BLUE, stroke=WHITE, sw=2),
+            P([(cx-3.0, cy+3.0), (cx+2.0, cy-2.0), (cx+3.0, cy-1.0), (cx-2.0, cy+4.0)],
+              fill=WHITE, stroke=WHITE, sw=0.8),
+            P([(cx-3.0, cy+3.0), (cx-4.0, cy+5.0), (cx-2.0, cy+4.0)],
+              fill=GRAY_L, stroke=GRAY_L, sw=0.6),
+            P([(cx+2.0, cy-2.0), (cx+2.8, cy-2.8), (cx+3.8, cy-1.8), (cx+3.0, cy-1.0)],
+              fill=RED, stroke=RED, sw=0.6)]
+
 def task(dx=0, line=True):
     s = [P([(7, 3), (19, 3), (25, 9), (25, 29), (7, 29)], fill=WHITE, stroke=GRAY, sw=1.6),
          P([(19, 3), (19, 9), (25, 9)], fill=GRAY_L, stroke=GRAY, sw=1.2),
@@ -291,6 +300,8 @@ ICONS = {
     "app":          (64, mark()),
     "add_task":     (32, task(-2, line=False) + plus_badge()),
     "add_schedule": (32, clock(14, 14, 10.5) + plus_badge()),
+    "edit_task":    (32, task(line=False) + pencil_badge()),
+    "edit_schedule":(32, clock(14, 14, 10.5) + pencil_badge()),
     "start":        (32, [P([(9, 7), (25, 16), (9, 25)], fill=GREEN, stroke=GREEN, sw=3)]),
     "stop":         (32, [R(7, 7, 18, 18, 3.5, fill=RED)]),
     "pause":        (32, [R(8, 7, 5.5, 18, 1.8, fill=AMBER), R(18.5, 7, 5.5, 18, 1.8, fill=AMBER)]),
@@ -323,6 +334,7 @@ ICONS = {
 }
 CAPTIONS = {
     "app": "Главная форма", "add_task": "Добавить задание", "add_schedule": "Добавить расписание",
+    "edit_task": "Изменить задание", "edit_schedule": "Изменить расписание",
     "start": "Старт", "stop": "Стоп", "pause": "Пауза", "refresh": "Обновить", "add": "Добавить",
     "delete": "Удалить", "journal": "Журнал", "run": "Запустить", "open_folder": "Открыть папку",
     "save": "Сохранить", "cancel": "Отмена", "calendar": "Выбор периода",

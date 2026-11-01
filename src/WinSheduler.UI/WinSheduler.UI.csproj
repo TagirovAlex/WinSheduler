@@ -27,6 +27,8 @@
     <Resource Include="Resources\Icons\schedule.png" />
     <Resource Include="Resources\Icons\stop.png" />
     <Resource Include="Resources\Icons\task.png" />
+    <Resource Include="Resources\Icons\edit_task.png" />
+    <Resource Include="Resources\Icons\edit_schedule.png" />
   </ItemGroup>
 
   <ItemGroup>
