@@ -49,6 +49,7 @@ UAC: неэлевированный администратор имеет filter
 
 - Имя: `//./pipe/WinSheduler`.
 - Режим: byte, `PIPE_REJECT_REMOTE_CLIENTS`.
+- SID группы установщик пишет в `HKLM/SOFTWARE/WinSheduler`, значение `GroupSid`; служба читает его один раз при старте и кэширует. Fallback — `LookupAccountName`, затем доступ только `SYSTEM` + `Administrators`.
 - SDDL (пример; точный SID группы подставляет установщик):
   - `SYSTEM` — полный доступ;
   - `Administrators` — полный доступ;

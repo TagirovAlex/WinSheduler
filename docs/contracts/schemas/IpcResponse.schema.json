@@ -33,6 +33,6 @@
         "message": { "type": "string", "minLength": 1 }
       }
     },
-    "payload": { "type": ["object", "null"] }
+    "payload": { "type": ["object", "array", "null"] }
   }
 }

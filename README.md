@@ -1,237 +1,193 @@
 # WinSheduler
 
-**Windows Scheduler** — собственная служба планирования задач для Windows, полностью независимая от встроенного Task Scheduler.
+Собственный планировщик задач для Windows: привилегированная служба, WPF-интерфейс и локальный IPC. Не зависит от встроенного Task Scheduler.
 
-> ⚠️ Встроенный планировщик Windows (Task Scheduler) катастрофически ненадёжен. WinSheduler реализует свой движок планирования, гарантирующий предсказуемое выполнение задач по расписанию.
-
----
+Текущая версия — **1.2.0**. Режим выполнения задач — **headless** (без видимого окна); интерактивный режим зарезервирован на будущее.
 
 ## Возможности
 
-- ✅ Независимый движок планирования — никаких зависимостей от Task Scheduler
-- ✅ Неограниченное количество задач с произвольным числом триггеров
-- ✅ 5 типов триггеров: Однократно, Ежедневно, Еженедельно, Ежемесячно, Интервал
-- ✅ Точное время запуска — список конкретных моментов (09:00, 13:00, 18:00)
-- ✅ Запуск задач под указанным пользователем (логин/пароль)
-- ✅ Шифрование учётных данных через DPAPI (ключ привязан к машине)
-- ✅ SQLite — встраиваемая БД, без серверов
-- ✅ WPF-интерфейс с вкладками: Основные / Расписание / Параметры
-- ✅ Иконки в ресурсах приложения (Segoe MDL2 Assets)
-- ✅ Детальный журнал запусков с ротацией
-- ✅ Индивидуальные настройки: таймаут, поведение при ошибках, логирование
-- ✅ Windows-служба (SYSTEM) или standalone режим
-
----
+- 5 типов триггеров: однократно, ежедневно, еженедельно, ежемесячно, интервал.
+- Точные времена, интервалы N дней/недель/месяцев, диапазоны дат, конкретные даты, повтор до указанного момента.
+- Планировщик с состоянием слотов: задача не запускается дважды в одну минуту.
+- Политики наложения: ждать завершения, пропустить, запустить параллельно.
+- Таймауты, завершение дерева процессов, повторы при ошибке.
+- Запуск от имени пользователя (только администратор) или от имени вызывающего пользователя.
+- Журнал запусков, аудит действий, ротация истории и файлов вывода.
+- SQLite (WAL), миграция схемы v1 → v2.
+- WPF-интерфейс: поиск, фильтры, сортировка, горячие клавиши, локальные даты, диагностика.
+- Локальная группа `WinSheduler Users` для доступа к IPC без прав администратора.
+- Установщик WiX MSI с поддержкой кастомных каталогов и ACL.
 
 ## Архитектура
 
 ```
-┌──────────────────────────────────────────────┐
-│  WinSheduler.UI (C# WPF, .NET 8)             │
-│  GUI с вкладками, иконки, триггеры            │
-│  Требует .NET 8 Desktop Runtime              │
-│       ↕ Named Pipes (\\.\pipe\WinSheduler)   │
-├──────────────────────────────────────────────┤
-│  WinShedulerSvc.exe (C++ Win32, /MT)         │
-│  Планировщик, ~1.5 MB, без .NET Runtime      │
-│  1-секундный тик, проверка всех задач        │
-│       ↕                                       │
-│  SQLite (data\scheduler.db, WAL journal)     │
-│       ↕                                       │
-│  DPAPI (CryptProtectData / LocalMachine)     │
-│       ↕                                       │
-│  Запущенные процессы (CreateProcessW)        │
-└──────────────────────────────────────────────┘
+WinSheduler.UI.exe (WPF, .NET 8, self-contained)
+  │  named pipe //./pipe/WinSheduler, IPC v1
+  │  4 байта длины LE + UTF-8 JSON
+  ▼
+WinShedulerSvc.exe (C++ Win32, /MT)
+  ├─ планировщик: trigger_engine, trigger_state, process_runner
+  ├─ IPC: ipc_frame, auth_policy, auth_token, audit_log
+  ├─ SQLite: migrations, db_repository, db_stmt
+  └─ процессы задач (headless)
 ```
 
----
+- Служба работает от `LocalSystem` в session 0.
+- UI работает с правами обычного пользователя (`asInvoker`).
+- Обмен — только локальный именованный канал; удалённые клиенты отклоняются.
+- Данные и логи — в `%ProgramData%/WinSheduler`, программа — в `%ProgramFiles%/WinSheduler` (по умолчанию).
 
-## Модель данных
+## Модель доступа
 
-### Task (Задача)
+| Операция | `WinSheduler Users` | Администратор |
+|----------|---------------------|---------------|
+| Подключение к IPC | да | да |
+| Свои задачи: просмотр, создание, изменение, удаление, запуск | да | да |
+| Чужие задачи | нет | да |
+| Запуск от `SYSTEM` или другого пользователя | нет | да |
+| Аудит, настройки, управление службой | нет | да |
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| Id | `Guid` | Уникальный идентификатор |
-| Name | `string` | Название задачи |
-| Description | `string` | Описание |
-| Enabled | `bool` | Включена / отключена |
-| ProgramPath | `string` | Путь к исполняемому файлу |
-| Arguments | `string` | Аргументы командной строки |
-| WorkingDirectory | `string` | Рабочая папка |
-| WindowStyle | `WindowStyle` | Normal / Hidden / Minimized / Maximized |
-| RunAsUser | `RunAsCredentials` | Учётные данные для запуска |
-| OnError | `OnErrorAction` | SkipNext / Retry / Fail |
-| OnOverlap | `OnOverlapAction` | WaitComplete / WaitNext / StartAnother |
-| TimeoutMinutes | `int?` | Макс. время выполнения (null — без лимита) |
-| KillOnTimeout | `bool` | Завершать при таймауте |
-| LogOutput | `bool` | Сохранять stdout/stderr |
-| MaxHistoryRecords | `int` | Лимит записей журнала (по умолчанию 50) |
+Не-администратор запускает задачи **токеном своего пользователя**, поэтому членство в группе не повышает привилегии. Администратор без elevation обрабатывается как оператор; для привилегированных действий UI перезапускается через `runas`.
 
-### TimeWindow (Триггер)
+## Требования
 
-5 типов триггеров:
+- Windows 10 1809+ / Windows Server 2019+ (x64).
+- Для сборки: Visual Studio 2022 Build Tools (MSVC v143), .NET 8 SDK.
+- Для MSI: WiX Toolset 5 (`dotnet tool install --global wix`).
+- Для запуска UI: .NET Runtime не требуется (self-contained).
 
-| Тип | Описание | Поля |
-|-----|----------|------|
-| **Однократно** | Запуск в указанную дату и время | OnceDate, OnceTime |
-| **Ежедневно** | Каждые N дней в указанные времена | DayInterval, ExactTimes |
-| **Еженедельно** | Каждые N недель в указанные дни и времена | WeekInterval, DaysOfWeek, ExactTimes |
-| **Ежемесячно** | В указанное число месяца каждые N месяцев | MonthDay, MonthInterval, ExactTimes |
-| **Интервал** | Повтор каждые N минут в диапазоне времени | StartTime, EndTime, RepeatIntervalMinutes |
+## Сборка
 
-Общие поля:
-- `StartDate` / `EndDate` — диапазон дат действия
-- `RepeatUntil` — время последнего запуска (для интервала)
-- `DaysOfWeek` — дни недели
-- `DaysOfMonth` — числа месяца
-- `SpecificDates` — конкретные даты (для однократного)
+Все команды — из корня проекта.
 
-### RunHistory (Журнал)
+```powershell
+# Сборка решения
+./scripts/build.ps1
 
-| Поле | Описание |
-|------|----------|
-| StartTime | Время запуска |
-| EndTime | Время завершения |
-| Status | Running / Completed / Failed / Killed / Timeout |
-| ExitCode | Код возврата процесса |
-| ErrorMessage | Текст ошибки |
+# Тесты
+./scripts/test.ps1
 
----
+# Полный локальный gate: сборка, тесты, формат, контракты, схемы, smoke
+./scripts/verify.ps1 -Scope integration
 
-## Поведение задач
+# Установщик: служба + self-contained UI (+ MSI, если установлен WiX)
+./scripts/installer/build.ps1
+```
 
-### Ошибка запуска (OnError)
+Отдельные тесты:
 
-| Значение | Поведение |
-|----------|-----------|
-| `SkipNext` | Пропустить, ждать следующий |
-| `Retry` | Повторить N раз с интервалом |
-| `Fail` | Прекратить, зафиксировать ошибку |
-
-### Наложение запусков (OnOverlap)
-
-| Значение | Поведение |
-|----------|-----------|
-| `WaitComplete` | Ждать завершения текущего |
-| `WaitNext` | Пропустить запуск |
-| `StartAnother` | Запустить параллельно |
-
-### Таймаут
-
-При превышении `TimeoutMinutes`:
-- `KillOnTimeout = true` → процесс завершается, статус `Timeout`
-- `KillOnTimeout = false` → процесс продолжает работу, предупреждение в журнал
-
----
+```powershell
+./tests/scheduler/run.ps1
+./tests/db/run.ps1
+./tests/ipc/run.ps1
+dotnet test ./tests/ui/WinSheduler.UI.Tests.csproj -c Release
+```
 
 ## Установка
 
-### Требования
-
-- Windows 10 x64 / Windows Server 2016+
-- .NET 8 Desktop Runtime (для UI)
-- Visual Studio 2022 (для сборки C++ компонента)
-
-### Сборка
-
-```powershell
-# Полная сборка (C++ + C#)
-.\publish.ps1
-
-# Или вручную:
-# C++ служба
-msbuild src\WinShedulerSvc\WinShedulerSvc.vcxproj /p:Configuration=Release /p:Platform=x64
-
-# C# UI
-dotnet publish src\WinSheduler.UI\WinSheduler.UI.csproj -c Release -o published\ui
+```bat
+msiexec /i ./artifacts/WinSheduler.msi /qn
 ```
 
-### Установка службы
+Кастомные каталоги:
 
-```powershell
-# Запуск от администратора
-.\deploy.bat
+```bat
+msiexec /i ./artifacts/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /qn
 ```
 
-Или вручную:
-```powershell
-sc create WinSheduler binPath="C:\WinSheduler\published\service\WinShedulerSvc.exe" start=auto DisplayName="WinSheduler Task Scheduler"
-sc start WinSheduler
+Свойства MSI: `INSTALLDIR`, `DATADIR`, `OLDDATADIR`, `CREATEGROUP`, `ADDINSTALLERTOGROUP`, `KEEPDATA`, `ALLOWUNSAFEPATH`.
+
+Установщик:
+
+- создаёт службу `WinSheduler` (auto delayed, recovery, preshutdown);
+- создаёт локальную группу `WinSheduler Users`;
+- выставляет ACL на программу и данные;
+- переносит старую БД из `./published/service/data`, если она найдена;
+- сохраняет данные при удалении по умолчанию.
+
+Удаление:
+
+```bat
+msiexec /x ./artifacts/WinSheduler.msi /qn
 ```
 
-### Удаление службы
+Старый `./deploy.bat` выведен из production-процесса: он регистрирует службу из каталога, доступного на запись пользователям.
 
-```powershell
-sc stop WinSheduler
-sc delete WinSheduler
+## Данные и логи
+
+```
+%ProgramFiles%/WinSheduler/service/WinShedulerSvc.exe
+%ProgramFiles%/WinSheduler/ui/WinSheduler.UI.exe
+%ProgramData%/WinSheduler/data/scheduler.db
+%ProgramData%/WinSheduler/logs/scheduler.log
+%ProgramData%/WinSheduler/logs/output/<taskId>/<historyId>.log
 ```
 
-### Standalone режим (без службы)
+Пароли учётных записей шифруются в службе через DPAPI `CRYPTPROTECT_SYSTEM`; UI никогда не получает зашифрованный blob и не шифрует пароль сам.
 
-```powershell
-.\service\WinShedulerSvc.exe --standalone
+## IPC
+
+Формат: 4 байта длины (little-endian) + UTF-8 JSON.
+
+```json
+{
+  "v": 1,
+  "id": "8f1c2c1e-4a0b-4c1e-9a6e-1f2d3c4b5a60",
+  "action": "GetDashboard",
+  "payload": {}
+}
 ```
 
----
+Ответ:
+
+```json
+{
+  "v": 1,
+  "id": "8f1c2c1e-4a0b-4c1e-9a6e-1f2d3c4b5a60",
+  "ok": true,
+  "error": null,
+  "payload": {}
+}
+```
+
+Основные действия: `Ping`, `GetStatus`, `GetDashboard`, `ListTasks`, `GetTask`, `GetTimeWindows`, `GetHistory`, `CreateTask`, `UpdateTask`, `DeleteTask`, `SetTaskEnabled`, `RunNow`, `GetAudit`, `GetSettings`, `SetSettings`.
+
+Полный контракт — `./docs/contracts/IPC.md`.
 
 ## Структура проекта
 
 ```
-WinSheduler/
-├── src/
-│   ├── WinShedulerSvc/           # C++ служба (Win32, SQLite)
-│   │   ├── *.cpp, *.h            # Исходный код
-│   │   ├── sqlite3.c, sqlite3.h  # SQLite amalgamation
-│   │   └── WinShedulerSvc.vcxproj
-│   ├── WinSheduler.UI/           # WPF-приложение (C# .NET 8)
-│   │   ├── MainWindow.xaml       # Главное окно
-│   │   ├── TaskEditorWindow.xaml # Редактор задач (вкладки)
-│   │   ├── TimeWindowDialog.xaml # Диалог создания триггера
-│   │   ├── HistoryWindow.xaml    # Журнал запусков
-│   │   ├── IpcClient.cs          # Named Pipe клиент
-│   │   ├── Resources/Icons/      # PNG иконки (Build Action: Resource)
-│   │   └── WinSheduler.UI.csproj
-│   └── WinSheduler.Shared/       # Модели, контракты (C#)
-├── published/                    # Готовые сборки
-│   ├── service/                  # WinShedulerSvc.exe + data/ + logs/
-│   └── ui/                       # WinSheduler.UI.exe + DLL
-├── deploy.bat                    # Установка службы
-├── publish.ps1                   # Скрипт сборки
-├── WinSheduler.sln               # Visual Studio решение
-├── SPECIFICATION.md              # Полная спецификация
-└── README.md
+./src/WinShedulerSvc/     C++ служба: планировщик, IPC, SQLite
+./src/WinSheduler.UI/     WPF-интерфейс
+./src/WinSheduler.Shared/ общие модели
+./installer/              WiX MSI и нативные действия установщика
+./scripts/                сборка, тесты, gate, установщик
+./tests/                  scheduler, db, ipc, ui, contract, e2e
+./docs/contracts/         IPC, DB, безопасность, установка, UI
+./docs/plan/              план работ, правила агентов, риски, вопросы
+./docs/status/            статусы треков и gate
 ```
 
----
+## Документация
 
-## IPC Протокол
+- `./docs/contracts/IPC.md` — протокол.
+- `./docs/contracts/DB.md` — схема и миграции.
+- `./docs/contracts/SECURITY.md` — модель доверия и права.
+- `./docs/contracts/INSTALL.md` — установка и ACL.
+- `./docs/contracts/UI.md` — дизайн-система и экраны.
+- `./docs/plan/TASKS.md` — доска задач.
+- `./docs/plan/AGENTS.md` — правила работы агентов.
+- `./docs/status/gate.md` — результаты локального gate.
+- `./docs/adr/` — принятые решения.
 
-Named Pipe `\\.\pipe\WinSheduler`, message-mode, JSON.
+## Ограничения v1
 
-| Действие | Описание |
-|----------|----------|
-| `GetStatus` | Статус службы |
-| `ListTasks` | Список всех задач |
-| `GetTask` | Детали задачи |
-| `GetTimeWindows` | Триггеры задачи |
-| `GetHistory` | Журнал запусков |
-| `CreateTask` | Создание задачи |
-| `UpdateTask` | Обновление задачи |
-| `DeleteTask` | Удаление задачи |
-| `EnableTask` / `DisableTask` | Включение / отключение |
-
----
-
-## Безопасность
-
-- **Пароли** — DPAPI (`CryptProtectData` с `CRYPTPROTECT_LOCAL_MACHINE`)
-- **IPC** — Named Pipe, только локально
-- **Память** — `SecureZeroMemory()` после использования пароля
-- **Служба** — работает под SYSTEM
-
----
+- Только headless-задачи: окно процесса не отображается на рабочем столе пользователя.
+- Интерактивный режим (`session_mode = ActiveUser`) зарезервирован, но не реализован.
+- MSI собирается только при установленном WiX; без него доступна публикация бинарников.
+- Подпись кода отложена: выпускается `SHA256SUMS.txt`.
+- CI отсутствует: проверки выполняются локально через `./scripts/verify.ps1`.
 
 ## Лицензия
 
-MIT
+MIT.
