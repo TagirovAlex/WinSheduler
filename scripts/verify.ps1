@@ -72,7 +72,9 @@ function Invoke-Step {
     Write-Host "==> $Name" -ForegroundColor Cyan
     try {
         if ($ShowOutput) {
-            & $Action
+            # Вывод действия уходит в host, а не в pipeline:
+            # иначе он смешивается с возвращаемым значением шага.
+            & $Action 2>&1 | ForEach-Object { Write-Host $_ }
         }
         else {
             & $Action | Out-Null

@@ -125,10 +125,12 @@ public class EnvelopeContractTests
     public void НеизвестныеПоля_НеЛомаютРазборКонверта()
     {
         // IPC.md, п. 4: неизвестные поля игнорируются (прямая совместимость).
-        var text = ContractFixtures.ReadFixture("ipc-request.json")
-            .Replace("{\n  \"v\": 1,", "{\n  \"futureField\": \"x\",\n  \"v\": 1,", StringComparison.Ordinal);
+        // Добавляем поле через JsonNode, чтобы тест не зависел от переводов строк.
+        var request = JsonNode.Parse(ContractFixtures.ReadFixture("ipc-request.json"));
+        Assert.NotNull(request);
+        request!["futureField"] = "x";
 
-        using var document = JsonDocument.Parse(text);
+        using var document = JsonDocument.Parse(request.ToJsonString());
         var root = document.RootElement;
 
         Assert.Equal(1, root.GetProperty("v").GetInt32());
