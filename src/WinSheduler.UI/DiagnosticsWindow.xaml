@@ -83,8 +83,13 @@
                     <TextBlock Text="{loc:Loc Diagnostics_AuditTo}" Style="{StaticResource CaptionText}"
                                Margin="0,0,6,0"/>
                     <DatePicker x:Name="AuditToPicker" Width="130" Margin="0,0,12,0"/>
-                    <Button x:Name="AuditLoadBtn" Content="{loc:Loc Diagnostics_AuditLoad}"
-                            Style="{StaticResource ToolbarButton}" Click="AuditLoadBtn_Click"/>
+                    <Button x:Name="AuditLoadBtn"
+                            Style="{StaticResource ToolbarButton}" Click="AuditLoadBtn_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource IconJournal}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="{loc:Loc Diagnostics_AuditLoad}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </WrapPanel>
 
                 <TextBlock x:Name="AuditStatusText" Style="{StaticResource CaptionText}"
@@ -108,12 +113,27 @@
         </GroupBox>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button x:Name="RefreshBtn" Content="{loc:Loc Common_Refresh}"
-                    Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="RefreshBtn_Click"/>
-            <Button x:Name="CopyBtn" Content="{loc:Loc Diagnostics_Copy}"
-                    Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="CopyBtn_Click"/>
-            <Button Content="{loc:Loc Common_Close}" Style="{StaticResource SecondaryButton}"
-                    IsCancel="True" Click="CloseBtn_Click"/>
+            <Button x:Name="RefreshBtn"
+                    Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="RefreshBtn_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Common_Refresh}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="CopyBtn"
+                    Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="CopyBtn_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconSave}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Diagnostics_Copy}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button Style="{StaticResource SecondaryButton}"
+                    IsCancel="True" Click="CloseBtn_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconCancel}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Common_Close}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </StackPanel>
     </Grid>
 </Window>

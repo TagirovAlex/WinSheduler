@@ -478,31 +478,66 @@ bool ValidatePathAcl(const std::wstring& path, const PathPolicy& policy, std::ws
     return true;
 }
 
-bool CheckWindowsVersion() {
+bool CheckWindowsVersion(MSIHANDLE hInstall) {
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) {
+        LogInfo(hInstall, L"WinSheduler: OS check — ntdll не найден.");
         return false;
     }
 
     using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
     auto rtlGetVersion = reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"));
     if (!rtlGetVersion) {
+        LogInfo(hInstall, L"WinSheduler: OS check — RtlGetVersion не найден.");
         return false;
     }
 
     OSVERSIONINFOW info{};
     info.dwOSVersionInfoSize = sizeof(info);
-    if (rtlGetVersion(&info) != 0) {
-        return false;
+    const LONG rc = rtlGetVersion(&info);
+    LogInfo(hInstall,
+            L"WinSheduler: OS check rc=" + std::to_wstring(rc) +
+            L" version=" + std::to_wstring(info.dwMajorVersion) + L"." +
+            std::to_wstring(info.dwMinorVersion) +
+            L" build=" + std::to_wstring(info.dwBuildNumber));
+    if (rc == 0) {
+        if (info.dwMajorVersion > 10) {
+            return true;
+        }
+        if (info.dwMajorVersion == 10 && info.dwBuildNumber >= 17763) {
+            return true;
+        }
     }
 
-    if (info.dwMajorVersion > 10) {
-        return true;
+    // В процессе msiexec RtlGetVersion может вернуть версию совместимости
+    // (например, 6.0.6000). Резервный источник — реестр, он не шимится.
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                      0,
+                      KEY_READ | KEY_WOW64_64KEY,
+                      &key) == ERROR_SUCCESS) {
+        wchar_t buffer[32] = {};
+        DWORD size = sizeof(buffer);
+        DWORD type = 0;
+        const LONG query = RegQueryValueExW(key,
+                                            L"CurrentBuildNumber",
+                                            nullptr,
+                                            &type,
+                                            reinterpret_cast<LPBYTE>(buffer),
+                                            &size);
+        RegCloseKey(key);
+
+        if (query == ERROR_SUCCESS && type == REG_SZ) {
+            const unsigned long build = std::wcstoul(buffer, nullptr, 10);
+            LogInfo(hInstall,
+                    L"WinSheduler: OS check registry build=" + std::to_wstring(build));
+            return build >= 17763;
+        }
     }
-    if (info.dwMajorVersion < 10) {
-        return false;
-    }
-    return info.dwBuildNumber >= 17763;
+
+    LogInfo(hInstall, L"WinSheduler: OS check — не удалось определить версию ОС.");
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -676,7 +711,7 @@ extern "C" __declspec(dllexport) UINT __stdcall ValidatePaths(MSIHANDLE hInstall
 
         LogInfo(hInstall, L"WinSheduler: INSTALLDIR=" + installdir + L", DATADIR=" + datadir);
 
-        if (!CheckWindowsVersion()) {
+        if (!CheckWindowsVersion(hInstall)) {
             return Fail(hInstall,
                         L"WinSheduler требует Windows 10 1809 (build 17763) или Windows Server 2019 "
                         L"и новее.");

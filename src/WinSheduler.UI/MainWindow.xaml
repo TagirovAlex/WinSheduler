@@ -46,33 +46,62 @@
             <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                 <Button x:Name="RefreshBtn" Command="{Binding RefreshCommand}"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionRefresh}"
                         ToolTip="{loc:Loc Main_ActionRefresh}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionRefresh}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="AddBtn" Click="AddBtn_Click"
+                        AutomationProperties.Name="{loc:Loc Main_ActionAdd}"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionAdd}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconAddTask}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionAdd}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="EditBtn" Click="EditBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionEdit}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconTask}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionEdit}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionDelete}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconDelete}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionDelete}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="HistoryBtn" Click="HistoryBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionHistory}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconJournal}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionHistory}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="RunNowBtn" Click="RunNowBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionRun}"
-                        Margin="0,0,6,6"/>
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconRun}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionRun}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="ToggleBtn" Click="ToggleBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Content="{loc:Loc Main_ActionToggle}"
-                        Margin="0,0,0,6"/>
+                        Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconPause}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionToggle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </WrapPanel>
         </Grid>
 
@@ -85,10 +114,20 @@
                            Margin="0,4,0,0"
                            Visibility="{Binding IsServiceUnavailable, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="{loc:Loc Common_Retry}" Command="{Binding RefreshCommand}"
-                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                    <Button Content="{loc:Loc Main_OpenServices}" Click="OpenServicesBtn_Click"
-                            Style="{StaticResource SecondaryButton}"/>
+                    <Button Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="{loc:Loc Common_Retry}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OpenServicesBtn_Click"
+                            Style="{StaticResource SecondaryButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource IconOpenFolder}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="{loc:Loc Main_OpenServices}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -150,9 +189,14 @@
                 <TextBlock x:Name="EmptyHint" TextWrapping="Wrap" TextAlignment="Center"
                            Margin="0,0,0,12"
                            Foreground="{DynamicResource App_SecondaryTextBrush}"/>
-                <Button x:Name="EmptyAddBtn" Content="{loc:Loc Main_EmptyAdd}"
+                <Button x:Name="EmptyAddBtn"
                         Style="{StaticResource PrimaryButton}"
-                        HorizontalAlignment="Center" Click="AddBtn_Click"/>
+                        HorizontalAlignment="Center" Click="AddBtn_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconAddTask}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_EmptyAdd}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
 
             <ProgressBar Height="4" VerticalAlignment="Top" IsIndeterminate="True"
@@ -170,11 +214,21 @@
                             Visibility="{Binding IsAdmin, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="{loc:Loc Status_RequiresAdmin}"/>
                     </Border>
-                    <Button Content="{loc:Loc Admin_Relaunch}" Click="RelaunchBtn_Click"
+                    <Button Click="RelaunchBtn_Click"
                             Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
-                            Visibility="{Binding IsAdmin, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                    <Button Content="{loc:Loc Main_ActionDiagnostics}" Click="DiagnosticsBtn_Click"
-                            Style="{StaticResource SecondaryButton}"/>
+                            Visibility="{Binding IsAdmin, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource IconRun}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="{loc:Loc Admin_Relaunch}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="DiagnosticsBtn_Click"
+                            Style="{StaticResource SecondaryButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource IconApp}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="{loc:Loc Main_ActionDiagnostics}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>

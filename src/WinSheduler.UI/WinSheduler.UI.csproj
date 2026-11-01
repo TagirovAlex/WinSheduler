@@ -16,6 +16,17 @@
     <Resource Include="Resources\Icons\save.png" />
     <Resource Include="Resources\Icons\start.png" />
     <Resource Include="Resources\Icons\trigger.png" />
+    <Resource Include="Resources\Icons\add_task.png" />
+    <Resource Include="Resources\Icons\add_schedule.png" />
+    <Resource Include="Resources\Icons\app.png" />
+    <Resource Include="Resources\Icons\calendar.png" />
+    <Resource Include="Resources\Icons\journal.png" />
+    <Resource Include="Resources\Icons\open_folder.png" />
+    <Resource Include="Resources\Icons\pause.png" />
+    <Resource Include="Resources\Icons\run.png" />
+    <Resource Include="Resources\Icons\schedule.png" />
+    <Resource Include="Resources\Icons\stop.png" />
+    <Resource Include="Resources\Icons\task.png" />
   </ItemGroup>
 
   <ItemGroup>

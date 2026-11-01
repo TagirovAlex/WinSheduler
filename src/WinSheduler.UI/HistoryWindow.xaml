@@ -21,15 +21,30 @@
             <ComboBox x:Name="StatusFilterBox" Width="180" Margin="0,0,12,6"
                       Style="{StaticResource FormComboBox}"
                       DisplayMemberPath="Label" SelectionChanged="StatusFilterBox_SelectionChanged"/>
-            <Button x:Name="RefreshBtn" Content="{loc:Loc Common_Refresh}"
+            <Button x:Name="RefreshBtn"
                     Style="{StaticResource ToolbarButton}" Margin="0,0,6,6"
-                    Click="RefreshBtn_Click" ToolTip="{loc:Loc History_RefreshTooltip}"/>
-            <Button x:Name="ExportBtn" Content="{loc:Loc History_ExportCsv}"
+                    Click="RefreshBtn_Click" ToolTip="{loc:Loc History_RefreshTooltip}">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Common_Refresh}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="ExportBtn"
                     Style="{StaticResource ToolbarButton}" Margin="0,0,6,6"
-                    Click="ExportBtn_Click" IsEnabled="False"/>
-            <Button x:Name="OpenLogBtn" Content="{loc:Loc History_OpenLog}"
+                    Click="ExportBtn_Click" IsEnabled="False">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconSave}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc History_ExportCsv}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="OpenLogBtn"
                     Style="{StaticResource ToolbarButton}" Margin="0,0,0,6"
-                    Click="OpenLogBtn_Click" IsEnabled="False"/>
+                    Click="OpenLogBtn_Click" IsEnabled="False">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconOpenFolder}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc History_OpenLog}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </WrapPanel>
 
         <Border x:Name="Banner" Grid.Row="1" Style="{StaticResource StatusBannerError}" Visibility="Collapsed">

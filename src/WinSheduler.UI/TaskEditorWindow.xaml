@@ -51,9 +51,14 @@
                             <Label Grid.Row="2" Grid.Column="0" Content="{loc:Loc Editor_LabelProgram}"
                                    Style="{StaticResource FormLabel}" Target="{Binding ElementName=PathBox}"/>
                             <TextBox x:Name="PathBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource FormTextBox}"/>
-                            <Button Grid.Row="2" Grid.Column="2" Content="{loc:Loc Common_Browse}"
+                            <Button Grid.Row="2" Grid.Column="2"
                                     Style="{StaticResource SecondaryButton}" Click="BrowseBtn_Click"
-                                    Margin="4"/>
+                                    Margin="4">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="{StaticResource IconOpenFolder}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                    <TextBlock Text="{loc:Loc Common_Browse}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
 
                             <Label Grid.Row="3" Grid.Column="0" Content="{loc:Loc Editor_LabelArguments}"
                                    Style="{StaticResource FormLabel}" Target="{Binding ElementName=ArgsBox}"/>
@@ -111,10 +116,14 @@
                                                  Style="{StaticResource FormPasswordBox}"
                                                  PasswordChanged="RunAsPasswordBox_PasswordChanged"/>
                                     <Button x:Name="ClearPasswordBtn" Grid.Row="2" Grid.Column="2"
-                                            Content="{loc:Loc Editor_ClearPassword}"
                                             Style="{StaticResource SecondaryButton}"
                                             Click="ClearPasswordBtn_Click"
-                                            Margin="4"/>
+                                            Margin="4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="{StaticResource IconCancel}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                            <TextBlock Text="{loc:Loc Editor_ClearPassword}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
 
                                     <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
                                                 Orientation="Horizontal">
@@ -141,18 +150,38 @@
                     </Grid.RowDefinitions>
 
                     <WrapPanel Grid.Row="0" Margin="0,0,0,8">
-                        <Button x:Name="AddTimeBtn" Content="{loc:Loc Editor_AddTrigger}"
+                        <Button x:Name="AddTimeBtn"
                                 Style="{StaticResource ToolbarButton}" Click="AddTimeBtn_Click"
-                                Margin="0,0,6,0"/>
-                        <Button x:Name="EditTimeBtn" Content="{loc:Loc Common_Edit}"
+                                Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconAddSchedule}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{loc:Loc Editor_AddTrigger}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EditTimeBtn"
                                 Style="{StaticResource ToolbarButton}" Click="EditTimeBtn_Click"
-                                Margin="0,0,6,0" IsEnabled="False"/>
-                        <Button x:Name="DuplicateTimeBtn" Content="{loc:Loc Editor_DuplicateTrigger}"
+                                Margin="0,0,6,0" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconSchedule}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{loc:Loc Common_Edit}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DuplicateTimeBtn"
                                 Style="{StaticResource ToolbarButton}" Click="DuplicateTimeBtn_Click"
-                                Margin="0,0,6,0" IsEnabled="False"/>
-                        <Button x:Name="RemoveTimeBtn" Content="{loc:Loc Common_Delete}"
+                                Margin="0,0,6,0" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconAddSchedule}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{loc:Loc Editor_DuplicateTrigger}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RemoveTimeBtn"
                                 Style="{StaticResource DangerButton}" Click="RemoveTimeBtn_Click"
-                                IsEnabled="False"/>
+                                IsEnabled="False">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource IconDelete}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="{loc:Loc Common_Delete}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </WrapPanel>
 
                     <Grid Grid.Row="1">
@@ -269,12 +298,22 @@
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveBtn" Content="{loc:Loc Common_Save}"
+            <Button x:Name="SaveBtn"
                     Style="{StaticResource PrimaryButton}" Click="SaveBtn_Click"
-                    IsDefault="True" Margin="0,0,8,0" IsEnabled="False"/>
-            <Button x:Name="CancelBtn" Content="{loc:Loc Common_Cancel}"
+                    IsDefault="True" Margin="0,0,8,0" IsEnabled="False">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconSave}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Common_Save}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="CancelBtn"
                     Style="{StaticResource SecondaryButton}" Click="CancelBtn_Click"
-                    IsCancel="True"/>
+                    IsCancel="True">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{StaticResource IconCancel}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="{loc:Loc Common_Cancel}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </StackPanel>
     </Grid>
 </Window>

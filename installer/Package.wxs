@@ -17,8 +17,10 @@
            Codepage="1251"
            InstallerVersion="500">
 
-    <!-- Лицензия для диалога WixUI_InstallDir. -->
+    <!-- Изображения и лицензия для диалогов WixUI_InstallDir. -->
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.BannerBmp)" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.DialogBmp)" />
 
     <!-- Major upgrade: старый продукт удаляется после InstallValidate; downgrade запрещён. -->
     <MajorUpgrade Schedule="afterInstallValidate"
