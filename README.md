@@ -70,8 +70,11 @@ WinShedulerSvc.exe (C++ Win32, /MT)
 # Полный локальный gate: сборка, тесты, формат, контракты, схемы, smoke
 ./scripts/verify.ps1 -Scope integration
 
-# Установщик: служба + self-contained UI (+ MSI, если установлен WiX)
-./scripts/installer/build.ps1
+# Финальный комплект: служба + self-contained UI + MSI + SHA256 в ./published
+./publish.ps1
+
+# Промежуточная сборка без MSI
+./scripts/installer/build.ps1 -SkipMsi -OutputDir published
 ```
 
 Отдельные тесты:
@@ -86,16 +89,16 @@ dotnet test ./tests/ui/WinSheduler.UI.Tests.csproj -c Release
 ## Установка
 
 ```bat
-msiexec /i ./artifacts/WinSheduler.msi /qn
+msiexec /i ./published/WinSheduler.msi /qn
 ```
 
 Кастомные каталоги:
 
 ```bat
-msiexec /i ./artifacts/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /qn
+msiexec /i ./published/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /qn
 ```
 
-Свойства MSI: `INSTALLDIR`, `DATADIR`, `OLDDATADIR`, `CREATEGROUP`, `ADDINSTALLERTOGROUP`, `KEEPDATA`, `ALLOWUNSAFEPATH`.
+Свойства MSI: `INSTALLDIR`, `DATADIR`, `OLDDATADIR`, `CREATEGROUP`, `ADDINSTALLERTOGROUP`, `KEEPDATA`, `ALLOWUNSAFEPATH`, `ALLOWUNSUPPORTEDOS`.
 
 Установщик:
 
@@ -108,7 +111,7 @@ msiexec /i ./artifacts/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR=
 Удаление:
 
 ```bat
-msiexec /x ./artifacts/WinSheduler.msi /qn
+msiexec /x ./published/WinSheduler.msi /qn
 ```
 
 Старый `./deploy.bat` выведен из production-процесса: он регистрирует службу из каталога, доступного на запись пользователям.

@@ -9,7 +9,8 @@
 | `./scripts/format.ps1` | Проверка форматирования C# (`dotnet format`) и C++ (`clang-format`). |
 | `./scripts/verify.ps1 -Scope <track>` | Полный локальный gate: сборка, тесты, форматирование, контрактные тесты, схемы, smoke-тест службы. |
 | `./scripts/bench.ps1` | Заглушка бенчмарков (будут в Track G). |
-| `./scripts/installer/build.ps1` | Сборка службы, self-contained UI и MSI; `-SkipMsi` — без MSI, `-RequireWix` — ошибка при отсутствии WiX. |
+| `./publish.ps1` | Финальный комплект в `./published`: служба, self-contained UI, MSI, SHA256, лицензии. Старые версии заменяются, БД копируется в `./temp/backup/`. |
+| `./scripts/installer/build.ps1` | Сборка службы, self-contained UI и MSI; `-OutputDir` — каталог готовых файлов, `-SkipMsi` — без MSI, `-RequireWix` — ошибка при отсутствии WiX. |
 | `./tests/e2e/ui-smoke.ps1` | UI smoke через UI Automation: окно и кнопка «Добавить»; нужен интерактивный рабочий стол. |
 
 ## build.ps1

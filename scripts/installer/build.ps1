@@ -20,6 +20,9 @@
 .PARAMETER Version
     Версия продукта (x.y.z). По умолчанию — из ближайшего git-тега (v1.2.3 -> 1.2.3).
 
+.PARAMETER OutputDir
+    Каталог готовых файлов. По умолчанию ./artifacts; для финальной сборки — ./published.
+
 .PARAMETER SkipMsi
     Только опубликовать бинарники в ./artifacts (без MSI).
 
@@ -51,6 +54,7 @@
 param(
     [string]$Configuration = 'Release',
     [string]$Version,
+    [string]$OutputDir = 'artifacts',
     [switch]$SkipMsi,
     [switch]$ReadyToRun,
     [switch]$RequireWix,
@@ -63,7 +67,12 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$artifacts = Join-Path $root 'artifacts'
+$artifacts = if ([System.IO.Path]::IsPathRooted($OutputDir)) {
+    $OutputDir
+}
+else {
+    Join-Path $root $OutputDir
+}
 $tempRoot = Join-Path $root 'temp/installer'
 $uiPublish = Join-Path $tempRoot 'ui'
 $uiArtifacts = Join-Path $artifacts 'ui'

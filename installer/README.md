@@ -21,7 +21,7 @@ MSI-пакет (WiX Toolset 5), установка per-machine. Контракт
   gen-components.ps1           генерация компонентов UI (замена heat, без сети)
   smoke-test.ps1               smoke-тест установки на чистой ВМ
 
-./artifacts/
+./published/
   WinSheduler.msi              пакет
   SHA256SUMS.txt               хеши MSI и бинарников
   service/WinShedulerSvc.exe   служба (для справки/отладки)
@@ -56,7 +56,7 @@ wix extension add -g WixToolset.UI.wixext
 # С ReadyToRun (быстрее старт UI, больше размер)
 ./scripts/installer/build.ps1 -ReadyToRun
 
-# Только бинарники в ./artifacts (без MSI)
+# Только бинарники в ./published (без MSI)
 ./publish.ps1
 ```
 
@@ -97,11 +97,11 @@ UI, синтаксис скриптов. Команда для проверки 
 ## 5. Тихая установка
 
 ```powershell
-msiexec /i ./artifacts/WinSheduler.msi /qn /l*v ./temp/install.log
+msiexec /i ./published/WinSheduler.msi /qn /l*v ./temp/install.log
 
-msiexec /i ./artifacts/WinSheduler.msi /qn INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /l*v ./temp/install.log
+msiexec /i ./published/WinSheduler.msi /qn INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /l*v ./temp/install.log
 
-msiexec /x ./artifacts/WinSheduler.msi /qn /l*v ./temp/uninstall.log
+msiexec /x ./published/WinSheduler.msi /qn /l*v ./temp/uninstall.log
 ```
 
 Коды возврата стандартные: `0` — успех, `3010` — нужна перезагрузка,
@@ -110,7 +110,7 @@ msiexec /x ./artifacts/WinSheduler.msi /qn /l*v ./temp/uninstall.log
 Удаление данных — только явно:
 
 ```powershell
-msiexec /x ./artifacts/WinSheduler.msi /qn KEEPDATA=0
+msiexec /x ./published/WinSheduler.msi /qn KEEPDATA=0
 ```
 
 `KEEPDATA=0` удаляет `DATADIR` только при наличии маркера `.winsheduler-data`,
@@ -231,7 +231,7 @@ Add-LocalGroupMember -Group 'WinSheduler Users' -Member 'DOMAIN/user'
 2. Установить MSI с указанием старого каталога данных:
 
 ```powershell
-msiexec /i ./artifacts/WinSheduler.msi /qn OLDDATADIR="c:/OldWinSheduler/published/service/data"
+msiexec /i ./published/WinSheduler.msi /qn OLDDATADIR="c:/OldWinSheduler/published/service/data"
 ```
 
 3. Установщик скопирует `scheduler.db` в `DATADIR/data/`. Если целевая БД уже
@@ -245,8 +245,8 @@ msiexec /i ./artifacts/WinSheduler.msi /qn OLDDATADIR="c:/OldWinSheduler/publish
 ## 10. Подпись и SHA256
 
 - Сертификата нет: шаг подписи — заглушка, выводится предупреждение.
-- Обязательный `./artifacts/SHA256SUMS.txt` содержит хеши MSI, службы и UI.
-- Проверка: `Get-FileHash ./artifacts/WinSheduler.msi -Algorithm SHA256`.
+- Обязательный `./published/SHA256SUMS.txt` содержит хеши MSI, службы и UI.
+- Проверка: `Get-FileHash ./published/WinSheduler.msi -Algorithm SHA256`.
 - SmartScreen будет предупреждать о неизвестном издателе. В enterprise:
   подпись сертификатом организации, Intune/GPO-политика SmartScreen,
   добавление хеша в allow-list.

@@ -54,4 +54,4 @@ git merge --no-ff track/<track> -m "merge: track/<track>"
 - Smoke-тест установки на чистой ВМ (Track F).
 - Security-чеклист из `./docs/contracts/SECURITY.md`.
 - Проверка отсутствия секретов в диффе.
-- Проверка, что `./temp/` и `./artifacts/` не попали в коммит.
+- Проверка, что `./temp/`, `./artifacts/` и `./published/` не попали в коммит.

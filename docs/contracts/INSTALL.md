@@ -111,14 +111,11 @@ ACL выставляется установщиком явно и повторн
 Все команды — из корня проекта, без `cd`.
 
 ```powershell
-# Служба
-./scripts/build.ps1
+# Финальный комплект: служба + self-contained UI + MSI + SHA256 в ./published
+./publish.ps1
 
-# UI self-contained
-dotnet publish ./src/WinSheduler.UI/WinSheduler.UI.csproj -c Release -r win-x64 --self-contained true -o ./artifacts/ui
-
-# MSI
-./scripts/installer/build.ps1
+# Промежуточная сборка без MSI
+./scripts/installer/build.ps1 -SkipMsi -OutputDir published
 ```
 
 Требования к сборке:
@@ -127,22 +124,22 @@ dotnet publish ./src/WinSheduler.UI/WinSheduler.UI.csproj -c Release -r win-x64 
 - .NET 8 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).
-- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `1.2.0` из `./Directory.Build.props`.
+- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.0.0` из `./Directory.Build.props`.
 
 ## 9. Установка
 
-Интерактивно: запустить `./artifacts/WinSheduler.msi`.
+Интерактивно: запустить `./published/WinSheduler.msi`.
 
 Silent install (абсолютный путь — только как аргумент внешней утилиты, прямые слэши):
 
 ```bat
-msiexec /i ./artifacts/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /qn /l*v ./temp/install.log
+msiexec /i ./published/WinSheduler.msi INSTALLDIR="d:/Apps/WinSheduler" DATADIR="d:/WinShedulerData" /qn /l*v ./temp/install.log
 ```
 
 Silent uninstall:
 
 ```bat
-msiexec /x ./artifacts/WinSheduler.msi /qn
+msiexec /x ./published/WinSheduler.msi /qn
 ```
 
 ## 10. Обновление и удаление
@@ -165,7 +162,7 @@ msiexec /x ./artifacts/WinSheduler.msi /qn
 ## 12. Подпись
 
 - Если задан сертификат: подписать exe и MSI через `signtool`, timestamp SHA256.
-- Если сертификата нет: шаг пропускается с предупреждением, формируется `./artifacts/SHA256SUMS.txt`.
+- Если сертификата нет: шаг пропускается с предупреждением, формируется `./published/SHA256SUMS.txt`.
 - Документировать предупреждение SmartScreen и способы обхода в enterprise (GPO/Intune).
 
 ## 13. Smoke-тест на чистой ВМ
