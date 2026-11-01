@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/IpcLegacyRequest.schema.json",
+  "title": "Переходный IPC-запрос",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["Action", "Payload"],
+  "properties": {
+    "Action": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "Payload": { "type": "string" }
+  }
+}
