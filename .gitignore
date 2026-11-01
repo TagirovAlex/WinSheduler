@@ -31,4 +31,7 @@ artifacts/
 # Temp files
 query
 stop
+delete
+start
+scheduler.db*
 screen.png
