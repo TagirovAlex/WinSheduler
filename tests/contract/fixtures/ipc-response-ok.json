@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "id": "8f1c2c1e-4a0b-4c1e-9a6e-1f2d3c4b5a60",
+  "ok": true,
+  "error": null,
+  "payload": {
+    "pong": true,
+    "serviceVersion": "1.2.0"
+  }
+}

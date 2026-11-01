@@ -1,0 +1,17 @@
+{
+  "id": "7d2e3f40-5b6c-4d7e-9f80-1a2b3c4d5e6f",
+  "kind": "Interval",
+  "startDate": "2026-11-01",
+  "endDate": "2026-12-31",
+  "daysOfWeek": [],
+  "daysOfMonth": [],
+  "specificDates": [],
+  "exactTimes": [],
+  "startTime": "09:00",
+  "endTime": "18:00",
+  "repeatIntervalMinutes": 30,
+  "repeatUntil": "2026-12-31T18:00",
+  "dayInterval": 1,
+  "weekInterval": 1,
+  "monthInterval": 1
+}
