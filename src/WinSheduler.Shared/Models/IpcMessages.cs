@@ -16,7 +16,12 @@ public class IpcResponse
 public class ServiceStatus
 {
     public bool Running { get; set; }
+    public bool IsAdmin { get; set; }
+    public bool IsOperator { get; set; }
+    public bool CanManageSystemTasks { get; set; }
+    public string ServiceVersion { get; set; } = "";
     public int TaskCount { get; set; }
     public int RunningTaskCount { get; set; }
+    public bool DbReady { get; set; }
     public DateTime StartedAt { get; set; }
 }

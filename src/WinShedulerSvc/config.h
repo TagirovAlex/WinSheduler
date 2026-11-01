@@ -35,7 +35,12 @@ enum class WindowStyle : int { Normal = 0, Hidden = 1, Minimized = 2, Maximized 
 enum class OnErrorAction : int { SkipNext = 0, Retry = 1, Fail = 2 };
 enum class OnOverlapAction : int { WaitComplete = 0, WaitNext = 1, StartAnother = 2 };
 enum class TimeWindowType : int { ExactTimes = 0, Interval = 1 };
-enum class RunStatus : int { Running = 0, Completed = 1, Failed = 2, Killed = 3, Timeout = 4 };
+enum class RunStatus : int { Running = 0, Completed = 1, Failed = 2, Killed = 3, Timeout = 4, Aborted = 5 };
+
+// v2: тип триггера, режим сессии и источник запуска (зеркало C# WinSheduler.Shared)
+enum class SessionMode : int { Headless = 0, ActiveUser = 1 };
+enum class TriggerKind : int { Once = 0, Daily = 1, Weekly = 2, Monthly = 3, Interval = 4 };
+enum class TriggeredBy : int { Schedule = 0, Manual = 1 };
 
 inline const wchar_t* ToWide(RunStatus s) {
     switch (s) {
@@ -44,6 +49,7 @@ inline const wchar_t* ToWide(RunStatus s) {
     case RunStatus::Failed: return L"Failed";
     case RunStatus::Killed: return L"Killed";
     case RunStatus::Timeout: return L"Timeout";
+    case RunStatus::Aborted: return L"Aborted";
     default: return L"Unknown";
     }
 }
@@ -58,6 +64,7 @@ struct TimeWindow {
     std::wstring id;
     std::wstring task_id;
     TimeWindowType type = TimeWindowType::ExactTimes;
+    TriggerKind kind = TriggerKind::Daily;
     std::optional<std::wstring> start_date;
     std::optional<std::wstring> end_date;
     std::vector<int> days_of_week;      // 0=Sun, 1=Mon...
@@ -68,6 +75,9 @@ struct TimeWindow {
     std::optional<std::wstring> end_time;
     std::optional<int> repeat_interval_minutes;
     std::optional<std::wstring> repeat_until;
+    int day_interval = 1;
+    int week_interval = 1;
+    int month_interval = 1;
 };
 
 struct TaskDefinition {
@@ -79,6 +89,8 @@ struct TaskDefinition {
     std::wstring arguments;
     std::wstring working_directory;
     WindowStyle window_style = WindowStyle::Normal;
+    SessionMode session_mode = SessionMode::Headless;
+    std::wstring owner_sid;
     std::optional<RunAsCredentials> run_as_user;
     OnErrorAction on_error = OnErrorAction::SkipNext;
     int retry_count = 0;
@@ -101,12 +113,18 @@ struct RunHistory {
     RunStatus status = RunStatus::Running;
     std::wstring error_message;
     std::optional<std::wstring> output_path;
+    TriggeredBy triggered_by = TriggeredBy::Schedule;
 };
 
 struct ServiceStatus {
     bool running = true;
+    bool is_admin = false;
+    bool is_operator = false;
+    bool can_manage_system_tasks = false;
+    std::wstring service_version;
     int task_count = 0;
     int running_task_count = 0;
+    bool db_ready = false;
     std::wstring started_at;
 };
 

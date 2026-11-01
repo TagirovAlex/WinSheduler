@@ -23,6 +23,11 @@ Thumbs.db
 .rag/
 skills/
 
+# Временные каталоги агентов и артефакты сборки
+temp/*
+!temp/.gitkeep
+artifacts/
+
 # Temp files
 query
 stop

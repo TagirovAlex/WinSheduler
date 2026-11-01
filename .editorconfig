@@ -1,0 +1,29 @@
+# Единые правила оформления исходников WinSheduler.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C#, C++ и XAML: отступ 4 пробела, переводы строк CRLF.
+[*.{cs,cpp,c,h,hpp,xaml}]
+indent_style = space
+indent_size = 4
+
+# Данные и документация: отступ 2 пробела, переводы строк LF.
+[*.{json,jsonc,yaml,yml,md}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+trim_trailing_whitespace = false
+
+# Файлы проектов и скриптов сборки.
+[*.{csproj,vcxproj,props,targets,sln,ps1,bat,cmd}]
+indent_style = space
+indent_size = 2
+
+# Windows PowerShell 5.1 читает UTF-8 только при наличии BOM.
+[*.ps1]
+charset = utf-8-bom

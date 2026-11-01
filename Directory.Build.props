@@ -1,0 +1,26 @@
+<Project>
+
+  <!--
+    Общие свойства сборки для всех проектов решения (C# и C++).
+    Файл подключается автоматически через Microsoft.Common.props.
+  -->
+  <PropertyGroup>
+    <Version>1.2.0</Version>
+    <FileVersion>1.2.0.0</FileVersion>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <Company>WinSheduler</Company>
+    <Product>WinSheduler</Product>
+    <Copyright>Copyright (c) WinSheduler</Copyright>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Настройки C#: nullable, неявные using, последняя версия языка, строгие предупреждения. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <WarningLevel>5</WarningLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+  </PropertyGroup>
+
+</Project>

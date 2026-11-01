@@ -10,6 +10,8 @@ public class TaskDefinition
     public string Arguments { get; set; } = "";
     public string WorkingDirectory { get; set; } = "";
     public WindowStyle WindowStyle { get; set; } = WindowStyle.Normal;
+    public SessionMode SessionMode { get; set; } = SessionMode.Headless;
+    public string OwnerSid { get; set; } = "";
     public RunAsCredentials? RunAsUser { get; set; }
     public OnErrorAction OnError { get; set; } = OnErrorAction.SkipNext;
     public int RetryCount { get; set; }

@@ -94,22 +94,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="service.cpp" />
-    <ClCompile Include="database.cpp" />
-    <ClCompile Include="ipc.cpp" />
-    <ClCompile Include="json.cpp" />
-    <ClCompile Include="scheduler.cpp" />
-    <ClCompile Include="sqlite3.c" />
+    <!-- Wildcard-включения: новые файлы не требуют правки проекта. -->
+    <ClCompile Include="*.cpp" />
+    <ClCompile Include="*.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="config.h" />
-    <ClInclude Include="service.h" />
-    <ClInclude Include="database.h" />
-    <ClInclude Include="ipc.h" />
-    <ClInclude Include="scheduler.h" />
-    <ClInclude Include="json.h" />
-    <ClInclude Include="sqlite3.h" />
+    <ClInclude Include="*.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -10,9 +10,13 @@ public class TimeWindow
     public List<int> DaysOfMonth { get; set; } = [];
     public List<DateTime> SpecificDates { get; set; } = [];
     public TimeWindowType Type { get; set; } = TimeWindowType.ExactTimes;
+    public TriggerKind Kind { get; set; } = TriggerKind.Daily;
     public List<TimeSpan> ExactTimes { get; set; } = [];
     public TimeSpan? StartTime { get; set; }
     public TimeSpan? EndTime { get; set; }
     public int? RepeatIntervalMinutes { get; set; }
     public TimeSpan? RepeatUntil { get; set; }
+    public int DayInterval { get; set; } = 1;
+    public int WeekInterval { get; set; } = 1;
+    public int MonthInterval { get; set; } = 1;
 }
