@@ -1,14 +1,13 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using WinSheduler.UI.Localization;
 
 namespace WinSheduler.UI;
 
 public partial class TimeWindowDialog : Window
 {
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-
-    private static readonly string[] ShortDayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
     public TimeWindowEditType SelectedType { get; private set; } = TimeWindowEditType.Exact;
     public string ExactTimes { get; private set; } = "";
@@ -133,9 +132,9 @@ public partial class TimeWindowDialog : Window
     {
         if (SummaryText == null) return;
         SummaryText.Text = BuildSummary();
-        if (ErrorText != null && ErrorText.Visibility == Visibility.Visible)
+        if (ErrorBanner != null && ErrorBanner.Visibility == Visibility.Visible)
         {
-            ErrorText.Visibility = Visibility.Collapsed;
+            ErrorBanner.Visibility = Visibility.Collapsed;
             ErrorText.Text = "";
         }
     }
@@ -148,25 +147,29 @@ public partial class TimeWindowDialog : Window
         {
             case TimeWindowEditType.Once:
                 parts.Add(OnceDatePicker.SelectedDate is { } onceDate
-                    ? $"Однократно: {onceDate.ToString("dd.MM.yyyy", Invariant)} в {Text(OnceTimeBox)}"
-                    : "Однократно: дата не указана");
+                    ? Strings.Format("Trigger_SummaryOnce", onceDate.ToString("dd.MM.yyyy", Invariant), Text(OnceTimeBox))
+                    : Strings.Get("Trigger_SummaryOnceNoDate"));
                 break;
 
             case TimeWindowEditType.Exact:
                 {
                     var interval = ReadInt(DailyIntervalBox);
-                    parts.Add(interval > 1 ? $"Ежедневно, каждые {interval} дн." : "Ежедневно");
-                    parts.Add($"в {Text(DailyTimesBox)}");
+                    parts.Add(interval > 1
+                        ? Strings.Format("Trigger_SummaryDailyEvery", interval)
+                        : Strings.Get("Trigger_SummaryDaily"));
+                    parts.Add(Strings.Format("Trigger_SummaryAt", Text(DailyTimesBox)));
                     break;
                 }
 
             case TimeWindowEditType.ExactWeekly:
                 {
                     var interval = ReadInt(WeeklyIntervalBox);
-                    parts.Add(interval > 1 ? $"Еженедельно, каждые {interval} нед." : "Еженедельно");
+                    parts.Add(interval > 1
+                        ? Strings.Format("Trigger_SummaryWeeklyEvery", interval)
+                        : Strings.Get("Trigger_SummaryWeekly"));
                     var days = SelectedDaysOrdered();
                     if (days.Count > 0) parts.Add(string.Join(", ", days));
-                    parts.Add($"в {Text(WeeklyTimesBox)}");
+                    parts.Add(Strings.Format("Trigger_SummaryAt", Text(WeeklyTimesBox)));
                     break;
                 }
 
@@ -175,26 +178,31 @@ public partial class TimeWindowDialog : Window
                     var interval = ReadInt(MonthlyIntervalBox);
                     var day = ReadInt(MonthlyDayBox);
                     parts.Add(interval > 1
-                        ? $"Ежемесячно, {day}-го числа, каждые {interval} мес."
-                        : $"Ежемесячно, {day}-го числа");
-                    parts.Add($"в {Text(MonthlyTimesBox)}");
+                        ? Strings.Format("Trigger_SummaryMonthlyEvery", day, interval)
+                        : Strings.Format("Trigger_SummaryMonthly", day));
+                    parts.Add(Strings.Format("Trigger_SummaryAt", Text(MonthlyTimesBox)));
                     break;
                 }
 
             case TimeWindowEditType.Interval:
-                parts.Add($"Интервал: с {Text(IntervalStartBox)} до {Text(IntervalEndBox)}, " +
-                          $"каждые {Text(IntervalRepeatBox)} мин");
+                parts.Add(Strings.Format(
+                    "Trigger_SummaryInterval",
+                    Text(IntervalStartBox),
+                    Text(IntervalEndBox),
+                    Text(IntervalRepeatBox)));
                 break;
         }
 
         if (StartDatePicker.SelectedDate is { } startDate)
-            parts.Add($"с {startDate.ToString("dd.MM.yyyy", Invariant)}");
+            parts.Add(Strings.Format("Trigger_SummaryFrom", startDate.ToString("dd.MM.yyyy", Invariant)));
         if (EndDatePicker.SelectedDate is { } endDate)
-            parts.Add($"по {endDate.ToString("dd.MM.yyyy", Invariant)}");
+            parts.Add(Strings.Format("Trigger_SummaryTo", endDate.ToString("dd.MM.yyyy", Invariant)));
         if (RepeatUntilPicker.SelectedDate is { } repeatDate)
-            parts.Add($"повторять до {repeatDate.ToString("dd.MM.yyyy", Invariant)} {Text(RepeatUntilTimeBox)}");
+            parts.Add(Strings.Format(
+                "Trigger_SummaryUntil",
+                $"{repeatDate.ToString("dd.MM.yyyy", Invariant)} {Text(RepeatUntilTimeBox)}"));
         if (EnabledCheck.IsChecked != true)
-            parts.Add("выключено");
+            parts.Add(Strings.Get("Trigger_SummaryDisabled"));
 
         return string.Join("; ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
     }
@@ -207,7 +215,16 @@ public partial class TimeWindowDialog : Window
             DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
         ];
         return order.Where(d => DayBox(d)?.IsChecked == true)
-                    .Select(d => ShortDayNames[(int)d])
+                    .Select(d => Strings.Get(d switch
+                    {
+                        DayOfWeek.Monday => "DayShort_Monday",
+                        DayOfWeek.Tuesday => "DayShort_Tuesday",
+                        DayOfWeek.Wednesday => "DayShort_Wednesday",
+                        DayOfWeek.Thursday => "DayShort_Thursday",
+                        DayOfWeek.Friday => "DayShort_Friday",
+                        DayOfWeek.Saturday => "DayShort_Saturday",
+                        _ => "DayShort_Sunday",
+                    }))
                     .ToList();
     }
 
@@ -234,18 +251,18 @@ public partial class TimeWindowDialog : Window
         var startDate = StartDatePicker.SelectedDate?.Date;
         var endDate = EndDatePicker.SelectedDate?.Date;
         if (startDate.HasValue && endDate.HasValue && endDate.Value < startDate.Value)
-            errors.Add("Дата конца не может быть раньше даты начала.");
+            errors.Add(Strings.Get("Trigger_ErrorEndBeforeStart"));
 
         DateTime? repeatUntil = null;
         if (RepeatUntilPicker.SelectedDate is { } repeatDate)
         {
             if (!TryParseTime(RepeatUntilTimeBox.Text, out var repeatTime))
-                errors.Add("Время «Повторять до» должно быть в формате ЧЧ:ММ.");
+                errors.Add(Strings.Get("Trigger_ErrorRepeatUntilTime"));
             else
                 repeatUntil = repeatDate.Date + repeatTime;
 
             if (repeatUntil.HasValue && startDate.HasValue && repeatUntil.Value < startDate.Value)
-                errors.Add("Дата «Повторять до» не может быть раньше даты начала.");
+                errors.Add(Strings.Get("Trigger_ErrorRepeatUntilBeforeStart"));
         }
 
         switch (CurrentType)
@@ -254,12 +271,12 @@ public partial class TimeWindowDialog : Window
                 {
                     SelectedType = TimeWindowEditType.Once;
                     if (OnceDatePicker.SelectedDate is not { } onceDate)
-                        errors.Add("Укажите дату однократного запуска.");
+                        errors.Add(Strings.Get("Trigger_ErrorDateOnce"));
                     else
                         OnceDate = onceDate.ToString("yyyy-MM-dd", Invariant);
 
                     if (!TryParseTime(OnceTimeBox.Text, out var onceTime))
-                        errors.Add("Время однократного запуска должно быть в формате ЧЧ:ММ.");
+                        errors.Add(Strings.Get("Trigger_ErrorOnceTime"));
                     else
                     {
                         OnceTime = FormatTime(onceTime);
@@ -273,7 +290,7 @@ public partial class TimeWindowDialog : Window
             case TimeWindowEditType.Exact:
                 {
                     SelectedType = TimeWindowEditType.Exact;
-                    DayInterval = ParseIntInRange(DailyIntervalBox, 1, 365, "Интервал в днях", errors);
+                    DayInterval = ParseIntInRange(DailyIntervalBox, 1, 365, "Trigger_FieldDayInterval", errors);
                     if (TryParseTimes(DailyTimesBox.Text, out var times, out var badTime))
                         ExactTimes = string.Join(", ", times);
                     else
@@ -285,7 +302,7 @@ public partial class TimeWindowDialog : Window
             case TimeWindowEditType.ExactWeekly:
                 {
                     SelectedType = TimeWindowEditType.ExactWeekly;
-                    WeekInterval = ParseIntInRange(WeeklyIntervalBox, 1, 52, "Интервал в неделях", errors);
+                    WeekInterval = ParseIntInRange(WeeklyIntervalBox, 1, 52, "Trigger_FieldWeekInterval", errors);
                     if (TryParseTimes(WeeklyTimesBox.Text, out var times, out var badTime))
                         ExactTimes = string.Join(", ", times);
                     else
@@ -297,15 +314,15 @@ public partial class TimeWindowDialog : Window
                         if (DayBox(day)?.IsChecked == true) SelectedDays.Add(day);
                     }
                     if (SelectedDays.Count == 0)
-                        errors.Add("Выберите хотя бы один день недели.");
+                        errors.Add(Strings.Get("Trigger_ErrorDaysEmpty"));
                     break;
                 }
 
             case TimeWindowEditType.ExactMonthly:
                 {
                     SelectedType = TimeWindowEditType.ExactMonthly;
-                    MonthDay = ParseIntInRange(MonthlyDayBox, 1, 31, "День месяца", errors);
-                    MonthInterval = ParseIntInRange(MonthlyIntervalBox, 1, 12, "Интервал в месяцах", errors);
+                    MonthDay = ParseIntInRange(MonthlyDayBox, 1, 31, "Trigger_FieldMonthDay", errors);
+                    MonthInterval = ParseIntInRange(MonthlyIntervalBox, 1, 12, "Trigger_FieldMonthInterval", errors);
                     if (TryParseTimes(MonthlyTimesBox.Text, out var times, out var badTime))
                         ExactTimes = string.Join(", ", times);
                     else
@@ -319,15 +336,15 @@ public partial class TimeWindowDialog : Window
                     SelectedType = TimeWindowEditType.Interval;
                     var hasStart = TryParseTime(IntervalStartBox.Text, out var intervalStart);
                     var hasEnd = TryParseTime(IntervalEndBox.Text, out var intervalEnd);
-                    if (!hasStart) errors.Add("Начало интервала должно быть в формате ЧЧ:ММ.");
-                    if (!hasEnd) errors.Add("Конец интервала должен быть в формате ЧЧ:ММ.");
+                    if (!hasStart) errors.Add(Strings.Get("Trigger_ErrorIntervalStart"));
+                    if (!hasEnd) errors.Add(Strings.Get("Trigger_ErrorIntervalEnd"));
                     if (hasStart && hasEnd && intervalStart >= intervalEnd)
-                        errors.Add("Начало интервала должно быть раньше конца.");
+                        errors.Add(Strings.Get("Trigger_ErrorIntervalOrder"));
 
                     StartTime = hasStart ? FormatTime(intervalStart) : Text(IntervalStartBox);
                     EndTime = hasEnd ? FormatTime(intervalEnd) : Text(IntervalEndBox);
 
-                    var repeat = ParseIntInRange(IntervalRepeatBox, 1, 1440, "Интервал в минутах", errors);
+                    var repeat = ParseIntInRange(IntervalRepeatBox, 1, 1440, "Trigger_FieldIntervalMinutes", errors);
                     RepeatInterval = repeat.ToString(Invariant);
                     SelectedDays = [];
                     break;
@@ -345,17 +362,17 @@ public partial class TimeWindowDialog : Window
         RepeatUntil = repeatUntil?.ToString("yyyy-MM-ddTHH:mm", Invariant);
         TriggerEnabled = EnabledCheck.IsChecked == true;
 
-        ErrorText.Visibility = Visibility.Collapsed;
+        ErrorBanner.Visibility = Visibility.Collapsed;
         ErrorText.Text = "";
         return true;
     }
 
-    private int ParseIntInRange(System.Windows.Controls.TextBox box, int min, int max, string fieldName, List<string> errors)
+    private int ParseIntInRange(System.Windows.Controls.TextBox box, int min, int max, string fieldKey, List<string> errors)
     {
         if (int.TryParse(box.Text.Trim(), NumberStyles.Integer, Invariant, out var value) && value >= min && value <= max)
             return value;
 
-        errors.Add($"Поле «{fieldName}» должно быть целым числом от {min} до {max}.");
+        errors.Add(Strings.Format("Trigger_ErrorRange", Strings.Get(fieldKey), min, max));
         return min;
     }
 
@@ -369,7 +386,7 @@ public partial class TimeWindowDialog : Window
 
         if (parts.Length == 0)
         {
-            error = "Укажите хотя бы одно время запуска в формате ЧЧ:ММ.";
+            error = Strings.Get("Trigger_ErrorTimesEmpty");
             return false;
         }
 
@@ -378,7 +395,7 @@ public partial class TimeWindowDialog : Window
         {
             if (!TryParseTime(part, out var time))
             {
-                error = $"Время «{part}» должно быть в формате ЧЧ:ММ.";
+                error = Strings.Format("Trigger_ErrorTime", part);
                 return false;
             }
             if (!parsed.Contains(time)) parsed.Add(time);
@@ -421,6 +438,6 @@ public partial class TimeWindowDialog : Window
     private void ShowError(string message)
     {
         ErrorText.Text = message;
-        ErrorText.Visibility = Visibility.Visible;
+        ErrorBanner.Visibility = Visibility.Visible;
     }
 }

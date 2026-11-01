@@ -3,35 +3,29 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Media;
 using WinSheduler.Shared;
 using WinSheduler.Shared.Models;
+using WinSheduler.UI.Localization;
+using WinSheduler.UI.Services;
 
 namespace WinSheduler.UI;
 
 public partial class HistoryWindow : Window
 {
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
 
-    private readonly IpcClient _ipc;
+    private readonly IIpcService _ipc;
     private readonly Guid _taskId;
     private readonly string _taskName;
     private readonly ObservableCollection<HistoryRow> _visible = [];
     private List<HistoryRow> _all = [];
 
-    public HistoryWindow(IpcClient ipc, Guid taskId, string taskName)
+    public HistoryWindow(IIpcService ipc, Guid taskId, string taskName)
     {
         InitializeComponent();
-        _ipc = ipc;
+        _ipc = ipc ?? throw new ArgumentNullException(nameof(ipc));
         _taskId = taskId;
         _taskName = taskName;
 
@@ -41,18 +35,18 @@ public partial class HistoryWindow : Window
         Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 32));
         Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 32));
 
-        Title = $"Журнал запусков: {taskName}";
-        HistoryList.ItemsSource = _visible;
+        Title = Strings.Format("History_TitleFormat", taskName);
+        HistoryGrid.ItemsSource = _visible;
 
         StatusFilterBox.ItemsSource = new List<HistoryFilter>
         {
-            new("Все статусы", null),
-            new("Выполнено", RunStatus.Completed),
-            new("Ошибка", RunStatus.Failed),
-            new("Таймаут", RunStatus.Timeout),
-            new("Прервано", RunStatus.Killed),
-            new("Прервано при старте", RunStatus.Aborted),
-            new("Выполняется", RunStatus.Running),
+            new(Strings.Get("History_FilterAll"), null),
+            new(Strings.Get("History_StatusCompleted"), RunStatus.Completed),
+            new(Strings.Get("History_StatusFailed"), RunStatus.Failed),
+            new(Strings.Get("History_StatusTimeout"), RunStatus.Timeout),
+            new(Strings.Get("History_StatusKilled"), RunStatus.Killed),
+            new(Strings.Get("History_StatusAborted"), RunStatus.Aborted),
+            new(Strings.Get("History_StatusRunning"), RunStatus.Running),
         };
         StatusFilterBox.SelectedIndex = 0;
 
@@ -63,31 +57,28 @@ public partial class HistoryWindow : Window
     {
         RefreshBtn.IsEnabled = false;
         HideBanner();
-        StatusLine.Text = "Загрузка...";
+        StatusLine.Text = Strings.Get("Common_Loading");
 
         try
         {
-            var resp = await _ipc.SendAsync(new IpcRequest { Action = "GetHistory", Payload = _taskId.ToString() });
-            if (!resp.Success)
-            {
-                ShowBanner($"Не удалось загрузить журнал: {resp.Error}");
-                StatusLine.Text = "";
-                return;
-            }
-
-            var history = JsonSerializer.Deserialize<List<RunHistory>>(resp.Payload, JsonOpts) ?? [];
+            var history = await _ipc.GetHistoryAsync(_taskId, 1000);
             _all = history
                 .Select(HistoryRow.FromHistory)
-                .OrderByDescending(r => r.StartLocal)
+                .OrderByDescending(row => row.StartLocal)
                 .ToList();
 
             ApplyFilter();
             ExportBtn.IsEnabled = _all.Count > 0;
         }
+        catch (IpcException ex)
+        {
+            ShowBanner(IpcErrorText.Describe(ex));
+            StatusLine.Text = string.Empty;
+        }
         catch (Exception ex)
         {
-            ShowBanner($"Ошибка чтения журнала: {ex.Message}");
-            StatusLine.Text = "";
+            ShowBanner(IpcErrorText.Describe(ex));
+            StatusLine.Text = string.Empty;
         }
         finally
         {
@@ -99,18 +90,21 @@ public partial class HistoryWindow : Window
     {
         var filter = StatusFilterBox.SelectedItem as HistoryFilter;
         var rows = filter?.Status is { } status
-            ? _all.Where(r => r.Status == status).ToList()
+            ? _all.Where(row => row.Status == status).ToList()
             : _all;
 
         _visible.Clear();
         foreach (var row in rows) _visible.Add(row);
 
-        EmptyText.Text = _all.Count == 0
-            ? "Запусков ещё не было."
-            : "Нет записей с выбранным статусом.";
+        EmptyText.Text = Strings.Get(_all.Count == 0
+            ? "History_Empty"
+            : "History_EmptyFiltered");
         EmptyText.Visibility = _visible.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        StatusLine.Text = $"Записей: {_visible.Count} · обновлено {DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", Invariant)}";
+        StatusLine.Text = Strings.Format(
+            "History_Summary",
+            _visible.Count,
+            DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", Strings.Culture));
     }
 
     private void StatusFilterBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -125,21 +119,20 @@ public partial class HistoryWindow : Window
 
     private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.F5)
-        {
-            RefreshBtn_Click(sender, e);
-            e.Handled = true;
-        }
+        if (e.Key != System.Windows.Input.Key.F5) return;
+
+        RefreshBtn_Click(sender, e);
+        e.Handled = true;
     }
 
-    private void HistoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void HistoryGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        OpenLogBtn.IsEnabled = HistoryList.SelectedItem is HistoryRow { HasOutput: true };
+        OpenLogBtn.IsEnabled = HistoryGrid.SelectedItem is HistoryRow { HasOutput: true };
     }
 
     private void OpenLogBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (HistoryList.SelectedItem is not HistoryRow row || string.IsNullOrWhiteSpace(row.OutputPath))
+        if (HistoryGrid.SelectedItem is not HistoryRow row || string.IsNullOrWhiteSpace(row.OutputPath))
             return;
 
         var path = row.OutputPath;
@@ -147,13 +140,13 @@ public partial class HistoryWindow : Window
         // Открываем только файлы логов: служба строит путь сама, но клиент не доверяет формату.
         if (!path.EndsWith(".log", StringComparison.OrdinalIgnoreCase))
         {
-            ShowBanner("Служба вернула недопустимый путь к файлу вывода.");
+            ShowBanner(Strings.Get("History_LogInvalidPath"));
             return;
         }
 
         if (!File.Exists(path))
         {
-            ShowBanner("Файл лога недоступен: он удалён или у вас нет прав на чтение.");
+            ShowBanner(Strings.Get("History_LogMissing"));
             return;
         }
 
@@ -164,27 +157,34 @@ public partial class HistoryWindow : Window
         }
         catch (Exception ex)
         {
-            ShowBanner($"Не удалось открыть лог: {ex.Message}");
+            ShowBanner(Strings.Format("History_LogOpenError", ex.Message));
         }
     }
 
     private void ExportBtn_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new Microsoft.Win32.SaveFileDialog
+        var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "Экспорт журнала",
-            Filter = "CSV (*.csv)|*.csv",
+            Title = Strings.Get("History_ExportTitle"),
+            Filter = Strings.Get("History_CsvFilter"),
             DefaultExt = ".csv",
             FileName = $"history-{SafeFileName(_taskName)}-{DateTime.Now.ToString("yyyyMMdd-HHmm", Invariant)}.csv"
         };
 
-        if (dlg.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true) return;
 
-        var sb = new StringBuilder();
-        sb.AppendLine("Начало;Конец;Статус;Код;Длительность;Ошибка");
+        var builder = new StringBuilder();
+        builder.AppendLine(string.Join(';',
+            Strings.Get("History_ColumnStart"),
+            Strings.Get("History_ColumnEnd"),
+            Strings.Get("History_ColumnStatus"),
+            Strings.Get("History_ColumnExitCode"),
+            Strings.Get("History_ColumnDuration"),
+            Strings.Get("History_ColumnError")));
+
         foreach (var row in _visible)
         {
-            sb.AppendLine(string.Join(';',
+            builder.AppendLine(string.Join(';',
                 Csv(row.StartText),
                 Csv(row.EndText),
                 Csv(row.StatusText),
@@ -196,19 +196,22 @@ public partial class HistoryWindow : Window
         try
         {
             // BOM нужен Excel для корректного определения UTF-8.
-            File.WriteAllText(dlg.FileName, sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(dialog.FileName, builder.ToString(), new UTF8Encoding(true));
             HideBanner();
-            StatusLine.Text = $"Экспортировано записей: {_visible.Count} · {DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", Invariant)}";
+            StatusLine.Text = Strings.Format(
+                "History_ExportSaved",
+                _visible.Count,
+                DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", Strings.Culture));
         }
         catch (Exception ex)
         {
-            ShowBanner($"Не удалось сохранить CSV: {ex.Message}");
+            ShowBanner(Strings.Format("History_ExportError", ex.Message));
         }
     }
 
     private static string Csv(string? value)
     {
-        var text = (value ?? "").Replace('\r', ' ').Replace('\n', ' ');
+        var text = (value ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ');
         return text.Contains(';') || text.Contains('"')
             ? "\"" + text.Replace("\"", "\"\"") + "\""
             : text;
@@ -217,56 +220,57 @@ public partial class HistoryWindow : Window
     private static string SafeFileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
-        return string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c));
+        return string.Concat(name.Select(character => invalid.Contains(character) ? '_' : character));
     }
 
     private void ShowBanner(string message)
     {
         BannerText.Text = message;
-        BannerText.Visibility = Visibility.Visible;
+        Banner.Visibility = Visibility.Visible;
     }
 
     private void HideBanner()
     {
-        BannerText.Text = "";
-        BannerText.Visibility = Visibility.Collapsed;
+        BannerText.Text = string.Empty;
+        Banner.Visibility = Visibility.Collapsed;
     }
 }
 
 /// <summary>Строка журнала в локальном времени и с русскими подписями.</summary>
 public sealed class HistoryRow
 {
-    private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-
     public DateTime StartLocal { get; init; }
     public DateTime? EndLocal { get; init; }
     public RunStatus Status { get; init; }
     public int? ExitCode { get; init; }
-    public string ErrorMessage { get; init; } = "";
+    public string ErrorMessage { get; init; } = string.Empty;
     public string? OutputPath { get; init; }
 
-    public string StartText => StartLocal.ToString("dd.MM.yyyy HH:mm:ss", Invariant);
-    public string EndText => EndLocal?.ToString("dd.MM.yyyy HH:mm:ss", Invariant) ?? "—";
-    public string ExitCodeText => ExitCode?.ToString(Invariant) ?? "—";
+    public string StartText => StartLocal.ToString("dd.MM.yyyy HH:mm:ss", Strings.Culture);
+    public string EndText => EndLocal?.ToString("dd.MM.yyyy HH:mm:ss", Strings.Culture) ?? Strings.Get("Common_Dash");
+    public string ExitCodeText => ExitCode?.ToString(Strings.Culture) ?? Strings.Get("Common_Dash");
 
-    public string StatusText => Status switch
+    public string StatusText => Strings.Get(Status switch
     {
-        RunStatus.Running => "Выполняется",
-        RunStatus.Completed => "Выполнено",
-        RunStatus.Failed => "Ошибка",
-        RunStatus.Killed => "Прервано",
-        RunStatus.Timeout => "Таймаут",
-        RunStatus.Aborted => "Прервано при старте",
-        _ => Status.ToString()
-    };
+        RunStatus.Running => "History_StatusRunning",
+        RunStatus.Completed => "History_StatusCompleted",
+        RunStatus.Failed => "History_StatusFailed",
+        RunStatus.Killed => "History_StatusKilled",
+        RunStatus.Timeout => "History_StatusTimeout",
+        RunStatus.Aborted => "History_StatusAborted",
+        _ => "Common_Unknown"
+    });
 
     public string DurationText
     {
         get
         {
-            if (EndLocal is not { } end) return "—";
+            if (EndLocal is not { } end) return Strings.Get("Common_Dash");
+
             var duration = end - StartLocal;
-            return duration < TimeSpan.Zero ? "—" : duration.ToString(@"hh\:mm\:ss", Invariant);
+            return duration < TimeSpan.Zero
+                ? Strings.Get("Common_Dash")
+                : duration.ToString(@"hh\:mm\:ss", Strings.Culture);
         }
     }
 
@@ -292,25 +296,3 @@ public sealed class HistoryRow
 }
 
 public sealed record HistoryFilter(string Label, RunStatus? Status);
-
-/// <summary>Цвет статуса: успех/ошибка из токенов контракта UI, нейтральный — системный.</summary>
-public sealed class HistoryStatusBrushConverter : IValueConverter
-{
-    private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
-
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is not RunStatus status) return SystemColors.GrayTextBrush;
-
-        return status switch
-        {
-            RunStatus.Completed => SuccessBrush,
-            RunStatus.Failed or RunStatus.Timeout or RunStatus.Killed or RunStatus.Aborted => ErrorBrush,
-            _ => SystemColors.GrayTextBrush
-        };
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => throw new NotImplementedException();
-}

@@ -1,30 +1,34 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using WinSheduler.Shared;
+using WinSheduler.UI.Localization;
+using WinSheduler.UI.Services;
 
 namespace WinSheduler.UI;
 
 public partial class DiagnosticsWindow : Window
 {
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-    private static readonly Brush SuccessBrush = new SolidColorBrush(Color.FromRgb(0x10, 0x7C, 0x10));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xC4, 0x2B, 0x1C));
 
-    private readonly IpcClient _ipc;
+    private readonly IIpcService _ipc;
+    private readonly IElevationService _elevation;
     private ServiceStatus? _status;
     private bool _connected;
-    private string? _lastError;
 
-    public DiagnosticsWindow(IpcClient ipc)
+    public DiagnosticsWindow(IIpcService ipc, IElevationService elevation)
     {
         InitializeComponent();
-        _ipc = ipc;
-        MaxHeight = Math.Max(360, SystemParameters.WorkArea.Height - 24);
+        _ipc = ipc ?? throw new ArgumentNullException(nameof(ipc));
+        _elevation = elevation ?? throw new ArgumentNullException(nameof(elevation));
 
-        UiVersionText.Text = typeof(DiagnosticsWindow).Assembly.GetName().Version?.ToString(3) ?? "—";
+        MaxHeight = Math.Max(360, SystemParameters.WorkArea.Height - 24);
+        UiVersionText.Text = typeof(DiagnosticsWindow).Assembly.GetName().Version?.ToString(3)
+                             ?? Strings.Get("Common_Dash");
+
+        AuditFromPicker.SelectedDate = DateTime.Today.AddDays(-1);
+        AuditToPicker.SelectedDate = DateTime.Today;
 
         Loaded += async (_, _) => await RefreshAsync();
     }
@@ -32,31 +36,25 @@ public partial class DiagnosticsWindow : Window
     private async Task RefreshAsync()
     {
         RefreshBtn.IsEnabled = false;
-        BannerText.Visibility = Visibility.Collapsed;
-        ConnectionText.Text = "Проверка...";
-        ConnectionText.Foreground = SystemColors.GrayTextBrush;
+        Banner.Visibility = Visibility.Collapsed;
+        ConnectionText.Text = Strings.Get("Status_Loading");
+        ConnectionText.Foreground = (Brush)FindResource("App_SecondaryTextBrush");
 
         try
         {
-            var resp = await _ipc.SendAsync(new IpcRequest { Action = "GetStatus" });
-            if (resp.Success)
-            {
-                _status = JsonSerializer.Deserialize<ServiceStatus>(resp.Payload);
-                _connected = _status?.Running == true;
-                _lastError = null;
-            }
-            else
-            {
-                _status = null;
-                _connected = false;
-                _lastError = resp.Error;
-            }
+            _status = await _ipc.GetStatusAsync();
+            _elevation.Update(_status);
+            _connected = _status.Running;
         }
-        catch (Exception ex)
+        catch (IpcException)
         {
             _status = null;
             _connected = false;
-            _lastError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _status = null;
+            _connected = false;
         }
         finally
         {
@@ -68,40 +66,50 @@ public partial class DiagnosticsWindow : Window
 
     private void Render()
     {
-        if (_connected && _status != null)
+        var successBrush = (Brush)FindResource("Status_SuccessBrush");
+        var errorBrush = (Brush)FindResource("Status_ErrorBrush");
+
+        if (_connected && _status is not null)
         {
-            ConnectionText.Text = "Подключено";
-            ConnectionText.Foreground = SuccessBrush;
-            ServiceStateText.Text = "Работает";
-            ServiceVersionText.Text = string.IsNullOrWhiteSpace(_status.ServiceVersion) ? "не сообщается" : _status.ServiceVersion;
+            ConnectionText.Text = Strings.Get("Diagnostics_Connected");
+            ConnectionText.Foreground = successBrush;
+            ServiceStateText.Text = Strings.Get("Diagnostics_ServiceRunning");
+            ServiceVersionText.Text = string.IsNullOrWhiteSpace(_status.ServiceVersion)
+                ? Strings.Get("Diagnostics_NotReported")
+                : _status.ServiceVersion;
             TaskCountText.Text = $"{_status.TaskCount} / {_status.RunningTaskCount}";
-            RoleText.Text = _status.IsAdmin
-                ? "Администратор"
-                : _status.IsOperator ? "Оператор" : "не сообщается службой";
+            RoleText.Text = _elevation.RoleText;
             UptimeText.Text = FormatUptime(_status.StartedAt);
-            BannerText.Visibility = Visibility.Collapsed;
-            return;
+            Banner.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ConnectionText.Text = Strings.Get("Diagnostics_Disconnected");
+            ConnectionText.Foreground = errorBrush;
+            ServiceStateText.Text = Strings.Get("Diagnostics_ServiceStopped");
+            ServiceVersionText.Text = Strings.Get("Common_Dash");
+            UptimeText.Text = Strings.Get("Common_Dash");
+            TaskCountText.Text = Strings.Get("Common_Dash");
+            RoleText.Text = Strings.Get("Common_Dash");
+
+            BannerText.Text = Strings.Get("Diagnostics_UnavailableBanner");
+            Banner.Visibility = Visibility.Visible;
         }
 
-        ConnectionText.Text = "Служба недоступна";
-        ConnectionText.Foreground = ErrorBrush;
-        ServiceStateText.Text = "Остановлена или не установлена";
-        ServiceVersionText.Text = "—";
-        UptimeText.Text = "—";
-        TaskCountText.Text = "—";
-        RoleText.Text = "—";
+        var isAdmin = _elevation.IsAdmin;
+        PathsGroup.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+        PathsText.Text = Strings.Get("Diagnostics_PathsUnavailable");
 
-        BannerText.Text =
-            "Не удалось получить состояние службы" +
-            (string.IsNullOrWhiteSpace(_lastError) ? "." : $": {_lastError}") +
-            "\nЗапустите службу «WinSheduler» через оснастку «Службы» или командой " +
-            "«sc start WinSheduler» от имени администратора.";
-        BannerText.Visibility = Visibility.Visible;
+        AuditGroup.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+        if (isAdmin)
+        {
+            AuditStatusText.Text = Strings.Get("Diagnostics_AuditHint");
+        }
     }
 
     private static string FormatUptime(DateTime startedAt)
     {
-        if (startedAt == default) return "—";
+        if (startedAt == default) return Strings.Get("Common_Dash");
 
         var started = startedAt.Kind switch
         {
@@ -111,10 +119,10 @@ public partial class DiagnosticsWindow : Window
         };
 
         var uptime = DateTime.Now - started;
-        if (uptime < TimeSpan.Zero) return "—";
+        if (uptime < TimeSpan.Zero) return Strings.Get("Common_Dash");
 
         return uptime.Days > 0
-            ? $"{uptime.Days} д {uptime.ToString(@"hh\:mm\:ss", Invariant)}"
+            ? $"{uptime.Days} {Strings.Get("Time_DurationDays")} {uptime.ToString(@"hh\:mm\:ss", Invariant)}"
             : uptime.ToString(@"hh\:mm\:ss", Invariant);
     }
 
@@ -123,32 +131,59 @@ public partial class DiagnosticsWindow : Window
         await RefreshAsync();
     }
 
-    private void CopyBtn_Click(object sender, RoutedEventArgs e)
+    private async void AuditLoadBtn_Click(object sender, RoutedEventArgs e)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("WinSheduler — диагностика");
-        sb.AppendLine($"Дата: {DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", Invariant)}");
-        sb.AppendLine($"Подключение: {ConnectionText.Text}");
-        sb.AppendLine($"Служба: {ServiceStateText.Text}");
-        sb.AppendLine($"Версия службы: {ServiceVersionText.Text}");
-        sb.AppendLine($"Версия интерфейса: {UiVersionText.Text}");
-        sb.AppendLine($"Время работы службы: {UptimeText.Text}");
-        sb.AppendLine($"Задач / выполняется: {TaskCountText.Text}");
-        sb.AppendLine($"Роль: {RoleText.Text}");
+        var from = AuditFromPicker.SelectedDate ?? DateTime.Today.AddDays(-1);
+        var to = (AuditToPicker.SelectedDate ?? DateTime.Today).AddDays(1);
+
+        AuditLoadBtn.IsEnabled = false;
+        AuditStatusText.Text = Strings.Get("Common_Loading");
+        AuditGrid.ItemsSource = null;
 
         try
         {
-            Clipboard.SetText(sb.ToString());
+            var entries = await _ipc.GetAuditAsync(new DateTimeOffset(from), new DateTimeOffset(to), 500);
+            AuditGrid.ItemsSource = entries;
+            AuditStatusText.Text = entries.Count == 0
+                ? Strings.Get("Diagnostics_AuditEmpty")
+                : Strings.Format("Diagnostics_AuditCount", entries.Count);
+        }
+        catch (IpcException ex)
+        {
+            AuditStatusText.Text = Strings.Format("Diagnostics_AuditError", IpcErrorText.Describe(ex));
         }
         catch (Exception ex)
         {
-            BannerText.Text = $"Не удалось скопировать сведения: {ex.Message}";
-            BannerText.Visibility = Visibility.Visible;
+            AuditStatusText.Text = Strings.Format("Diagnostics_AuditError", IpcErrorText.Describe(ex));
+        }
+        finally
+        {
+            AuditLoadBtn.IsEnabled = true;
         }
     }
 
-    private void CloseBtn_Click(object sender, RoutedEventArgs e)
+    private void CopyBtn_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        var builder = new StringBuilder();
+        builder.AppendLine(Strings.Get("Diagnostics_Title"));
+        builder.AppendLine($"{Strings.Get("Diagnostics_Connection")} {ConnectionText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_Service")} {ServiceStateText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_ServiceVersion")} {ServiceVersionText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_UiVersion")} {UiVersionText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_Uptime")} {UptimeText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_Tasks")} {TaskCountText.Text}");
+        builder.AppendLine($"{Strings.Get("Diagnostics_Role")} {RoleText.Text}");
+
+        try
+        {
+            Clipboard.SetText(builder.ToString());
+        }
+        catch (Exception ex)
+        {
+            BannerText.Text = Strings.Format("Diagnostics_CopyError", ex.Message);
+            Banner.Visibility = Visibility.Visible;
+        }
     }
+
+    private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
 }
