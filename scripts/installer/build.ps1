@@ -299,6 +299,7 @@ $wixArguments = @(
     'build',
     '-arch', 'x64',
     '-ext', 'WixToolset.UI.wixext',
+    '-culture', 'ru-RU',
     '-d', "ProductVersion=$Version",
     '-d', "ServiceExe=$(Join-Path $serviceArtifacts 'WinShedulerSvc.exe')",
     '-d', "UiIcon=$(Join-Path $root 'src/WinSheduler.UI/170.ico')",
@@ -309,6 +310,7 @@ $wixArguments = @(
     '-o', $msiPath,
     (Join-Path $root 'installer/Package.wxs'),
     (Join-Path $root 'installer/Components.wxs'),
+    (Join-Path $root 'installer/ru-RU.wxl'),
     $generated
 )
 

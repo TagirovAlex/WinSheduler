@@ -25,7 +25,7 @@
 
   <Fragment>
     <ComponentGroup Id="ServiceComponents">
-      <Component Id="ServiceComponent" Guid="{5A1D2E7C-3B48-4F69-A0C2-8D4E6F1B3A57}" Bitness="always64">
+      <Component Id="ServiceComponent" Directory="SVCDIR" Guid="{5A1D2E7C-3B48-4F69-A0C2-8D4E6F1B3A57}" Bitness="always64">
         <File Id="ServiceExe" Source="$(var.ServiceExe)" KeyPath="yes" />
         <ServiceInstall Id="ServiceInstall"
                         Name="WinSheduler"
@@ -43,7 +43,7 @@
 
   <Fragment>
     <ComponentGroup Id="DocumentationComponents">
-      <Component Id="DocumentationComponent" Guid="{2F6B9C4D-8E31-4A57-B0D9-6C3A1E5F7B28}" Bitness="always64">
+      <Component Id="DocumentationComponent" Directory="INSTALLDIR" Guid="{2F6B9C4D-8E31-4A57-B0D9-6C3A1E5F7B28}" Bitness="always64">
         <File Id="LicenseFile" Source="$(var.LicenseTxt)" />
         <File Id="ThirdPartyNoticesFile" Source="$(var.ThirdPartyNotices)" KeyPath="yes" />
       </Component>
@@ -52,7 +52,7 @@
 
   <Fragment>
     <ComponentGroup Id="ShortcutComponents">
-      <Component Id="ApplicationShortcutComponent" Guid="{9C4E7A2B-1D65-4F08-8B3A-5E7C9D0F1A46}" Bitness="always64">
+      <Component Id="ApplicationShortcutComponent" Directory="ApplicationProgramsFolder" Guid="{9C4E7A2B-1D65-4F08-8B3A-5E7C9D0F1A46}" Bitness="always64">
         <Shortcut Id="StartMenuShortcut"
                   Name="WinSheduler"
                   Description="Планировщик задач WinSheduler"

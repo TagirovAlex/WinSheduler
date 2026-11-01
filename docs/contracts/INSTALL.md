@@ -186,5 +186,5 @@ msiexec /x ./artifacts/WinSheduler.msi /qn
 - MSIX не используется: не поддерживает Windows-службы.
 - Установка per-user не поддерживается: служба требует per-machine.
 - Portable-режим не поддерживается.
-- Диалоги MSI в v1 — стандартные английские `WixUI`; русская локализация (`.wxl`) — отдельная задача.
+- Диалоги MSI локализованы на русский: `./installer/ru-RU.wxl`, `-culture ru-RU`, `Package/@Codepage="1251"`, `ProductLanguage=1049`. Отсутствующие строки берутся из английского fallback `WixUI`.
 - Проект `./installer/ca/WinShedulerCA.vcxproj` собирается отдельным вызовом MSBuild; в `./WinSheduler.sln` не входит, чтобы не усложнять основную сборку.

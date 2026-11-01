@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="ru-RU" Codepage="1251" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+
+  <!-- Общие кнопки -->
+  <String Id="WixUIBack" Value="Назад" />
+  <String Id="WixUINext" Value="Далее" />
+  <String Id="WixUICancel" Value="Отмена" />
+  <String Id="WixUIFinish" Value="Готово" />
+  <String Id="WixUIRetry" Value="Повторить" />
+  <String Id="WixUIIgnore" Value="Пропустить" />
+  <String Id="WixUIYes" Value="Да" />
+  <String Id="WixUINo" Value="Нет" />
+  <String Id="WixUIOK" Value="ОК" />
+  <String Id="WixUIPrint" Value="Печать" />
+
+  <!-- Приветствие -->
+  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}Мастер установки [ProductName]" />
+  <String Id="WelcomeDlgDescription" Value="Мастер установит [ProductName] на компьютер. Нажмите «Далее» для продолжения или «Отмена» для выхода." />
+
+  <!-- Лицензия -->
+  <String Id="LicenseAgreementDlgTitle" Value="{\WixUI_Font_Title}Лицензионное соглашение" />
+  <String Id="LicenseAgreementDlgDescription" Value="Прочитайте лицензионное соглашение" />
+  <String Id="LicenseAgreementDlgLicenseAcceptedCheckBox" Value="Я принимаю условия лицензионного соглашения" />
+
+  <!-- Папка установки -->
+  <String Id="InstallDirDlgTitle" Value="{\WixUI_Font_Title}Папка установки" />
+  <String Id="InstallDirDlgDescription" Value="Нажмите «Далее», чтобы установить в папку по умолчанию, или «Изменить», чтобы выбрать другую." />
+  <String Id="InstallDirDlgChange" Value="Изменить..." />
+  <String Id="InstallDirDlgFolderLabel" Value="Установить [ProductName] в:" />
+
+  <!-- Подтверждение -->
+  <String Id="VerifyReadyDlgInstallTitle" Value="{\WixUI_Font_Title}Готово к установке [ProductName]" />
+  <String Id="VerifyReadyDlgInstallText" Value="Нажмите «Установить», чтобы начать установку. «Назад» — изменить параметры, «Отмена» — выйти." />
+  <String Id="VerifyReadyDlgInstall" Value="Установить" />
+
+  <!-- Прогресс -->
+  <String Id="ProgressDlgTitleInstalling" Value="{\WixUI_Font_Title}Установка [ProductName]" />
+  <String Id="ProgressDlgTextInstalling" Value="Подождите, выполняется установка [ProductName]." />
+  <String Id="ProgressDlgStatusLabel" Value="Состояние:" />
+  <String Id="ProgressTextInstallValidate" Value="Проверка установки" />
+  <String Id="ProgressTextInstallFiles" Value="Копирование файлов" />
+  <String Id="ProgressTextCreateShortcuts" Value="Создание ярлыков" />
+  <String Id="ProgressTextPublishProduct" Value="Публикация сведений о продукте" />
+  <String Id="ProgressTextRegisterProduct" Value="Регистрация продукта" />
+  <String Id="ProgressTextInstallServices" Value="Установка служб" />
+  <String Id="ProgressTextStartServices" Value="Запуск служб" />
+  <String Id="ProgressTextStopServices" Value="Остановка служб" />
+  <String Id="ProgressTextWriteRegistryValues" Value="Запись параметров реестра" />
+  <String Id="ProgressTextRemoveFiles" Value="Удаление файлов" />
+  <String Id="ProgressTextRemoveServices" Value="Удаление служб" />
+  <String Id="ProgressTextRemoveShortcuts" Value="Удаление ярлыков" />
+  <String Id="ProgressTextCostInitialize" Value="Расчёт требуемого места" />
+  <String Id="ProgressTextFileCost" Value="Расчёт требуемого места" />
+  <String Id="ProgressTextCostFinalize" Value="Расчёт требуемого места" />
+  <String Id="ProgressTextInstallInitialize" Value="Подготовка установки" />
+  <String Id="ProgressTextInstallFinalize" Value="Завершение установки" />
+
+  <!-- Завершение -->
+  <String Id="ExitDialogTitle" Value="{\WixUI_Font_Bigger}Мастер установки [ProductName] завершён" />
+  <String Id="ExitDialogDescription" Value="Нажмите «Готово», чтобы закрыть мастер." />
+
+  <!-- Обслуживание -->
+  <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}Мастер установки [ProductName]" />
+  <String Id="MaintenanceWelcomeDlgDescription" Value="Мастер позволяет изменить или удалить [ProductName]. Нажмите «Далее» или «Отмена»." />
+  <String Id="MaintenanceTypeDlgTitle" Value="{\WixUI_Font_Title}Изменить, восстановить или удалить" />
+  <String Id="MaintenanceTypeDlgDescription" Value="Выберите действие." />
+  <String Id="MaintenanceTypeDlgChangeButton" Value="Изменить" />
+  <String Id="MaintenanceTypeDlgRepairButton" Value="Восстановить" />
+  <String Id="MaintenanceTypeDlgRemoveButton" Value="Удалить" />
+
+  <!-- Ошибки и прерывание -->
+  <String Id="CancelDlgText" Value="Вы уверены, что хотите отменить установку [ProductName]?" />
+  <String Id="InvalidDirDlgText" Value="Папка установки должна находиться на локальном жёстком диске." />
+  <String Id="FilesInUseTitle" Value="{\WixUI_Font_Title}Используемые файлы" />
+  <String Id="FilesInUseText" Value="Следующие приложения используют файлы, которые нужно обновить. Закройте их и нажмите «Повторить» или «Выход»." />
+  <String Id="UserExitTitle" Value="{\WixUI_Font_Bigger}Установка [ProductName] прервана" />
+  <String Id="UserExitDescription1" Value="Установка [ProductName] прервана. Система не изменена. Запустите установку позже." />
+  <String Id="UserExitDescription2" Value="Нажмите «Готово», чтобы закрыть мастер." />
+  <String Id="FatalErrorTitle" Value="{\WixUI_Font_Bigger}Установка [ProductName] завершилась с ошибкой" />
+  <String Id="FatalErrorDescription1" Value="Установка [ProductName] завершилась с ошибкой. Система не изменена. Запустите установку позже." />
+  <String Id="FatalErrorDescription2" Value="Нажмите «Готово», чтобы закрыть мастер." />
+  <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}Мастер установки [ProductName]" />
+  <String Id="PrepareDlgDescription" Value="Подождите, мастер готовится к установке." />
+  <String Id="DiskCostDlgTitle" Value="{\WixUI_Font_Title}Требования к диску" />
+  <String Id="DiskCostDlgDescription" Value="Требуемое место на диске для выбранных компонентов." />
+  <String Id="OutOfDiskDlgTitle" Value="{\WixUI_Font_Title}Недостаточно места на диске" />
+  <String Id="OutOfDiskDlgDescription" Value="Требуемое место превышает доступное." />
+  <String Id="WaitForCostingDlgText" Value="Подождите, определяется требуемое место на диске." />
+
+</WixLocalization>
