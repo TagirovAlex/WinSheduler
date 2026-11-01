@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Светлая тема. Семантические кисти: контролы обращаются к ним
+        только через DynamicResource, поэтому тема переключается в рантайме.
+    -->
+
+    <SolidColorBrush x:Key="App_BackgroundBrush" Color="#F3F3F3" />
+    <SolidColorBrush x:Key="App_SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="App_ForegroundBrush" Color="#1B1B1B" />
+    <SolidColorBrush x:Key="App_SecondaryTextBrush" Color="#5D5D5D" />
+    <SolidColorBrush x:Key="App_DisabledTextBrush" Color="#9A9A9A" />
+    <SolidColorBrush x:Key="App_BorderBrush" Color="#D6D6D6" />
+    <SolidColorBrush x:Key="App_ToolbarBackgroundBrush" Color="#FFFFFF" />
+
+    <SolidColorBrush x:Key="App_ControlBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="App_ControlBorderBrush" Color="#C9C9C9" />
+    <SolidColorBrush x:Key="App_ControlHoverBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="App_ControlPressedBrush" Color="#E8E8E8" />
+    <SolidColorBrush x:Key="App_ControlDisabledBrush" Color="#F5F5F5" />
+
+    <SolidColorBrush x:Key="App_SelectionBrush" Color="#CCE8FF" />
+    <SolidColorBrush x:Key="App_SelectionTextBrush" Color="#1B1B1B" />
+    <SolidColorBrush x:Key="App_AccentBrush" Color="#0F6CBD" />
+    <SolidColorBrush x:Key="App_AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="App_FocusBrush" Color="#0F6CBD" />
+    <SolidColorBrush x:Key="App_LinkBrush" Color="#0F6CBD" />
+
+    <SolidColorBrush x:Key="App_GridHeaderBackgroundBrush" Color="#F5F5F5" />
+    <SolidColorBrush x:Key="App_GridAlternateRowBrush" Color="#FAFAFA" />
+    <SolidColorBrush x:Key="App_GridRowHoverBrush" Color="#F0F6FC" />
+
+    <SolidColorBrush x:Key="Status_SuccessBrush" Color="#107C10" />
+    <SolidColorBrush x:Key="Status_ErrorBrush" Color="#C42B1C" />
+    <SolidColorBrush x:Key="Status_WarningBrush" Color="#9D5D00" />
+    <SolidColorBrush x:Key="Status_SuccessBackgroundBrush" Color="#DFF6DD" />
+    <SolidColorBrush x:Key="Status_ErrorBackgroundBrush" Color="#FDE7E9" />
+    <SolidColorBrush x:Key="Status_WarningBackgroundBrush" Color="#FFF4CE" />
+    <SolidColorBrush x:Key="Status_InfoBackgroundBrush" Color="#E5F1FB" />
+
+</ResourceDictionary>
