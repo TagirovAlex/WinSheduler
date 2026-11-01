@@ -91,6 +91,8 @@ private:
     const TaskDefinition* find_task(const std::vector<ScheduleCache::Entry>& entries, const std::wstring& task_id) const;
     // Номер суток UTC: для ежедневной чистки файлов вывода.
     int64_t current_day() const;
+    // Удаляет устаревшие слоты trigger_state (retention состояния).
+    void prune_trigger_state(const LocalDateTime& now_local);
 
     Database& db_;
     std::wstring log_dir_;

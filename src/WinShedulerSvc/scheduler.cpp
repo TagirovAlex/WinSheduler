@@ -183,15 +183,8 @@ void Scheduler::tick_once() {
 }
 
 int Scheduler::task_count() const {
-    if (!db_.get_db()) return 0;
-    auto sql = "SELECT COUNT(*) FROM tasks";
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_.get_db(), sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return (int)db_.list_tasks().size(); // запасной путь
-    int count = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) count = sqlite3_column_int(stmt, 0);
-    sqlite3_finalize(stmt);
-    return count;
+    // Счётчик задач — через репозиторий трека C (без SQL в планировщике).
+    return db_.task_count();
 }
 
 int Scheduler::running_task_count() const {
@@ -223,6 +216,20 @@ int64_t Scheduler::current_day() const {
     return std::chrono::duration_cast<std::chrono::hours>(clock_->now_utc().time_since_epoch()).count() / 24;
 }
 
+void Scheduler::prune_trigger_state(const LocalDateTime& now_local) {
+    // Состояние слотов хранится ограниченное время: старые ключи не нужны.
+    constexpr int kRetentionDays = 90;
+    int64_t day = trigger::days_from_civil(now_local.year, now_local.month, now_local.day) - kRetentionDays;
+    LocalDateTime cutoff;
+    trigger::civil_from_days(day, cutoff.year, cutoff.month, cutoff.day);
+    const std::wstring before_slot = trigger::format_slot(cutoff);
+
+    const auto entries = cache_->get();
+    for (const auto& entry : *entries) {
+        dbcompat::prune_trigger_state(db_, entry.task.id, before_slot);
+    }
+}
+
 void Scheduler::worker_thread() {
     tick_timer_ = CreateWaitableTimerW(nullptr, FALSE, nullptr);
     if (!tick_timer_) return;
@@ -245,15 +252,16 @@ void Scheduler::tick() {
     try {
         check_running();
 
-        // Чистка файлов вывода по retention — не чаще раза в сутки.
+        const auto now_utc = clock_->now_utc();
+        const auto now_local = clock_->to_local(now_utc);
+
+        // Ежедневное обслуживание: файлы вывода и устаревшие слоты.
         const int64_t today = current_day();
         if (today != last_purge_day_) {
             last_purge_day_ = today;
             dbcompat::purge_expired_outputs(db_);
+            prune_trigger_state(now_local);
         }
-
-        const auto now_utc = clock_->now_utc();
-        const auto now_local = clock_->to_local(now_utc);
         auto entries = cache_->get();
         dispatch(*entries, now_local);
 
@@ -354,7 +362,8 @@ std::wstring Scheduler::request_start(const TaskDefinition& task, const std::wst
     spec.client_token = client_token;
     spec.caller_is_admin = caller_is_admin;
     // Не-админская задача без токена владельца не запускается от SYSTEM.
-    spec.require_client_token = !is_system_sid(task.owner_sid) && client_token == nullptr;
+    // Задача с RunAs запускается отдельным токеном пользователя (только админ).
+    spec.require_client_token = !spec.has_run_as && !is_system_sid(task.owner_sid) && client_token == nullptr;
 
     std::optional<std::wstring> output_path;
     if (task.log_output) {

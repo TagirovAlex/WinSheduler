@@ -4,17 +4,9 @@
 
 class Database;
 
-// Совместимость планировщика с двумя состояниями слоя хранения:
-//  - схема v2 (трек C): Database::mark_trigger_fired / insert_history(h, window_id)
-//    / purge_expired_outputs;
-//  - текущее дерево до слияния ветки C (v1): запасной путь поверх того же SQLite.
-// После слияния ветки C запасной путь удаляется вместе с этим файлом.
-#if __has_include("db_repository.h")
-#define WS_DB_SCHEMA_V2 1
-#else
-#define WS_DB_SCHEMA_V2 0
-#endif
-
+// Тонкий адаптер планировщика над слоем хранения (трек C, схема v2).
+// Планировщик не выполняет SQL напрямую: все операции идут через Database,
+// поэтому writer-мьютекс и транзакции остаются в одном месте.
 namespace dbcompat {
 
 // Атомарно занимает слот (task_id, window_id, slot).
@@ -28,10 +20,13 @@ bool was_trigger_fired(Database& db, const std::wstring& task_id, const std::wst
 // Удаляет состояние срабатываний задачи (при изменении или удалении задачи).
 void clear_trigger_state(Database& db, const std::wstring& task_id);
 
-// Вставляет запись истории; window_id передаётся отдельно (NULL для RunNow).
+// Удаляет слоты задачи старше before_slot (локальное "yyyy-MM-ddTHH:mm").
+int prune_trigger_state(Database& db, const std::wstring& task_id, const std::wstring& before_slot);
+
+// Вставляет запись истории; window_id передаётся отдельно (пусто для RunNow).
 void insert_history(Database& db, const RunHistory& history, const std::wstring& window_id);
 
-// Чистка файлов вывода по retention. 0 — если слой хранения не поддерживает.
+// Чистка файлов вывода по retention (DB.md, раздел 6).
 int purge_expired_outputs(Database& db);
 
 } // namespace dbcompat

@@ -63,6 +63,11 @@
     <ClCompile Include="..\..\src\WinShedulerSvc\process_runner.cpp" />
     <ClCompile Include="..\..\src\WinShedulerSvc\scheduler.cpp" />
     <ClCompile Include="..\..\src\WinShedulerSvc\database.cpp" />
+    <ClCompile Include="..\..\src\WinShedulerSvc\db_path.cpp" />
+    <ClCompile Include="..\..\src\WinShedulerSvc\db_repository.cpp" />
+    <ClCompile Include="..\..\src\WinShedulerSvc\db_stmt.cpp" />
+    <ClCompile Include="..\..\src\WinShedulerSvc\db_util.cpp" />
+    <ClCompile Include="..\..\src\WinShedulerSvc\migrations.cpp" />
     <ClCompile Include="..\..\src\WinShedulerSvc\json.cpp" />
     <ClCompile Include="..\..\src\WinShedulerSvc\sqlite3.c" />
   </ItemGroup>

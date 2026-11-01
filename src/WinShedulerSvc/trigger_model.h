@@ -51,10 +51,6 @@ std::wstring format_utc_iso(std::chrono::system_clock::time_point utc);
 // Ограничение repeatUntil для конкретного слота (полное время или легаси "HH:mm").
 bool slot_within_repeat_until(const TimeWindow& window, const LocalDateTime& slot);
 
-// Восстанавливает TriggerKind, если колонка kind ещё не сохраняется схемой v1
-// (до C-2). Использует легаси-правила из DB.md, раздел 4.
-TimeWindow normalize_time_window(const TimeWindow& window);
-
 // --- Валидация ---
 
 // Проверка окна расписания по ./docs/contracts/IPC.md. error заполняется по-русски.

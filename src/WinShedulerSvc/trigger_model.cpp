@@ -389,28 +389,6 @@ TriggerKind trigger_kind_from_legacy_type(int legacy_type, bool has_days_of_mont
     return TriggerKind::Daily;
 }
 
-TimeWindow normalize_time_window(const TimeWindow& window) {
-    TimeWindow result = window;
-    // Пока схема v1 не хранит kind, тип восстанавливается по заполненным полям.
-    if (window.type == TimeWindowType::Interval) {
-        result.kind = TriggerKind::Interval;
-        return result;
-    }
-    if (!window.days_of_month.empty()) {
-        result.kind = TriggerKind::Monthly;
-        return result;
-    }
-    if (!window.days_of_week.empty()) {
-        result.kind = TriggerKind::Weekly;
-        return result;
-    }
-    if (!window.specific_dates.empty()) {
-        result.kind = TriggerKind::Once;
-        return result;
-    }
-    return result;
-}
-
 std::string int_array_to_json(const std::vector<int>& values) {
     std::string out = "[";
     for (size_t i = 0; i < values.size(); ++i) {

@@ -1,5 +1,4 @@
 #include "schedule_cache.h"
-#include "trigger_model.h"
 
 ScheduleCache::ScheduleCache(Database& db) : db_(db) {}
 
@@ -26,10 +25,7 @@ void ScheduleCache::rebuild() {
     for (auto& task : tasks) {
         Entry entry;
         entry.task = task;
-        // Пока C-2 не сохраняет kind, тип окна восстанавливается по полям.
-        for (const auto& window : db_.get_time_windows(task.id)) {
-            entry.windows.push_back(trigger::normalize_time_window(window));
-        }
+        entry.windows = db_.get_time_windows(task.id);
         entries->push_back(std::move(entry));
     }
     data_ = entries;

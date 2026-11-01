@@ -497,6 +497,7 @@ public:
 };
 
 // Временная БД в ./temp/scheduler/: создаётся и удаляется тестом.
+// Путь приводится к абсолютному: Database::open требует локальный абсолютный путь.
 class TestDatabase {
 public:
     TestDatabase() {
@@ -504,7 +505,7 @@ public:
         CreateDirectoryW(L"temp\\scheduler", nullptr);
         CreateDirectoryW(L"temp\\scheduler\\logs", nullptr);
         remove_files();
-        opened_ = db_.open(L"temp/scheduler/scheduler-tests.db");
+        opened_ = db_.open(database_path());
     }
 
     ~TestDatabase() {
@@ -514,12 +515,24 @@ public:
 
     Database& db() { return db_; }
     bool opened() const { return opened_; }
+    std::wstring last_error() const { return db_.last_error(); }
+
+    static std::wstring database_path() {
+        wchar_t cwd[MAX_PATH] = {};
+        GetCurrentDirectoryW(MAX_PATH, cwd);
+        std::wstring base = cwd;
+        for (auto& c : base) {
+            if (c == L'\\') c = L'/';
+        }
+        return base + L"/temp/scheduler/scheduler-tests.db";
+    }
 
 private:
     static void remove_files() {
-        DeleteFileW(L"temp\\scheduler\\scheduler-tests.db");
-        DeleteFileW(L"temp\\scheduler\\scheduler-tests.db-wal");
-        DeleteFileW(L"temp\\scheduler\\scheduler-tests.db-shm");
+        const std::wstring path = database_path();
+        DeleteFileW(path.c_str());
+        DeleteFileW((path + L"-wal").c_str());
+        DeleteFileW((path + L"-shm").c_str());
     }
 
     Database db_;
@@ -817,9 +830,72 @@ void test_scheduler_recovery() {
     CHECK(!history.empty() && history[0].end_time.has_value());
 }
 
+void test_scheduler_interval_no_storm() {
+    std::printf("Interval: один запуск на слот, без шторма\n");
+    TestDatabase database;
+    CHECK(database.opened());
+
+    auto task = make_task(L"11111111-1111-1111-1111-111111111111");
+    task.on_overlap = OnOverlapAction::StartAnother;
+    database.db().insert_task(task);
+
+    TimeWindow window;
+    window.id = L"aaaaaaaa-1111-1111-1111-111111111111";
+    window.task_id = task.id;
+    window.kind = TriggerKind::Interval;
+    window.type = TimeWindowType::Interval;
+    window.start_time = L"09:00";
+    window.end_time = L"10:00";
+    window.repeat_interval_minutes = 20;
+    database.db().insert_time_window(window);
+
+    auto runner = std::make_unique<FakeProcessRunner>();
+    auto* runner_ptr = runner.get();
+    auto clock = std::make_unique<TestClock>(dt(2026, 11, 1, 9, 20));
+    auto* clock_ptr = clock.get();
+    Scheduler scheduler(database.db(), L"temp/scheduler/logs",
+        std::move(runner), std::make_unique<MemoryTriggerStateStore>(), std::move(clock));
+
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 1);
+    scheduler.tick_once();
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 1); // та же минута — повторного запуска нет
+
+    clock_ptr->advance(1); // 09:21 — не слот
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 1);
+
+    clock_ptr->advance(19); // 09:40 — следующий слот
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 2);
+}
+
+void test_scheduler_active_user_rejected() {
+    std::printf("session_mode=ActiveUser в v1 отклоняется\n");
+    TestDatabase database;
+    CHECK(database.opened());
+
+    auto task = make_task(L"11111111-1111-1111-1111-111111111111");
+    task.session_mode = SessionMode::ActiveUser;
+    database.db().insert_task(task);
+
+    auto runner = std::make_unique<FakeProcessRunner>();
+    auto* runner_ptr = runner.get();
+    Scheduler scheduler(database.db(), L"temp/scheduler/logs",
+        std::move(runner), std::make_unique<MemoryTriggerStateStore>(),
+        std::make_unique<TestClock>(dt(2026, 11, 1, 9, 0)));
+
+    std::wstring error;
+    CHECK(scheduler.run_now(task.id, error).empty());
+    CHECK(runner_ptr->launches == 0);
+}
+
 } // namespace
 
 int main() {
+    // Без буферизации: при падении видно, какой тест не завершился.
+    setvbuf(stdout, nullptr, _IONBF, 0);
     std::printf("Тесты планировщика WinSheduler\n\n");
 
     test_calendar();
@@ -845,6 +921,8 @@ int main() {
     test_scheduler_retry();
     test_scheduler_run_now_overlap();
     test_scheduler_recovery();
+    test_scheduler_interval_no_storm();
+    test_scheduler_active_user_rejected();
 
     std::printf("\nПройдено: %d, ошибок: %d\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
