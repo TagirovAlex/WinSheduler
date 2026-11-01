@@ -43,6 +43,7 @@
 | `STARTUI` | `0` | запустить UI после установки |
 | `KEEPDATA` | `1` | сохранить данные при удалении |
 | `ALLOWUNSAFEPATH` | `0` | разрешить небезопасный `INSTALLDIR` (только лаборатория) |
+| `OLDDATADIR` | пусто | каталог старой БД для миграции; при пустом значении выполняется автоопределение |
 
 Свойства публичные (UPPERCASE), доступны для silent install и GPO.
 
@@ -74,9 +75,11 @@
 | `INSTALLDIR/ui` | Full | Full | Read + Execute |
 | `DATADIR` | Full | Full | нет доступа |
 | `DATADIR/data` | Full | Full | нет доступа |
-| `DATADIR/logs` | Full | Full | Read (опционально) |
+| `DATADIR/logs` | Full | Full | нет доступа |
 
 ACL выставляется установщиком явно и повторно применяется при repair/upgrade. Наследуемые права, дающие запись не-админам, удаляются.
+
+Доступ к логам — только через администратора или службу. Это совпадает с `./docs/contracts/SECURITY.md` §7 и выбрано осознанно: в логах могут быть пути и аргументы задач.
 
 ## 6. Служба
 
@@ -123,6 +126,7 @@ dotnet publish ./src/WinSheduler.UI/WinSheduler.UI.csproj -c Release -r win-x64 
 - .NET 8 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).
+- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `1.2.0` из `./Directory.Build.props`.
 
 ## 9. Установка
 
@@ -182,3 +186,5 @@ msiexec /x ./artifacts/WinSheduler.msi /qn
 - MSIX не используется: не поддерживает Windows-службы.
 - Установка per-user не поддерживается: служба требует per-machine.
 - Portable-режим не поддерживается.
+- Диалоги MSI в v1 — стандартные английские `WixUI`; русская локализация (`.wxl`) — отдельная задача.
+- Проект `./installer/ca/WinShedulerCA.vcxproj` собирается отдельным вызовом MSBuild; в `./WinSheduler.sln` не входит, чтобы не усложнять основную сборку.

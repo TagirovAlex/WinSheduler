@@ -228,6 +228,7 @@ Payload: `{ "from": "2026-11-01T00:00:00Z", "to": "2026-11-02T00:00:00Z", "limit
 - `Interval`: `startTime < endTime`, `repeatIntervalMinutes >= 1`.
 - Время — `HH:mm` в 24-часовом формате; невалидное значение отклоняется.
 - `dayInterval`, `weekInterval`, `monthInterval` — неотрицательные целые со значением по умолчанию 1; это согласовано с `./docs/contracts/DB.md` (`NOT NULL DEFAULT 1`).
+- `specificDates` на проводе — строки `yyyy-MM-dd`. C#-модель может хранить `DateTime`, но клиент обязан преобразовывать на границе IPC; `DateTime` в формате ISO с временем не допускается.
 
 ### `RunHistoryDto`
 

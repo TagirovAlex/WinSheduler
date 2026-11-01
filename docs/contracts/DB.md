@@ -13,7 +13,7 @@
   - расписание (`exactTimes`, `startTime`, `endTime`, `repeatUntil`, `startDate`, `endDate`) — локальное настенное время;
   - события (`createdAt`, `modifiedAt`, `startTime`, `endTime`, `lastFiredAt`, `ts`) — UTC ISO 8601 с `Z`.
 - Кодировка текста — UTF-8.
-- Файл БД и каталог — только `SYSTEM` + `Administrators`.
+- Файл БД и каталог — только `SYSTEM` + `Administrators`. Для службы проверка ACL включается через `DatabaseOptions::require_secure_acl = true`; для standalone и тестов допускается отключение.
 
 ## 2. Версия схемы
 
@@ -21,10 +21,11 @@
 
 | Версия | Состояние |
 |--------|-----------|
+| 0 | legacy: старый код не писал версию; при наличии таблицы `tasks` трактуется как v1 |
 | 1 | текущая рабочая схема |
 | 2 | целевая схема (этот документ) |
 
-Миграция выполняется при старте службы, идемпотентно, в одной транзакции. При ошибке — откат и отказ старта с записью в лог.
+Миграция выполняется при старте службы, идемпотентно, в одной транзакции. При ошибке — откат и отказ старта с записью в лог. Пустая БД без `tasks` создаётся сразу как v2.
 
 ## 3. Схема v2
 
@@ -141,6 +142,7 @@
 1. `PRAGMA user_version` = 1 → начать транзакцию.
 2. Добавить в `tasks`: `owner_sid`, `session_mode`. Заполнить `owner_sid` значением `install.owner_sid` или `S-1-5-18`; `session_mode=0`.
 3. Добавить в `time_windows`: `kind`, `day_interval`, `week_interval`, `month_interval`.
+   Добавить в `run_history`: `window_id`, `triggered_by` (в целевой схеме они есть, в старых БД отсутствуют).
 4. Заполнить `kind`:
    - `type=1` (Interval) → `kind=4`;
    - `type=0` и `days_of_month` непустой → `kind=3`;
@@ -164,11 +166,12 @@
 
 - После вставки истории: удалить записи сверх `tasks.max_history_records` (сначала самые старые).
 - Файлы `./logs/output/<taskId>/<historyId>.log` старше `retention.output_days` (по умолчанию 30) удаляются при старте и раз в сутки.
-- `audit_log` — хранить 180 дней (настраивается в `settings`).
+- `audit_log` — хранить 180 дней; ключ `settings` — `retention.audit_days`.
 
 ## 7. Резервное копирование
 
-- Штатный способ: `VACUUM INTO './temp/backup/scheduler-<timestamp>.db'` (или `sqlite3_backup`).
+- Штатный способ: `VACUUM INTO` или `sqlite3_backup` в каталог `DatabaseOptions::backup_dir`.
+- По умолчанию для службы — `<DATADIR>/backup`; для разработки и тестов — `./temp/backup/`.
 - Копирование файла БД без checkpoint WAL запрещено.
 - Восстановление — только при остановленной службе.
 

@@ -1,6 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- Токены нужны для StaticResource внутри этого словаря:
+         ресурсы соседнего merged-словаря здесь не видны. -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Tokens.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
     <!--
         Стили контролов дизайн-системы (контракт UI.md, раздел 2).
         Кисти темы подключаются через DynamicResource, метрики — через StaticResource
