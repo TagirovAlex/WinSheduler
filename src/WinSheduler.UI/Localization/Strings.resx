@@ -426,4 +426,539 @@
   <data name="Error_Unexpected" xml:space="preserve">
     <value>Произошла непредвиденная ошибка. Подробности записаны в журнал.</value>
   </data>
+  <data name="Main_SearchLabel" xml:space="preserve">
+    <value>Поиск:</value>
+  </data>
+  <data name="Main_FilterLabel" xml:space="preserve">
+    <value>Фильтр:</value>
+  </data>
+  <data name="Main_ActionToggle" xml:space="preserve">
+    <value>Включить/отключить</value>
+  </data>
+  <data name="Main_Running" xml:space="preserve">
+    <value>Выполняется</value>
+  </data>
+  <data name="Main_EmptyAdd" xml:space="preserve">
+    <value>Добавить задачу</value>
+  </data>
+  <data name="Main_EmptyNoMatchesTitle" xml:space="preserve">
+    <value>Ничего не найдено</value>
+  </data>
+  <data name="Main_EmptyNoMatchesHint" xml:space="preserve">
+    <value>Измените условия поиска или фильтр.</value>
+  </data>
+  <data name="Main_ServiceUnavailableHint" xml:space="preserve">
+    <value>Если служба не установлена — установите WinSheduler. Если установлена — запустите её через «Службы» (services.msc) или командой «sc start WinSheduler» от имени администратора.</value>
+  </data>
+  <data name="Main_OpenServices" xml:space="preserve">
+    <value>Открыть службы</value>
+  </data>
+  <data name="Main_OpenServicesError" xml:space="preserve">
+    <value>Не удалось открыть оснастку «Службы»: {0}</value>
+  </data>
+  <data name="Main_ActionDiagnostics" xml:space="preserve">
+    <value>Диагностика</value>
+  </data>
+  <data name="Main_StatusServiceChecking" xml:space="preserve">
+    <value>Служба: проверка...</value>
+  </data>
+  <data name="Main_RunStarted" xml:space="preserve">
+    <value>Задача «{0}» запущена</value>
+  </data>
+
+  <data name="Editor_TitleNew" xml:space="preserve">
+    <value>Новая задача</value>
+  </data>
+  <data name="Editor_TitleEdit" xml:space="preserve">
+    <value>Редактирование задачи</value>
+  </data>
+  <data name="Editor_TitleEditNamed" xml:space="preserve">
+    <value>Редактирование: {0}</value>
+  </data>
+  <data name="Editor_TabGeneral" xml:space="preserve">
+    <value>Основные</value>
+  </data>
+  <data name="Editor_TabSchedule" xml:space="preserve">
+    <value>Расписание</value>
+  </data>
+  <data name="Editor_TabOptions" xml:space="preserve">
+    <value>Параметры</value>
+  </data>
+  <data name="Editor_LabelName" xml:space="preserve">
+    <value>Название:</value>
+  </data>
+  <data name="Editor_LabelDescription" xml:space="preserve">
+    <value>Описание:</value>
+  </data>
+  <data name="Editor_LabelProgram" xml:space="preserve">
+    <value>Программа:</value>
+  </data>
+  <data name="Editor_LabelArguments" xml:space="preserve">
+    <value>Аргументы:</value>
+  </data>
+  <data name="Editor_LabelWorkingDirectory" xml:space="preserve">
+    <value>Рабочая папка:</value>
+  </data>
+  <data name="Editor_LabelWindowStyle" xml:space="preserve">
+    <value>Окно:</value>
+  </data>
+  <data name="Editor_HeadlessHint" xml:space="preserve">
+    <value>Headless: окно не отображается на рабочем столе.</value>
+  </data>
+  <data name="Editor_RunAsGroup" xml:space="preserve">
+    <value>Запуск от пользователя</value>
+  </data>
+  <data name="Editor_LabelUser" xml:space="preserve">
+    <value>Пользователь:</value>
+  </data>
+  <data name="Editor_LabelDomain" xml:space="preserve">
+    <value>Домен:</value>
+  </data>
+  <data name="Editor_LabelPassword" xml:space="preserve">
+    <value>Пароль:</value>
+  </data>
+  <data name="Editor_ClearPassword" xml:space="preserve">
+    <value>Очистить</value>
+  </data>
+  <data name="Editor_PasswordSet" xml:space="preserve">
+    <value>Пароль задан</value>
+  </data>
+  <data name="Editor_PasswordNotSet" xml:space="preserve">
+    <value>Пароль не задан</value>
+  </data>
+  <data name="Editor_PasswordWillClear" xml:space="preserve">
+    <value>Пароль будет снят при сохранении</value>
+  </data>
+  <data name="Editor_RequiresAdminHint" xml:space="preserve">
+    <value>Требует админа</value>
+  </data>
+  <data name="Editor_AddTrigger" xml:space="preserve">
+    <value>Добавить триггер</value>
+  </data>
+  <data name="Editor_DuplicateTrigger" xml:space="preserve">
+    <value>Дублировать</value>
+  </data>
+  <data name="Editor_ColumnType" xml:space="preserve">
+    <value>Тип</value>
+  </data>
+  <data name="Editor_ColumnSchedule" xml:space="preserve">
+    <value>Расписание</value>
+  </data>
+  <data name="Editor_TriggersEmpty" xml:space="preserve">
+    <value>Триггеров нет. Нажмите «Добавить триггер», чтобы задать расписание.</value>
+  </data>
+  <data name="Editor_LabelOnError" xml:space="preserve">
+    <value>При ошибке:</value>
+  </data>
+  <data name="Editor_LabelRetryCount" xml:space="preserve">
+    <value>Повторов:</value>
+  </data>
+  <data name="Editor_LabelOnOverlap" xml:space="preserve">
+    <value>При наложении:</value>
+  </data>
+  <data name="Editor_LabelTimeout" xml:space="preserve">
+    <value>Таймаут (мин):</value>
+  </data>
+  <data name="Editor_KillOnTimeout" xml:space="preserve">
+    <value>Завершать при таймауте</value>
+  </data>
+  <data name="Editor_LogOutput" xml:space="preserve">
+    <value>Сохранять вывод процесса</value>
+  </data>
+  <data name="Editor_LabelMaxHistory" xml:space="preserve">
+    <value>Записей в журнале:</value>
+  </data>
+  <data name="Editor_ValidationName" xml:space="preserve">
+    <value>Укажите название задачи.</value>
+  </data>
+  <data name="Editor_ValidationProgram" xml:space="preserve">
+    <value>Укажите путь к программе.</value>
+  </data>
+  <data name="Editor_ValidationPath" xml:space="preserve">
+    <value>Недопустимый путь к программе: {0}</value>
+  </data>
+  <data name="Editor_ValidationWorkingDirectory" xml:space="preserve">
+    <value>Недопустимая рабочая папка: {0}</value>
+  </data>
+  <data name="Editor_ValidationRetry" xml:space="preserve">
+    <value>Число повторов должно быть от 0 до 10.</value>
+  </data>
+  <data name="Editor_ValidationTimeout" xml:space="preserve">
+    <value>Таймаут должен быть от 0 до 10080 минут.</value>
+  </data>
+  <data name="Editor_ValidationHistory" xml:space="preserve">
+    <value>Записей в журнале должно быть от 1 до 10000.</value>
+  </data>
+  <data name="Editor_ValidationPassword" xml:space="preserve">
+    <value>Указан пользователь для запуска, но пароль не задан.</value>
+  </data>
+  <data name="Editor_PathNotAbsolute" xml:space="preserve">
+    <value>путь должен быть абсолютным.</value>
+  </data>
+  <data name="Editor_PathUnc" xml:space="preserve">
+    <value>сетевые пути (UNC) запрещены.</value>
+  </data>
+  <data name="Editor_PathDevice" xml:space="preserve">
+    <value>пути устройств запрещены.</value>
+  </data>
+  <data name="Editor_PathTraversal" xml:space="preserve">
+    <value>переходы «..» запрещены.</value>
+  </data>
+  <data name="Editor_PathStream" xml:space="preserve">
+    <value>альтернативные потоки запрещены.</value>
+  </data>
+  <data name="Editor_PathDriveRoot" xml:space="preserve">
+    <value>корень диска недопустим.</value>
+  </data>
+
+  <data name="Trigger_Title" xml:space="preserve">
+    <value>Триггер расписания</value>
+  </data>
+  <data name="Trigger_TypeGroup" xml:space="preserve">
+    <value>Тип триггера</value>
+  </data>
+  <data name="Trigger_ParamsGroup" xml:space="preserve">
+    <value>Параметры</value>
+  </data>
+  <data name="Trigger_LimitsGroup" xml:space="preserve">
+    <value>Ограничения</value>
+  </data>
+  <data name="Trigger_PreviewGroup" xml:space="preserve">
+    <value>Предпросмотр</value>
+  </data>
+  <data name="Trigger_Date" xml:space="preserve">
+    <value>Дата:</value>
+  </data>
+  <data name="Trigger_Time" xml:space="preserve">
+    <value>Время (ЧЧ:ММ):</value>
+  </data>
+  <data name="Trigger_Every" xml:space="preserve">
+    <value>Каждые:</value>
+  </data>
+  <data name="Trigger_UnitDays" xml:space="preserve">
+    <value>дн.</value>
+  </data>
+  <data name="Trigger_UnitWeeks" xml:space="preserve">
+    <value>нед.</value>
+  </data>
+  <data name="Trigger_UnitMonths" xml:space="preserve">
+    <value>мес.</value>
+  </data>
+  <data name="Trigger_UnitMinutes" xml:space="preserve">
+    <value>мин.</value>
+  </data>
+  <data name="Trigger_DaysOfWeek" xml:space="preserve">
+    <value>Дни недели:</value>
+  </data>
+  <data name="Trigger_DayOfMonth" xml:space="preserve">
+    <value>День месяца:</value>
+  </data>
+  <data name="Trigger_DayRange" xml:space="preserve">
+    <value>(1–31)</value>
+  </data>
+  <data name="Trigger_Start" xml:space="preserve">
+    <value>Начало (ЧЧ:ММ):</value>
+  </data>
+  <data name="Trigger_End" xml:space="preserve">
+    <value>Конец (ЧЧ:ММ):</value>
+  </data>
+  <data name="Trigger_TimesHint" xml:space="preserve">
+    <value>Несколько значений — через запятую, например: 09:00, 13:00, 18:00</value>
+  </data>
+  <data name="Trigger_IntervalHint" xml:space="preserve">
+    <value>От 1 до 1440 минут. Например: с 09:00 до 18:00 каждые 30 минут.</value>
+  </data>
+  <data name="Trigger_StartDate" xml:space="preserve">
+    <value>Дата начала:</value>
+  </data>
+  <data name="Trigger_EndDate" xml:space="preserve">
+    <value>Дата конца:</value>
+  </data>
+  <data name="Trigger_RepeatUntil" xml:space="preserve">
+    <value>Повторять до:</value>
+  </data>
+  <data name="Trigger_RepeatUntilTooltip" xml:space="preserve">
+    <value>Время окончания повторов в формате ЧЧ:ММ</value>
+  </data>
+  <data name="Trigger_Enabled" xml:space="preserve">
+    <value>Включено</value>
+  </data>
+  <data name="Trigger_SummaryOnce" xml:space="preserve">
+    <value>Однократно: {0} в {1}</value>
+  </data>
+  <data name="Trigger_SummaryOnceNoDate" xml:space="preserve">
+    <value>Однократно: дата не указана</value>
+  </data>
+  <data name="Trigger_SummaryDaily" xml:space="preserve">
+    <value>Ежедневно</value>
+  </data>
+  <data name="Trigger_SummaryDailyEvery" xml:space="preserve">
+    <value>Ежедневно, каждые {0} дн.</value>
+  </data>
+  <data name="Trigger_SummaryWeekly" xml:space="preserve">
+    <value>Еженедельно</value>
+  </data>
+  <data name="Trigger_SummaryWeeklyEvery" xml:space="preserve">
+    <value>Еженедельно, каждые {0} нед.</value>
+  </data>
+  <data name="Trigger_SummaryMonthly" xml:space="preserve">
+    <value>Ежемесячно, {0}-го числа</value>
+  </data>
+  <data name="Trigger_SummaryMonthlyEvery" xml:space="preserve">
+    <value>Ежемесячно, {0}-го числа, каждые {1} мес.</value>
+  </data>
+  <data name="Trigger_SummaryAt" xml:space="preserve">
+    <value>в {0}</value>
+  </data>
+  <data name="Trigger_SummaryInterval" xml:space="preserve">
+    <value>Интервал: с {0} до {1}, каждые {2} мин</value>
+  </data>
+  <data name="Trigger_SummaryFrom" xml:space="preserve">
+    <value>с {0}</value>
+  </data>
+  <data name="Trigger_SummaryTo" xml:space="preserve">
+    <value>по {0}</value>
+  </data>
+  <data name="Trigger_SummaryUntil" xml:space="preserve">
+    <value>повторять до {0}</value>
+  </data>
+  <data name="Trigger_SummaryDisabled" xml:space="preserve">
+    <value>выключено</value>
+  </data>
+  <data name="Trigger_ErrorTime" xml:space="preserve">
+    <value>Время «{0}» должно быть в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorTimesEmpty" xml:space="preserve">
+    <value>Укажите хотя бы одно время запуска в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorDateOnce" xml:space="preserve">
+    <value>Укажите дату однократного запуска.</value>
+  </data>
+  <data name="Trigger_ErrorOnceTime" xml:space="preserve">
+    <value>Время однократного запуска должно быть в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorRange" xml:space="preserve">
+    <value>Поле «{0}» должно быть целым числом от {1} до {2}.</value>
+  </data>
+  <data name="Trigger_ErrorDaysEmpty" xml:space="preserve">
+    <value>Выберите хотя бы один день недели.</value>
+  </data>
+  <data name="Trigger_ErrorIntervalStart" xml:space="preserve">
+    <value>Начало интервала должно быть в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorIntervalEnd" xml:space="preserve">
+    <value>Конец интервала должен быть в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorIntervalOrder" xml:space="preserve">
+    <value>Начало интервала должно быть раньше конца.</value>
+  </data>
+  <data name="Trigger_ErrorEndBeforeStart" xml:space="preserve">
+    <value>Дата конца не может быть раньше даты начала.</value>
+  </data>
+  <data name="Trigger_ErrorRepeatUntilTime" xml:space="preserve">
+    <value>Время «Повторять до» должно быть в формате ЧЧ:ММ.</value>
+  </data>
+  <data name="Trigger_ErrorRepeatUntilBeforeStart" xml:space="preserve">
+    <value>Дата «Повторять до» не может быть раньше даты начала.</value>
+  </data>
+  <data name="Trigger_FieldDayInterval" xml:space="preserve">
+    <value>Интервал в днях</value>
+  </data>
+  <data name="Trigger_FieldWeekInterval" xml:space="preserve">
+    <value>Интервал в неделях</value>
+  </data>
+  <data name="Trigger_FieldMonthDay" xml:space="preserve">
+    <value>День месяца</value>
+  </data>
+  <data name="Trigger_FieldMonthInterval" xml:space="preserve">
+    <value>Интервал в месяцах</value>
+  </data>
+  <data name="Trigger_FieldIntervalMinutes" xml:space="preserve">
+    <value>Интервал в минутах</value>
+  </data>
+  <data name="DayShort_Monday" xml:space="preserve">
+    <value>Пн</value>
+  </data>
+  <data name="DayShort_Tuesday" xml:space="preserve">
+    <value>Вт</value>
+  </data>
+  <data name="DayShort_Wednesday" xml:space="preserve">
+    <value>Ср</value>
+  </data>
+  <data name="DayShort_Thursday" xml:space="preserve">
+    <value>Чт</value>
+  </data>
+  <data name="DayShort_Friday" xml:space="preserve">
+    <value>Пт</value>
+  </data>
+  <data name="DayShort_Saturday" xml:space="preserve">
+    <value>Сб</value>
+  </data>
+  <data name="DayShort_Sunday" xml:space="preserve">
+    <value>Вс</value>
+  </data>
+
+  <data name="History_Title" xml:space="preserve">
+    <value>Журнал запусков</value>
+  </data>
+  <data name="History_TitleFormat" xml:space="preserve">
+    <value>Журнал запусков: {0}</value>
+  </data>
+  <data name="History_FilterLabel" xml:space="preserve">
+    <value>Статус:</value>
+  </data>
+  <data name="History_FilterAll" xml:space="preserve">
+    <value>Все статусы</value>
+  </data>
+  <data name="History_RefreshTooltip" xml:space="preserve">
+    <value>Обновить журнал (F5)</value>
+  </data>
+  <data name="History_ExportCsv" xml:space="preserve">
+    <value>Экспорт CSV</value>
+  </data>
+  <data name="History_OpenLog" xml:space="preserve">
+    <value>Открыть лог</value>
+  </data>
+  <data name="History_ColumnStart" xml:space="preserve">
+    <value>Начало</value>
+  </data>
+  <data name="History_ColumnEnd" xml:space="preserve">
+    <value>Конец</value>
+  </data>
+  <data name="History_ColumnStatus" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="History_ColumnExitCode" xml:space="preserve">
+    <value>Код</value>
+  </data>
+  <data name="History_ColumnDuration" xml:space="preserve">
+    <value>Длительность</value>
+  </data>
+  <data name="History_ColumnError" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="History_Empty" xml:space="preserve">
+    <value>Запусков ещё не было.</value>
+  </data>
+  <data name="History_EmptyFiltered" xml:space="preserve">
+    <value>Нет записей с выбранным статусом.</value>
+  </data>
+  <data name="History_Summary" xml:space="preserve">
+    <value>Записей: {0} · обновлено {1}</value>
+  </data>
+  <data name="History_LogInvalidPath" xml:space="preserve">
+    <value>Служба вернула недопустимый путь к файлу вывода.</value>
+  </data>
+  <data name="History_LogMissing" xml:space="preserve">
+    <value>Файл лога недоступен: он удалён или у вас нет прав на чтение.</value>
+  </data>
+  <data name="History_LogOpenError" xml:space="preserve">
+    <value>Не удалось открыть лог: {0}</value>
+  </data>
+  <data name="History_ExportTitle" xml:space="preserve">
+    <value>Экспорт журнала</value>
+  </data>
+  <data name="History_CsvFilter" xml:space="preserve">
+    <value>CSV (*.csv)|*.csv</value>
+  </data>
+  <data name="History_ExportSaved" xml:space="preserve">
+    <value>Экспортировано записей: {0} · {1}</value>
+  </data>
+  <data name="History_ExportError" xml:space="preserve">
+    <value>Не удалось сохранить CSV: {0}</value>
+  </data>
+
+  <data name="Diagnostics_Title" xml:space="preserve">
+    <value>Диагностика</value>
+  </data>
+  <data name="Diagnostics_GroupState" xml:space="preserve">
+    <value>Состояние</value>
+  </data>
+  <data name="Diagnostics_Connection" xml:space="preserve">
+    <value>Подключение:</value>
+  </data>
+  <data name="Diagnostics_Service" xml:space="preserve">
+    <value>Служба:</value>
+  </data>
+  <data name="Diagnostics_ServiceVersion" xml:space="preserve">
+    <value>Версия службы:</value>
+  </data>
+  <data name="Diagnostics_UiVersion" xml:space="preserve">
+    <value>Версия интерфейса:</value>
+  </data>
+  <data name="Diagnostics_Uptime" xml:space="preserve">
+    <value>Время работы службы:</value>
+  </data>
+  <data name="Diagnostics_Tasks" xml:space="preserve">
+    <value>Задач / выполняется:</value>
+  </data>
+  <data name="Diagnostics_Role" xml:space="preserve">
+    <value>Роль:</value>
+  </data>
+  <data name="Diagnostics_Connected" xml:space="preserve">
+    <value>Подключено</value>
+  </data>
+  <data name="Diagnostics_Disconnected" xml:space="preserve">
+    <value>Служба недоступна</value>
+  </data>
+  <data name="Diagnostics_ServiceRunning" xml:space="preserve">
+    <value>Работает</value>
+  </data>
+  <data name="Diagnostics_ServiceStopped" xml:space="preserve">
+    <value>Остановлена или не установлена</value>
+  </data>
+  <data name="Diagnostics_NotReported" xml:space="preserve">
+    <value>не сообщается</value>
+  </data>
+  <data name="Diagnostics_UnavailableBanner" xml:space="preserve">
+    <value>Не удалось получить состояние службы. Запустите службу «WinSheduler» через оснастку «Службы» или командой «sc start WinSheduler» от имени администратора.</value>
+  </data>
+  <data name="Diagnostics_PathsGroup" xml:space="preserve">
+    <value>Расположение данных</value>
+  </data>
+  <data name="Diagnostics_PathsUnavailable" xml:space="preserve">
+    <value>Пути DATADIR и INSTALLDIR передаются только администратору и появятся после реализации B-12.</value>
+  </data>
+  <data name="Diagnostics_AuditGroup" xml:space="preserve">
+    <value>Аудит</value>
+  </data>
+  <data name="Diagnostics_AuditFrom" xml:space="preserve">
+    <value>С:</value>
+  </data>
+  <data name="Diagnostics_AuditTo" xml:space="preserve">
+    <value>По:</value>
+  </data>
+  <data name="Diagnostics_AuditLoad" xml:space="preserve">
+    <value>Загрузить</value>
+  </data>
+  <data name="Diagnostics_AuditHint" xml:space="preserve">
+    <value>Выберите период и нажмите «Загрузить».</value>
+  </data>
+  <data name="Diagnostics_AuditEmpty" xml:space="preserve">
+    <value>За выбранный период записей нет.</value>
+  </data>
+  <data name="Diagnostics_AuditCount" xml:space="preserve">
+    <value>Записей: {0}</value>
+  </data>
+  <data name="Diagnostics_AuditError" xml:space="preserve">
+    <value>Аудит недоступен: {0}</value>
+  </data>
+  <data name="Diagnostics_AuditColumnTime" xml:space="preserve">
+    <value>Время</value>
+  </data>
+  <data name="Diagnostics_AuditColumnAction" xml:space="preserve">
+    <value>Действие</value>
+  </data>
+  <data name="Diagnostics_AuditColumnResult" xml:space="preserve">
+    <value>Результат</value>
+  </data>
+  <data name="Diagnostics_AuditColumnDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="Diagnostics_Copy" xml:space="preserve">
+    <value>Копировать сведения</value>
+  </data>
+  <data name="Diagnostics_CopyError" xml:space="preserve">
+    <value>Не удалось скопировать сведения: {0}</value>
+  </data>
 </root>

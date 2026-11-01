@@ -1,201 +1,239 @@
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using WinSheduler.Shared;
 using WinSheduler.Shared.Models;
+using WinSheduler.UI.Localization;
+using WinSheduler.UI.Services;
 
 namespace WinSheduler.UI;
 
 public partial class TaskEditorWindow : Window
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
+    private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
+    private static readonly JsonSerializerOptions SnapshotOptions = new()
     {
-        Converters = { new JsonStringEnumConverter() }
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
     };
 
-    private readonly IpcClient _ipc;
-    private readonly TaskDefinitionViewModel? _existing;
+    private readonly IIpcService _ipc;
+    private readonly Guid? _taskId;
     private readonly List<TimeWindowEditModel> _windows = [];
-    private string? _existingPasswordEncrypted;
 
-    public TaskEditorWindow(IpcClient ipc, TaskDefinitionViewModel? existing)
+    private bool _loaded;
+    private bool _busy;
+    private bool _allowClose;
+    private bool _enabled = true;
+    private bool _hasStoredPassword;
+    private bool _clearPasswordRequested;
+    private string _baseline = string.Empty;
+
+    public TaskEditorWindow(IIpcService ipc, Guid? taskId, string? taskName = null)
     {
         InitializeComponent();
-        _ipc = ipc;
-        _existing = existing;
+        _ipc = ipc ?? throw new ArgumentNullException(nameof(ipc));
+        _taskId = taskId;
 
-        WindowStyleBox.SelectedIndex = 0;
-        OnErrorBox.SelectedIndex = 0;
-        OnOverlapBox.SelectedIndex = 0;
+        ApplyWorkAreaLimits();
+        InitializeCombos();
+        ConfigureElevation();
 
-        if (existing != null)
+        Title = taskId is null
+            ? Strings.Get("Editor_TitleNew")
+            : string.IsNullOrWhiteSpace(taskName)
+                ? Strings.Get("Editor_TitleEdit")
+                : Strings.Format("Editor_TitleEditNamed", taskName);
+
+        Loaded += Editor_Loaded;
+        UpdatePasswordState();
+        UpdateTimeWindowList();
+    }
+
+    /// <summary>Не даёт окну выйти за рабочую область при DPI 100–200 %.</summary>
+    private void ApplyWorkAreaLimits()
+    {
+        var area = SystemParameters.WorkArea;
+        MaxWidth = area.Width;
+        MaxHeight = area.Height;
+        Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 32));
+        Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 32));
+    }
+
+    private void InitializeCombos()
+    {
+        WindowStyleBox.ItemsSource = Enum.GetValues<Shared.WindowStyle>();
+        OnErrorBox.ItemsSource = Enum.GetValues<OnErrorAction>();
+        OnOverlapBox.ItemsSource = Enum.GetValues<OnOverlapAction>();
+
+        WindowStyleBox.SelectedItem = Shared.WindowStyle.Normal;
+        OnErrorBox.SelectedItem = OnErrorAction.SkipNext;
+        OnOverlapBox.SelectedItem = OnOverlapAction.WaitComplete;
+        MaxHistoryBox.Text = "1000";
+        RetryCountBox.Text = "0";
+    }
+
+    private void ConfigureElevation()
+    {
+        var canManage = App.Services?.Elevation.CanManageSystemTasks == true;
+        RunAsGroup.IsEnabled = canManage;
+        AdminBadge.Visibility = canManage ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private async void Editor_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_taskId is not { } id)
         {
-            Title = "Редактирование задачи";
-            LoadExistingAsync(existing);
+            // Новая задача: форма готова сразу.
+            _loaded = true;
+            _baseline = Snapshot();
+            SaveBtn.IsEnabled = true;
+            return;
+        }
+
+        SetBusy(true);
+        try
+        {
+            var task = await _ipc.GetTaskAsync(id);
+            IReadOnlyList<TimeWindowDto> windows = task.TimeWindows;
+            if (windows.Count == 0)
+            {
+                windows = await _ipc.GetTimeWindowsAsync(id);
+            }
+
+            ApplyTask(task, windows);
+            _loaded = true;
+            _baseline = Snapshot();
+            HideError();
+        }
+        catch (IpcException ex)
+        {
+            ShowError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowError(IpcErrorText.Describe(ex));
+        }
+        finally
+        {
+            SetBusy(false);
+            SaveBtn.IsEnabled = _loaded;
         }
     }
 
-    private async void LoadExistingAsync(TaskDefinitionViewModel existing)
+    private void ApplyTask(TaskDto task, IReadOnlyList<TimeWindowDto> windows)
     {
-        var resp = await _ipc.SendAsync(new IpcRequest { Action = "GetTask", Payload = existing.Id.ToString() });
-        if (!resp.Success)
-        {
-            MessageBox.Show($"Ошибка загрузки задачи: {resp.Error}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-
-        var task = JsonSerializer.Deserialize<TaskDto>(resp.Payload, JsonOpts);
-        if (task == null)
-        {
-            MessageBox.Show("Не удалось разобрать ответ от службы", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-
         NameBox.Text = task.Name;
         DescBox.Text = task.Description;
         PathBox.Text = task.ProgramPath;
         ArgsBox.Text = task.Arguments;
         WorkDirBox.Text = task.WorkingDirectory;
-        WindowStyleBox.SelectedIndex = (int)task.WindowStyle;
-        OnErrorBox.SelectedIndex = (int)task.OnError;
-        RetryCountBox.Text = task.RetryCount.ToString();
-        OnOverlapBox.SelectedIndex = (int)task.OnOverlap;
-        TimeoutBox.Text = task.TimeoutMinutes?.ToString() ?? "";
+        WindowStyleBox.SelectedItem = task.WindowStyle;
+        OnErrorBox.SelectedItem = task.OnError;
+        OnOverlapBox.SelectedItem = task.OnOverlap;
+        RetryCountBox.Text = task.RetryCount.ToString(Invariant);
+        TimeoutBox.Text = task.TimeoutMinutes?.ToString(Invariant) ?? string.Empty;
         KillOnTimeoutBox.IsChecked = task.KillOnTimeout;
         LogOutputBox.IsChecked = task.LogOutput;
-        MaxHistoryBox.Text = task.MaxHistoryRecords.ToString();
+        MaxHistoryBox.Text = task.MaxHistoryRecords.ToString(Invariant);
+        _enabled = task.Enabled;
+        _hasStoredPassword = task.HasPassword;
 
-        if (task.RunAsUser != null)
+        RunAsUserBox.Text = task.RunAsUser ?? string.Empty;
+        RunAsDomainBox.Text = task.RunAsDomain ?? string.Empty;
+
+        _windows.Clear();
+        foreach (var window in windows)
         {
-            RunAsUserBox.Text = task.RunAsUser;
-            RunAsDomainBox.Text = task.RunAsDomain ?? "";
-            _existingPasswordEncrypted = task.RunAsPasswordEncrypted;
+            _windows.Add(ToEditModel(window));
         }
 
-        if (task.OnError == Shared.OnErrorAction.Retry)
-        {
-            RetryLabel.Visibility = Visibility.Visible;
-            RetryCountBox.Visibility = Visibility.Visible;
-        }
+        UpdateTimeWindowList();
+        UpdateRetryVisibility();
+        UpdatePasswordState();
+    }
 
-        var windowsResp = await _ipc.SendAsync(new IpcRequest { Action = "GetTimeWindows", Payload = existing.Id.ToString() });
-        if (windowsResp.Success)
-        {
-            var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload, JsonOpts) ?? [];
-            foreach (var w in windows)
-            {
-                var model = new TimeWindowEditModel
-                {
-                    ExactTimesStr = string.Join(", ", w.ExactTimes ?? []),
-                    StartTimeStr = w.StartTime ?? "",
-                    EndTimeStr = w.EndTime ?? "",
-                    RepeatIntervalStr = w.RepeatIntervalMinutes?.ToString() ?? "",
-                    SelectedDays = w.DaysOfWeek?.Select(d => d).ToList() ?? [],
-                    StartDate = w.StartDate?.ToString("yyyy-MM-dd"),
-                    EndDate = w.EndDate?.ToString("yyyy-MM-dd"),
-                    RepeatUntil = w.RepeatUntil,
-                };
-
-                if (w.Type == "Interval")
-                {
-                    model.Type = TimeWindowEditType.Interval;
-                }
-                else if (w.SpecificDates?.Count > 0)
-                {
-                    model.Type = TimeWindowEditType.Once;
-                    model.OnceDate = w.SpecificDates[0];
-                    model.OnceTimeStr = w.ExactTimes?.FirstOrDefault() ?? "";
-                }
-                else if (w.DaysOfMonth?.Count > 0)
-                {
-                    model.Type = TimeWindowEditType.ExactMonthly;
-                    model.MonthDay = w.DaysOfMonth[0];
-                }
-                else if (w.DaysOfWeek?.Count > 0 && w.DaysOfWeek.Count < 7)
-                {
-                    model.Type = TimeWindowEditType.ExactWeekly;
-                }
-                else
-                {
-                    model.Type = TimeWindowEditType.Exact;
-                }
-
-                if (w.RepeatIntervalMinutes.HasValue && w.Type != "Interval")
-                {
-                    model.RepeatEveryEnabled = true;
-                    model.RepeatEveryMinutes = w.RepeatIntervalMinutes.Value;
-                    if (w.RepeatUntil != null && TimeSpan.TryParse(w.RepeatUntil, out var ru))
-                    {
-                        var firstTime = w.ExactTimes?.FirstOrDefault();
-                        if (firstTime != null && TimeSpan.TryParse(firstTime, out var ft))
-                            model.RepeatDurationMinutes = (int)(ru - ft).TotalMinutes;
-                    }
-                }
-
-                _windows.Add(model);
-            }
-            UpdateTimeWindowList();
-        }
-        else
-        {
-            MessageBox.Show($"Ошибка загрузки расписания: {windowsResp.Error}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+    private void SetBusy(bool busy)
+    {
+        _busy = busy;
+        SaveBtn.IsEnabled = !busy && _loaded;
+        CancelBtn.IsEnabled = true;
     }
 
     private void BrowseBtn_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*",
-            Title = "Выберите программу"
-        };
-        if (dlg.ShowDialog() == true)
-            PathBox.Text = dlg.FileName;
+        var dialogs = App.Services?.Dialogs;
+        var path = dialogs?.PickFile(
+            Strings.Get("Dialog_FileFilterProgram"),
+            initialDirectory: null,
+            Strings.Get("Dialog_BrowseProgram"));
+
+        if (path is null) return;
+        PathBox.Text = path;
     }
 
     private void OnErrorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var isRetry = OnErrorBox.SelectedIndex == 1;
-        RetryLabel.Visibility = isRetry ? Visibility.Visible : Visibility.Collapsed;
-        RetryCountBox.Visibility = isRetry ? Visibility.Visible : Visibility.Collapsed;
-        if (isRetry && string.IsNullOrEmpty(RetryCountBox.Text))
-            RetryCountBox.Text = "3";
-    }
-
-    private void AddTimeBtn_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new TimeWindowDialog();
-        if (dlg.ShowDialog() == true)
+        if (RetryLabel is null) return;
+        UpdateRetryVisibility();
+        if (OnErrorBox.SelectedItem is OnErrorAction.Retry &&
+            string.IsNullOrWhiteSpace(RetryCountBox.Text))
         {
-            _windows.Add(new TimeWindowEditModel
-            {
-                Type = dlg.SelectedType,
-                ExactTimesStr = dlg.ExactTimes,
-                StartTimeStr = dlg.StartTime,
-                EndTimeStr = dlg.EndTime,
-                RepeatIntervalStr = dlg.RepeatInterval,
-                SelectedDays = dlg.SelectedDays,
-                StartDate = dlg.StartDate,
-                EndDate = dlg.EndDate,
-                RepeatUntil = dlg.RepeatUntil,
-                DayInterval = dlg.DayInterval,
-                WeekInterval = dlg.WeekInterval,
-                MonthDay = dlg.MonthDay,
-                MonthInterval = dlg.MonthInterval,
-                OnceDate = dlg.OnceDate != null && DateTime.TryParse(dlg.OnceDate, out var od) ? od : null,
-                OnceTimeStr = dlg.OnceTime,
-                TriggerEnabled = dlg.TriggerEnabled,
-            });
-            UpdateTimeWindowList();
+            RetryCountBox.Text = "3";
         }
     }
 
-    private void RemoveTimeBtn_Click(object sender, RoutedEventArgs e)
+    private void UpdateRetryVisibility()
     {
-        if (TimeWindowList.SelectedItem is TimeWindowEditModel model)
+        var isRetry = OnErrorBox.SelectedItem is OnErrorAction.Retry;
+        var visibility = isRetry ? Visibility.Visible : Visibility.Collapsed;
+        RetryLabel.Visibility = visibility;
+        RetryCountBox.Visibility = visibility;
+    }
+
+    private void RunAsPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (RunAsPasswordBox.SecurePassword.Length > 0)
         {
-            _windows.Remove(model);
+            _clearPasswordRequested = false;
+        }
+
+        UpdatePasswordState();
+    }
+
+    private void ClearPasswordBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _clearPasswordRequested = true;
+        RunAsPasswordBox.Clear();
+        UpdatePasswordState();
+    }
+
+    private void UpdatePasswordState()
+    {
+        if (PasswordStateText is null) return;
+
+        var hasNew = RunAsPasswordBox.SecurePassword.Length > 0;
+        PasswordStateText.Text = hasNew || (_hasStoredPassword && !_clearPasswordRequested)
+            ? Strings.Get("Editor_PasswordSet")
+            : _clearPasswordRequested
+                ? Strings.Get("Editor_PasswordWillClear")
+                : Strings.Get("Editor_PasswordNotSet");
+    }
+
+    // ===== Триггеры =====
+
+    private void AddTimeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new TimeWindowDialog();
+        if (dialog.ShowDialog() == true)
+        {
+            _windows.Add(ToEditModel(dialog));
             UpdateTimeWindowList();
         }
     }
@@ -203,148 +241,505 @@ public partial class TaskEditorWindow : Window
     private void EditTimeBtn_Click(object sender, RoutedEventArgs e)
     {
         if (TimeWindowList.SelectedItem is TimeWindowEditModel model)
+        {
             EditTimeWindow(model);
+        }
     }
 
-    private void TimeWindowList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void DuplicateTimeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (TimeWindowList.SelectedItem is not TimeWindowEditModel model) return;
+
+        _windows.Add(Clone(model));
+        UpdateTimeWindowList();
+        TimeWindowList.SelectedIndex = _windows.Count - 1;
+    }
+
+    private void RemoveTimeBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (TimeWindowList.SelectedItem is not TimeWindowEditModel model) return;
+
+        _windows.Remove(model);
+        UpdateTimeWindowList();
+    }
+
+    private void TimeWindowList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (TimeWindowList.SelectedItem is TimeWindowEditModel model)
+        {
             EditTimeWindow(model);
+        }
+    }
+
+    private void TimeWindowList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var hasSelection = TimeWindowList.SelectedItem is TimeWindowEditModel;
+        EditTimeBtn.IsEnabled = hasSelection;
+        DuplicateTimeBtn.IsEnabled = hasSelection;
+        RemoveTimeBtn.IsEnabled = hasSelection;
+    }
+
+    private void TimeWindowList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (TimeWindowList.SelectedItem is not TimeWindowEditModel) return;
+
+        if (e.Key == Key.Delete)
+        {
+            RemoveTimeBtn_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            EditTimeBtn_Click(sender, e);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Правый клик по строке выделяет её, чтобы контекстное меню применялось к нужному триггеру.</summary>
+    private void TimeWindowList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var item = FindAncestor<ListViewItem>(e.OriginalSource as DependencyObject);
+        if (item != null) item.IsSelected = true;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current != null)
+        {
+            if (current is T match) return match;
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+        }
+
+        return null;
     }
 
     private void EditTimeWindow(TimeWindowEditModel model)
     {
-        var dlg = new TimeWindowDialog(model);
-        if (dlg.ShowDialog() == true)
-        {
-            var idx = _windows.IndexOf(model);
-            _windows[idx] = new TimeWindowEditModel
-            {
-                Type = dlg.SelectedType,
-                ExactTimesStr = dlg.ExactTimes,
-                StartTimeStr = dlg.StartTime,
-                EndTimeStr = dlg.EndTime,
-                RepeatIntervalStr = dlg.RepeatInterval,
-                SelectedDays = dlg.SelectedDays,
-                StartDate = dlg.StartDate,
-                EndDate = dlg.EndDate,
-                RepeatUntil = dlg.RepeatUntil,
-                DayInterval = dlg.DayInterval,
-                WeekInterval = dlg.WeekInterval,
-                MonthDay = dlg.MonthDay,
-                MonthInterval = dlg.MonthInterval,
-                OnceDate = dlg.OnceDate != null && DateTime.TryParse(dlg.OnceDate, out var od) ? od : null,
-                OnceTimeStr = dlg.OnceTime,
-                TriggerEnabled = dlg.TriggerEnabled,
-                RepeatEveryEnabled = dlg.RepeatEveryEnabled,
-                RepeatEveryMinutes = dlg.RepeatEveryMinutes,
-                RepeatDurationMinutes = dlg.RepeatDurationMinutes,
-            };
-            UpdateTimeWindowList();
-        }
+        var dialog = new TimeWindowDialog(model);
+        if (dialog.ShowDialog() != true) return;
+
+        var index = _windows.IndexOf(model);
+        if (index < 0) return;
+
+        _windows[index] = ToEditModel(dialog);
+        UpdateTimeWindowList();
     }
 
     private void UpdateTimeWindowList()
     {
         TimeWindowList.ItemsSource = null;
         TimeWindowList.ItemsSource = _windows;
+        TimeWindowEmptyText.Visibility = _windows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        var hasSelection = TimeWindowList.SelectedItem is TimeWindowEditModel;
+        EditTimeBtn.IsEnabled = hasSelection;
+        DuplicateTimeBtn.IsEnabled = hasSelection;
+        RemoveTimeBtn.IsEnabled = hasSelection;
     }
 
-    private async void SaveBtn_Click(object sender, RoutedEventArgs e)
+    private static TimeWindowEditModel ToEditModel(TimeWindowDialog dialog) => new()
     {
-        if (string.IsNullOrWhiteSpace(NameBox.Text) || string.IsNullOrWhiteSpace(PathBox.Text))
-        {
-            MessageBox.Show("Название и путь к программе обязательны", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        Type = dialog.SelectedType,
+        ExactTimesStr = dialog.ExactTimes,
+        StartTimeStr = dialog.StartTime,
+        EndTimeStr = dialog.EndTime,
+        RepeatIntervalStr = dialog.RepeatInterval,
+        SelectedDays = dialog.SelectedDays,
+        StartDate = dialog.StartDate,
+        EndDate = dialog.EndDate,
+        RepeatUntil = dialog.RepeatUntil,
+        DayInterval = dialog.DayInterval,
+        WeekInterval = dialog.WeekInterval,
+        MonthDay = dialog.MonthDay,
+        MonthInterval = dialog.MonthInterval,
+        OnceDate = ParseLocalDate(dialog.OnceDate),
+        OnceTimeStr = dialog.OnceTime,
+        TriggerEnabled = dialog.TriggerEnabled,
+    };
 
-        bool hasRunAsUser = !string.IsNullOrWhiteSpace(RunAsUserBox.Text);
-        bool hasNewPassword = RunAsPasswordBox.SecurePassword.Length > 0;
-        bool hasExistingPassword = !string.IsNullOrEmpty(_existingPasswordEncrypted);
-
-        if (hasRunAsUser && !hasNewPassword && !hasExistingPassword)
+    private static TimeWindowEditModel ToEditModel(TimeWindowDto window)
+    {
+        var model = new TimeWindowEditModel
         {
-            MessageBox.Show("Указан пользователь для запуска, но пароль не задан. Введите пароль.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        var dto = new TaskDto
-        {
-            Id = _existing?.Id ?? Guid.Empty,
-            Name = NameBox.Text.Trim(),
-            Description = DescBox.Text.Trim(),
-            Enabled = _existing?.Enabled ?? true,
-            ProgramPath = PathBox.Text.Trim(),
-            Arguments = ArgsBox.Text.Trim(),
-            WorkingDirectory = WorkDirBox.Text.Trim(),
-            WindowStyle = (Shared.WindowStyle)WindowStyleBox.SelectedIndex,
-            RunAsUser = string.IsNullOrWhiteSpace(RunAsUserBox.Text) ? null : RunAsUserBox.Text.Trim(),
-            RunAsDomain = string.IsNullOrWhiteSpace(RunAsDomainBox.Text) ? null : RunAsDomainBox.Text.Trim(),
-            RunAsPasswordEncrypted = RunAsPasswordBox.SecurePassword.Length > 0
-                ? CryptoHelper.Encrypt(RunAsPasswordBox.Password)
-                : _existingPasswordEncrypted,
-            OnError = (Shared.OnErrorAction)OnErrorBox.SelectedIndex,
-            RetryCount = int.TryParse(RetryCountBox.Text, out var rc) ? rc : 0,
-            OnOverlap = (Shared.OnOverlapAction)OnOverlapBox.SelectedIndex,
-            TimeoutMinutes = int.TryParse(TimeoutBox.Text, out var tm) ? tm : null,
-            KillOnTimeout = KillOnTimeoutBox.IsChecked == true,
-            LogOutput = LogOutputBox.IsChecked == true,
-            MaxHistoryRecords = int.TryParse(MaxHistoryBox.Text, out var mh) ? mh : 50,
-            TimeWindows = _windows.Select(w => new TimeWindowDto
-            {
-                Id = Guid.Empty,
-                Type = w.Type switch
-                {
-                    TimeWindowEditType.Once => Shared.TimeWindowType.ExactTimes,
-                    TimeWindowEditType.Exact => Shared.TimeWindowType.ExactTimes,
-                    TimeWindowEditType.ExactWeekly => Shared.TimeWindowType.ExactTimes,
-                    TimeWindowEditType.ExactMonthly => Shared.TimeWindowType.ExactTimes,
-                    TimeWindowEditType.Interval => Shared.TimeWindowType.Interval,
-                    _ => Shared.TimeWindowType.ExactTimes,
-                },
-                ExactTimes = w.Type is TimeWindowEditType.Once or TimeWindowEditType.Exact or TimeWindowEditType.ExactWeekly or TimeWindowEditType.ExactMonthly
-                    ? (w.Type == TimeWindowEditType.Once && !string.IsNullOrWhiteSpace(w.OnceTimeStr)
-                        ? [w.OnceTimeStr!]
-                        : (w.ExactTimesStr?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? []).ToList())
-                    : [],
-                StartTime = w.Type == TimeWindowEditType.Interval ? w.StartTimeStr : null,
-                EndTime = w.Type == TimeWindowEditType.Interval ? w.EndTimeStr : null,
-                RepeatIntervalMinutes = w.Type == TimeWindowEditType.Interval
-                    ? (int.TryParse(w.RepeatIntervalStr, out var ri) ? ri : null)
-                    : (w.RepeatEveryEnabled && w.RepeatEveryMinutes > 0 ? w.RepeatEveryMinutes : null),
-                StartDate = w.StartDate != null && DateTime.TryParse(w.StartDate, out var sd) ? sd : null,
-                EndDate = w.EndDate != null && DateTime.TryParse(w.EndDate, out var ed) ? ed : null,
-                RepeatUntil = w.RepeatUntil,
-                DaysOfWeek = w.Type == TimeWindowEditType.Once ? [] : w.SelectedDays,
-                DaysOfMonth = w.Type == TimeWindowEditType.ExactMonthly ? [w.MonthDay] : [],
-                SpecificDates = w.Type == TimeWindowEditType.Once && w.OnceDate.HasValue
-                    ? [w.OnceDate.Value]
-                    : [],
-            }).ToList()
+            Type = MapEditType(window),
+            ExactTimesStr = string.Join(", ", window.ExactTimes),
+            StartTimeStr = window.StartTime ?? string.Empty,
+            EndTimeStr = window.EndTime ?? string.Empty,
+            RepeatIntervalStr = window.RepeatIntervalMinutes?.ToString(Invariant) ?? string.Empty,
+            SelectedDays = [.. window.DaysOfWeek],
+            StartDate = window.StartDate?.ToString("yyyy-MM-dd", Invariant),
+            EndDate = window.EndDate?.ToString("yyyy-MM-dd", Invariant),
+            RepeatUntil = window.RepeatUntil,
+            DayInterval = window.DayInterval,
+            WeekInterval = window.WeekInterval,
+            MonthDay = window.DaysOfMonth.FirstOrDefault(1),
+            MonthInterval = window.MonthInterval,
+            OnceDate = window.SpecificDates.FirstOrDefault(),
+            OnceTimeStr = window.ExactTimes.FirstOrDefault(),
         };
 
-        var action = _existing == null ? "CreateTask" : "UpdateTask";
-        var resp = await _ipc.SendAsync(new IpcRequest
-        {
-            Action = action,
-            Payload = JsonSerializer.Serialize(dto, JsonOpts)
-        });
+        return model;
+    }
 
-        if (resp.Success)
+    private static TimeWindowEditModel Clone(TimeWindowEditModel model) => new()
+    {
+        Type = model.Type,
+        ExactTimesStr = model.ExactTimesStr,
+        StartTimeStr = model.StartTimeStr,
+        EndTimeStr = model.EndTimeStr,
+        RepeatIntervalStr = model.RepeatIntervalStr,
+        SelectedDays = [.. model.SelectedDays],
+        StartDate = model.StartDate,
+        EndDate = model.EndDate,
+        RepeatUntil = model.RepeatUntil,
+        DayInterval = model.DayInterval,
+        WeekInterval = model.WeekInterval,
+        MonthDay = model.MonthDay,
+        MonthInterval = model.MonthInterval,
+        OnceDate = model.OnceDate,
+        OnceTimeStr = model.OnceTimeStr,
+        TriggerEnabled = model.TriggerEnabled,
+    };
+
+    /// <summary>Определяет тип редактора по данным службы: новый <see cref="TriggerKind"/> и legacy-поля.</summary>
+    private static TimeWindowEditType MapEditType(TimeWindowDto window)
+    {
+        if (window.Kind == TriggerKind.Interval || window.Type == Shared.TimeWindowType.Interval)
+            return TimeWindowEditType.Interval;
+        if (window.SpecificDates.Count > 0)
+            return TimeWindowEditType.Once;
+        if (window.DaysOfMonth.Count > 0)
+            return TimeWindowEditType.ExactMonthly;
+        if (window.DaysOfWeek.Count > 0)
+            return TimeWindowEditType.ExactWeekly;
+        return TimeWindowEditType.Exact;
+    }
+
+    // ===== Сохранение =====
+
+    private void SaveBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_loaded || _busy) return;
+        if (!Validate()) return;
+
+        _ = SaveAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        SetBusy(true);
+        try
         {
-            DialogResult = true;
-            Close();
+            var dto = BuildDto();
+            if (_taskId is null)
+            {
+                await _ipc.CreateTaskAsync(dto);
+            }
+            else
+            {
+                await _ipc.UpdateTaskAsync(dto);
+            }
+
+            _allowClose = true;
+            try
+            {
+                DialogResult = true;
+            }
+            catch (InvalidOperationException)
+            {
+                // Окно показано не как модальное — просто закрываем.
+                Close();
+            }
         }
-        else
+        catch (IpcException ex)
         {
-            MessageBox.Show($"Ошибка сохранения: {resp.Error}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowError(IpcErrorText.Describe(ex));
+        }
+        finally
+        {
+            SetBusy(false);
         }
     }
 
-    private void CancelBtn_Click(object sender, RoutedEventArgs e)
+    private TaskDto BuildDto()
     {
-        DialogResult = false;
-        Close();
+        var canManage = App.Services?.Elevation.CanManageSystemTasks == true;
+        var runAsUser = canManage && !string.IsNullOrWhiteSpace(RunAsUserBox.Text)
+            ? RunAsUserBox.Text.Trim()
+            : null;
+
+        var password = canManage && runAsUser is not null
+            ? RunAsPasswordBox.SecurePassword.Length > 0
+                ? RunAsPasswordBox.Password
+                : _clearPasswordRequested ? string.Empty : null
+            : null;
+
+        return new TaskDto
+        {
+            Id = _taskId ?? Guid.Empty,
+            Name = NameBox.Text.Trim(),
+            Description = DescBox.Text.Trim(),
+            Enabled = _enabled,
+            ProgramPath = NormalizePath(PathBox.Text),
+            Arguments = ArgsBox.Text.Trim(),
+            WorkingDirectory = NormalizePath(WorkDirBox.Text),
+            WindowStyle = WindowStyleBox.SelectedItem is Shared.WindowStyle style ? style : Shared.WindowStyle.Normal,
+            SessionMode = SessionMode.Headless,
+            RunAsUser = runAsUser,
+            RunAsDomain = runAsUser is null ? null : NullIfWhiteSpace(RunAsDomainBox.Text),
+            Password = password,
+            HasPassword = RunAsPasswordBox.SecurePassword.Length > 0 ||
+                          (_hasStoredPassword && !_clearPasswordRequested),
+            OnError = OnErrorBox.SelectedItem is OnErrorAction onError ? onError : OnErrorAction.SkipNext,
+            RetryCount = ParseInt(RetryCountBox.Text),
+            OnOverlap = OnOverlapBox.SelectedItem is OnOverlapAction overlap
+                ? overlap
+                : OnOverlapAction.WaitComplete,
+            TimeoutMinutes = string.IsNullOrWhiteSpace(TimeoutBox.Text) ? null : ParseInt(TimeoutBox.Text),
+            KillOnTimeout = KillOnTimeoutBox.IsChecked == true,
+            LogOutput = LogOutputBox.IsChecked == true,
+            MaxHistoryRecords = ParseInt(MaxHistoryBox.Text),
+            TimeWindows = _windows.Select(ToDto).ToList(),
+        };
+    }
+
+    private static TimeWindowDto ToDto(TimeWindowEditModel window) => new()
+    {
+        Id = Guid.Empty,
+        Type = window.Type == TimeWindowEditType.Interval
+            ? Shared.TimeWindowType.Interval
+            : Shared.TimeWindowType.ExactTimes,
+        Kind = window.Type switch
+        {
+            TimeWindowEditType.Once => TriggerKind.Once,
+            TimeWindowEditType.ExactWeekly => TriggerKind.Weekly,
+            TimeWindowEditType.ExactMonthly => TriggerKind.Monthly,
+            TimeWindowEditType.Interval => TriggerKind.Interval,
+            _ => TriggerKind.Daily,
+        },
+        ExactTimes = ParseTimes(window),
+        StartTime = window.Type == TimeWindowEditType.Interval ? window.StartTimeStr : null,
+        EndTime = window.Type == TimeWindowEditType.Interval ? window.EndTimeStr : null,
+        RepeatIntervalMinutes = window.Type == TimeWindowEditType.Interval
+            ? int.TryParse(window.RepeatIntervalStr, out var repeat) ? repeat : null
+            : null,
+        StartDate = ParseLocalDate(window.StartDate),
+        EndDate = ParseLocalDate(window.EndDate),
+        RepeatUntil = string.IsNullOrWhiteSpace(window.RepeatUntil) ? null : window.RepeatUntil,
+        DaysOfWeek = window.Type == TimeWindowEditType.ExactWeekly ? window.SelectedDays : [],
+        DaysOfMonth = window.Type == TimeWindowEditType.ExactMonthly ? [window.MonthDay] : [],
+        SpecificDates = window.Type == TimeWindowEditType.Once && window.OnceDate.HasValue
+            ? [window.OnceDate.Value.Date]
+            : [],
+        DayInterval = window.Type == TimeWindowEditType.Exact ? window.DayInterval : 1,
+        WeekInterval = window.Type == TimeWindowEditType.ExactWeekly ? window.WeekInterval : 1,
+        MonthInterval = window.Type == TimeWindowEditType.ExactMonthly ? window.MonthInterval : 1,
+    };
+
+    private static List<string> ParseTimes(TimeWindowEditModel window)
+    {
+        if (window.Type == TimeWindowEditType.Once)
+        {
+            return string.IsNullOrWhiteSpace(window.OnceTimeStr) ? [] : [window.OnceTimeStr];
+        }
+
+        return window.ExactTimesStr
+            .Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+    }
+
+    private static DateTime? ParseLocalDate(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        return DateTime.TryParseExact(
+            value,
+            "yyyy-MM-dd",
+            Invariant,
+            DateTimeStyles.None,
+            out var exact)
+            ? exact
+            : DateTime.TryParse(value, out var parsed) ? parsed.Date : null;
+    }
+
+    private static string NormalizePath(string value) => value.Trim().Replace('\\', '/');
+
+    private static string? NullIfWhiteSpace(string value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static int ParseInt(string value)
+        => int.TryParse(value.Trim(), NumberStyles.Integer, Invariant, out var parsed) ? parsed : 0;
+
+    // ===== Валидация =====
+
+    private bool Validate()
+    {
+        HideError();
+
+        if (string.IsNullOrWhiteSpace(NameBox.Text))
+        {
+            return Fail(Strings.Get("Editor_ValidationName"), NameBox);
+        }
+
+        var programPath = PathBox.Text.Trim();
+        if (programPath.Length == 0)
+        {
+            return Fail(Strings.Get("Editor_ValidationProgram"), PathBox);
+        }
+
+        if (!IsValidLocalPath(programPath, allowDriveRoot: false, out var pathError))
+        {
+            return Fail(Strings.Format("Editor_ValidationPath", pathError), PathBox);
+        }
+
+        var workDir = WorkDirBox.Text.Trim();
+        if (workDir.Length > 0 && !IsValidLocalPath(workDir, allowDriveRoot: false, out var workDirError))
+        {
+            return Fail(Strings.Format("Editor_ValidationWorkingDirectory", workDirError), WorkDirBox);
+        }
+
+        if (OnErrorBox.SelectedItem is OnErrorAction.Retry &&
+            !TryParseRange(RetryCountBox.Text, 0, 10, out _))
+        {
+            return Fail(Strings.Format("Editor_ValidationRetry"), RetryCountBox);
+        }
+
+        if (!string.IsNullOrWhiteSpace(TimeoutBox.Text) &&
+            !TryParseRange(TimeoutBox.Text, 0, 10080, out _))
+        {
+            return Fail(Strings.Format("Editor_ValidationTimeout"), TimeoutBox);
+        }
+
+        if (!TryParseRange(MaxHistoryBox.Text, 1, 10000, out _))
+        {
+            return Fail(Strings.Format("Editor_ValidationHistory"), MaxHistoryBox);
+        }
+
+        if (App.Services?.Elevation.CanManageSystemTasks == true &&
+            !string.IsNullOrWhiteSpace(RunAsUserBox.Text) &&
+            RunAsPasswordBox.SecurePassword.Length == 0 &&
+            !_hasStoredPassword)
+        {
+            return Fail(Strings.Get("Editor_ValidationPassword"), RunAsPasswordBox);
+        }
+
+        return true;
+    }
+
+    /// <summary>Проверяет локальный абсолютный путь по правилам SECURITY.md, раздел 5.</summary>
+    private static bool IsValidLocalPath(string value, bool allowDriveRoot, out string error)
+    {
+        error = string.Empty;
+        var normalized = value.Replace('\\', '/');
+
+        if (!Path.IsPathRooted(value))
+        {
+            error = Strings.Get("Editor_PathNotAbsolute");
+            return false;
+        }
+
+        if (normalized.StartsWith("//", StringComparison.Ordinal))
+        {
+            error = Strings.Get("Editor_PathUnc");
+            return false;
+        }
+
+        if (normalized.Contains("//?/", StringComparison.Ordinal) ||
+            normalized.Contains("//./", StringComparison.Ordinal))
+        {
+            error = Strings.Get("Editor_PathDevice");
+            return false;
+        }
+
+        if (normalized.Split('/').Any(segment => segment == ".."))
+        {
+            error = Strings.Get("Editor_PathTraversal");
+            return false;
+        }
+
+        var colon = normalized.IndexOf(':');
+        if (colon >= 0 && colon != 1)
+        {
+            error = Strings.Get("Editor_PathStream");
+            return false;
+        }
+
+        if (!allowDriveRoot)
+        {
+            var root = Path.GetPathRoot(value)?.Replace('\\', '/').TrimEnd('/');
+            if (!string.IsNullOrEmpty(root) &&
+                string.Equals(normalized.TrimEnd('/'), root, StringComparison.OrdinalIgnoreCase))
+            {
+                error = Strings.Get("Editor_PathDriveRoot");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryParseRange(string value, int min, int max, out int parsed)
+    {
+        parsed = 0;
+        return int.TryParse(value.Trim(), NumberStyles.Integer, Invariant, out parsed) &&
+               parsed >= min && parsed <= max;
+    }
+
+    private bool Fail(string message, Control control)
+    {
+        ShowError(message);
+        control.Focus();
+        return false;
+    }
+
+    private void ShowError(string message)
+    {
+        ErrorText.Text = message;
+        ErrorBanner.Visibility = Visibility.Visible;
+    }
+
+    private void HideError()
+    {
+        ErrorText.Text = string.Empty;
+        ErrorBanner.Visibility = Visibility.Collapsed;
+    }
+
+    // ===== Закрытие и dirty tracking =====
+
+    private string Snapshot() => JsonSerializer.Serialize(BuildDto(), SnapshotOptions);
+
+    private bool IsDirty => _loaded && !string.Equals(Snapshot(), _baseline, StringComparison.Ordinal);
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_allowClose && IsDirty)
+        {
+            var dialogs = App.Services?.Dialogs;
+            var discard = dialogs?.Confirm(Strings.Get("Dialog_UnsavedChanges")) ?? true;
+            if (!discard)
+            {
+                e.Cancel = true;
+                base.OnClosing(e);
+                return;
+            }
+        }
+
+        base.OnClosing(e);
+    }
+
+    private void CancelBtn_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            DuplicateTimeBtn_Click(sender, e);
+            e.Handled = true;
+        }
     }
 }
 
@@ -352,6 +747,8 @@ public enum TimeWindowEditType { Once, Exact, ExactWeekly, ExactMonthly, Interva
 
 public class TimeWindowEditModel
 {
+    private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
     public TimeWindowEditType Type { get; set; }
     public string ExactTimesStr { get; set; } = "";
     public string StartTimeStr { get; set; } = "";
@@ -368,35 +765,113 @@ public class TimeWindowEditModel
     public DateTime? OnceDate { get; set; }
     public string? OnceTimeStr { get; set; }
     public bool TriggerEnabled { get; set; } = true;
-    public bool RepeatEveryEnabled { get; set; }
-    public int RepeatEveryMinutes { get; set; }
-    public int RepeatDurationMinutes { get; set; }
 
     public string TypeDisplay => Type switch
     {
-        TimeWindowEditType.Once => "Однократно",
-        TimeWindowEditType.Exact => "Ежедневно",
-        TimeWindowEditType.ExactWeekly => "Еженедельно",
-        TimeWindowEditType.ExactMonthly => "Ежемесячно",
-        TimeWindowEditType.Interval => "Интервал",
-        _ => "?"
+        TimeWindowEditType.Once => Strings.Get("TriggerKind_Once"),
+        TimeWindowEditType.Exact => Strings.Get("TriggerKind_Daily"),
+        TimeWindowEditType.ExactWeekly => Strings.Get("TriggerKind_Weekly"),
+        TimeWindowEditType.ExactMonthly => Strings.Get("TriggerKind_Monthly"),
+        TimeWindowEditType.Interval => Strings.Get("TriggerKind_Interval"),
+        _ => Strings.Get("Common_Unknown")
     };
 
+    /// <summary>Локализованное описание триггера без сырых ISO-дат.</summary>
     public string Summary
     {
         get
         {
-            var days = SelectedDays.Count > 0 ? string.Join(",", SelectedDays.Select(d => d.ToString()[..2])) + " " : "";
-            var repeat = RepeatEveryEnabled ? $" повтор кажд. {RepeatEveryMinutes}мин" : "";
-            return Type switch
+            var parts = new List<string>();
+            switch (Type)
             {
-                TimeWindowEditType.Once => $"{OnceDate:yyyy-MM-dd} {OnceTimeStr}",
-                TimeWindowEditType.Exact => $"Каждые {DayInterval}дн {ExactTimesStr}{repeat}",
-                TimeWindowEditType.ExactWeekly => $"Каждые {WeekInterval}нед {days}{ExactTimesStr}{repeat}",
-                TimeWindowEditType.ExactMonthly => $"День {MonthDay} кажд. {MonthInterval}мес {ExactTimesStr}{repeat}",
-                TimeWindowEditType.Interval => $"{days}{StartTimeStr}-{EndTimeStr} кажд. {RepeatIntervalStr}мин",
-                _ => ""
-            };
+                case TimeWindowEditType.Once:
+                    parts.Add(OnceDate is { } onceDate
+                        ? Strings.Format("Trigger_SummaryOnce", onceDate.ToString("dd.MM.yyyy", Invariant), OnceTimeStr)
+                        : Strings.Get("Trigger_SummaryOnceNoDate"));
+                    break;
+
+                case TimeWindowEditType.Exact:
+                    parts.Add(DayInterval > 1
+                        ? Strings.Format("Trigger_SummaryDailyEvery", DayInterval)
+                        : Strings.Get("Trigger_SummaryDaily"));
+                    if (!string.IsNullOrWhiteSpace(ExactTimesStr))
+                        parts.Add(Strings.Format("Trigger_SummaryAt", ExactTimesStr));
+                    break;
+
+                case TimeWindowEditType.ExactWeekly:
+                    parts.Add(WeekInterval > 1
+                        ? Strings.Format("Trigger_SummaryWeeklyEvery", WeekInterval)
+                        : Strings.Get("Trigger_SummaryWeekly"));
+                    var days = OrderedDays();
+                    if (days.Count > 0) parts.Add(string.Join(", ", days));
+                    if (!string.IsNullOrWhiteSpace(ExactTimesStr))
+                        parts.Add(Strings.Format("Trigger_SummaryAt", ExactTimesStr));
+                    break;
+
+                case TimeWindowEditType.ExactMonthly:
+                    parts.Add(MonthInterval > 1
+                        ? Strings.Format("Trigger_SummaryMonthlyEvery", MonthDay, MonthInterval)
+                        : Strings.Format("Trigger_SummaryMonthly", MonthDay));
+                    if (!string.IsNullOrWhiteSpace(ExactTimesStr))
+                        parts.Add(Strings.Format("Trigger_SummaryAt", ExactTimesStr));
+                    break;
+
+                case TimeWindowEditType.Interval:
+                    parts.Add(Strings.Format("Trigger_SummaryInterval", StartTimeStr, EndTimeStr, RepeatIntervalStr));
+                    break;
+            }
+
+            if (ParseDate(StartDate) is { } start)
+                parts.Add(Strings.Format("Trigger_SummaryFrom", start.ToString("dd.MM.yyyy", Invariant)));
+            if (ParseDate(EndDate) is { } end)
+                parts.Add(Strings.Format("Trigger_SummaryTo", end.ToString("dd.MM.yyyy", Invariant)));
+            if (ParseDateTime(RepeatUntil) is { } until)
+                parts.Add(Strings.Format("Trigger_SummaryUntil", until.ToString("dd.MM.yyyy HH:mm", Invariant)));
+            if (!TriggerEnabled) parts.Add(Strings.Get("Trigger_SummaryDisabled"));
+
+            return string.Join("; ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
         }
+    }
+
+    private List<string> OrderedDays()
+    {
+        DayOfWeek[] order =
+        [
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+            DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+        ];
+
+        return order
+            .Where(SelectedDays.Contains)
+            .Select(day => Strings.Get(day switch
+            {
+                DayOfWeek.Monday => "DayShort_Monday",
+                DayOfWeek.Tuesday => "DayShort_Tuesday",
+                DayOfWeek.Wednesday => "DayShort_Wednesday",
+                DayOfWeek.Thursday => "DayShort_Thursday",
+                DayOfWeek.Friday => "DayShort_Friday",
+                DayOfWeek.Saturday => "DayShort_Saturday",
+                _ => "DayShort_Sunday",
+            }))
+            .ToList();
+    }
+
+    private static DateTime? ParseDate(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        return DateTime.TryParseExact(value, "yyyy-MM-dd", Invariant, DateTimeStyles.None, out var exact)
+            ? exact
+            : DateTime.TryParse(value, out var parsed) ? parsed.Date : null;
+    }
+
+    private static DateTime? ParseDateTime(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var formats = new[] { "yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd" };
+        return DateTime.TryParseExact(value, formats, Invariant, DateTimeStyles.None, out var parsed)
+            ? parsed
+            : null;
     }
 }

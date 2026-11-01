@@ -1,213 +1,305 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using WinSheduler.Shared;
+using WinSheduler.UI.Localization;
+using WinSheduler.UI.Services;
+using WinSheduler.UI.ViewModels;
 
 namespace WinSheduler.UI;
 
 public partial class MainWindow : Window
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
-
-    private readonly IpcClient _ipc = new();
-    private List<TaskDefinitionViewModel> _tasks = [];
+    private readonly AppServices? _services;
+    private readonly DashboardViewModel? _viewModel;
 
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await Refresh();
-    }
+        ApplyWorkAreaLimits();
 
-    private async Task Refresh()
-    {
-        try
+        _services = App.Services;
+        if (_services is null)
         {
-            StatusBarText.Text = "Загрузка...";
-
-            var statusResp = await _ipc.SendAsync(new IpcRequest { Action = "GetStatus" });
-            if (statusResp.Success)
-            {
-                var status = JsonSerializer.Deserialize<ServiceStatus>(statusResp.Payload);
-                StatusText.Text = status?.Running == true
-                    ? $"✅ Работает (задач: {status.TaskCount}, активных: {status.RunningTaskCount})"
-                    : "❌ Остановлена";
-                StatusText.Foreground = status?.Running == true
-                    ? System.Windows.Media.Brushes.Green
-                    : System.Windows.Media.Brushes.Red;
-            }
-            else
-            {
-                StatusText.Text = "❌ Служба недоступна";
-                StatusText.Foreground = System.Windows.Media.Brushes.Red;
-            }
-
-            var tasksResp = await _ipc.SendAsync(new IpcRequest { Action = "ListTasks" });
-            if (tasksResp.Success)
-            {
-                var tasks = JsonSerializer.Deserialize<List<TaskDefinitionViewModel>>(tasksResp.Payload) ?? [];
-                foreach (var t in tasks)
-                {
-                    t.UpdateDerivedFields();
-                    var windowsResp = await _ipc.SendAsync(new IpcRequest { Action = "GetTimeWindows", Payload = t.Id.ToString() });
-                    if (windowsResp.Success)
-                    {
-                        var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload, JsonOpts) ?? [];
-                        t.ScheduleSummary = windows.Count > 0
-                            ? string.Join(", ", windows.Select(w => w.Summary))
-                            : "Нет расписания";
-                    }
-
-                    var historyResp = await _ipc.SendAsync(new IpcRequest { Action = "GetHistory", Payload = t.Id.ToString() });
-                    if (historyResp.Success)
-                    {
-                        var history = JsonSerializer.Deserialize<List<RunHistoryViewModel>>(historyResp.Payload) ?? [];
-                        t.LastRun = history.Count > 0 ? history[0].StartTime.ToString("dd.MM.yy HH:mm") : "-";
-                    }
-                }
-                _tasks = tasks;
-                TaskListView.ItemsSource = _tasks;
-            }
-
-            StatusBarText.Text = $"Готов. Задач: {_tasks.Count}";
+            // Конструктор без композиционного корня (дизайнер, тесты) — пустое окно.
+            return;
         }
-        catch (Exception ex)
+
+        _viewModel = _services.CreateDashboardViewModel();
+        DataContext = _viewModel;
+        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        _viewModel.RefreshCompleted += ViewModel_RefreshCompleted;
+
+        Loaded += MainWindow_Loaded;
+        Closed += MainWindow_Closed;
+    }
+
+    /// <summary>Не даёт окну выйти за рабочую область при DPI 100–200 %.</summary>
+    private void ApplyWorkAreaLimits()
+    {
+        var area = SystemParameters.WorkArea;
+        MaxWidth = area.Width;
+        MaxHeight = area.Height;
+        Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 32));
+        Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 32));
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        await _viewModel.RefreshStatusAsync();
+        await _viewModel.RefreshAsync();
+    }
+
+    private void MainWindow_Closed(object? sender, EventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        _viewModel.RefreshCompleted -= ViewModel_RefreshCompleted;
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) => UpdateUi();
+
+    private void ViewModel_RefreshCompleted(object? sender, EventArgs e)
+    {
+        HideActionError();
+        UpdateUi();
+    }
+
+    private void UpdateUi()
+    {
+        if (_viewModel is null) return;
+
+        var status = _viewModel.Status;
+        var serviceState = _viewModel.IsServiceUnavailable
+            ? Strings.Get("Main_StatusServiceUnavailable")
+            : status?.Running == true
+                ? Strings.Get("Main_StatusServiceRunning")
+                : Strings.Get("Main_StatusServiceStopped");
+
+        var parts = new List<string>
         {
-            StatusText.Text = "❌ Ошибка подключения к службе";
-            StatusBarText.Text = $"Ошибка: {ex.Message}";
+            serviceState,
+            _viewModel.RoleText,
+            Strings.Format("Main_StatusTasks", _viewModel.TaskCount),
+        };
+
+        if (_viewModel.LastRefreshedAt is { } refreshed)
+        {
+            parts.Add(Strings.Format(
+                "Main_StatusLastRefresh",
+                refreshed.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss", Strings.Culture)));
         }
+
+        StatusSummaryText.Text = string.Join(" · ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+        var hasSelection = _viewModel.SelectedTask is not null;
+        var canAct = hasSelection && !_viewModel.IsLoading && !_viewModel.IsServiceUnavailable;
+
+        AddBtn.IsEnabled = !_viewModel.IsLoading;
+        EditBtn.IsEnabled = canAct;
+        DeleteBtn.IsEnabled = canAct;
+        HistoryBtn.IsEnabled = canAct;
+        RunNowBtn.IsEnabled = canAct;
+        ToggleBtn.IsEnabled = canAct;
+
+        UpdateEmptyState();
     }
 
-    private async void RefreshBtn_Click(object sender, RoutedEventArgs e)
+    private void UpdateEmptyState()
     {
-        try { await Refresh(); }
-        catch (Exception ex) { StatusBarText.Text = $"Ошибка: {ex.Message}"; }
+        if (_viewModel is null) return;
+
+        var empty = !_viewModel.IsLoading && !_viewModel.IsServiceUnavailable && _viewModel.VisibleTaskCount == 0;
+        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        if (!empty) return;
+
+        var nothingFound = _viewModel.TaskCount > 0;
+        EmptyTitle.Text = Strings.Get(nothingFound ? "Main_EmptyNoMatchesTitle" : "Main_EmptyTitle");
+        EmptyHint.Text = Strings.Get(nothingFound ? "Main_EmptyNoMatchesHint" : "Main_EmptyHint");
+        EmptyAddBtn.Visibility = nothingFound ? Visibility.Collapsed : Visibility.Visible;
     }
-    private async void AddBtn_Click(object sender, RoutedEventArgs e)
-    {
-        try { await OpenEditor(null); }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
+
+    private async void AddBtn_Click(object sender, RoutedEventArgs e) => await OpenEditorAsync(null);
+
     private async void EditBtn_Click(object sender, RoutedEventArgs e)
     {
-        try { await OpenEditor(GetSelected()); }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
-    private async void TaskListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        try { await OpenEditor(GetSelected()); }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+        if (_viewModel?.SelectedTask is not { } task) return;
+        await OpenEditorAsync(task);
     }
 
-    private TaskDefinitionViewModel? GetSelected() => TaskListView.SelectedItem as TaskDefinitionViewModel;
-
-    private async Task OpenEditor(TaskDefinitionViewModel? task)
+    private async void TaskGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        var editor = new TaskEditorWindow(_ipc, task);
+        if (_viewModel?.SelectedTask is not { } task) return;
+        await OpenEditorAsync(task);
+    }
+
+    private async Task OpenEditorAsync(TaskListItemViewModel? task)
+    {
+        if (_services is null) return;
+
+        var editor = new TaskEditorWindow(_services.Ipc, task?.Id, task?.Name) { Owner = this };
         if (editor.ShowDialog() == true)
-            await Refresh();
+        {
+            await _viewModel!.RefreshAsync();
+            await _viewModel.RefreshStatusAsync();
+        }
     }
 
     private async void DeleteBtn_Click(object sender, RoutedEventArgs e)
     {
-        var task = GetSelected();
-        if (task == null) return;
+        if (_services is null || _viewModel?.SelectedTask is not { } task) return;
 
-        var result = MessageBox.Show($"Удалить задачу \"{task.Name}\"?", "Подтверждение",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (result == MessageBoxResult.Yes)
+        if (!_services.Dialogs.Confirm(Strings.Format("Dialog_DeleteTask", task.Name))) return;
+
+        try
         {
-            try
-            {
-                await _ipc.SendAsync(new IpcRequest { Action = "DeleteTask", Payload = task.Id.ToString() });
-                await Refresh();
-            }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+            await _services.Ipc.DeleteTaskAsync(task.Id);
+            await _viewModel.RefreshAsync();
+        }
+        catch (IpcException ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
         }
     }
 
     private async void RunNowBtn_Click(object sender, RoutedEventArgs e)
     {
-        var task = GetSelected();
-        if (task == null) return;
+        if (_services is null || _viewModel?.SelectedTask is not { } task) return;
+
         try
         {
-            var resp = await _ipc.SendAsync(new IpcRequest { Action = "RunNow", Payload = task.Id.ToString() });
-            if (resp.Success)
-                MessageBox.Show($"Задача \"{task.Name}\" запущена", "Запуск", MessageBoxButton.OK, MessageBoxImage.Information);
-            else
-                MessageBox.Show($"Ошибка запуска: {resp.Error}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            await _services.Ipc.RunNowAsync(task.Id);
+            StatusSummaryText.Text = Strings.Format("Main_RunStarted", task.Name);
+            await _viewModel.RefreshAsync();
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (IpcException ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+    }
+
+    private async void ToggleBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null || _viewModel?.SelectedTask is not { } task) return;
+
+        try
+        {
+            await _services.Ipc.SetTaskEnabledAsync(task.Id, !task.Enabled);
+            await _viewModel.RefreshAsync();
+        }
+        catch (IpcException ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
     }
 
     private void HistoryBtn_Click(object sender, RoutedEventArgs e)
     {
-        var task = GetSelected();
-        if (task == null) return;
-        var history = new HistoryWindow(_ipc, task.Id, task.Name);
+        if (_services is null || _viewModel?.SelectedTask is not { } task) return;
+
+        var history = new HistoryWindow(_services.Ipc, task.Id, task.Name) { Owner = this };
         history.ShowDialog();
     }
-}
 
-public class TaskDefinitionViewModel
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; } = "";
-    public string Description { get; set; } = "";
-    public bool Enabled { get; set; } = true;
-    public string ProgramPath { get; set; } = "";
-    public string ScheduleSummary { get; set; } = "";
-    public string LastRun { get; set; } = "-";
-    public void UpdateDerivedFields() { }
-}
-
-public class TimeWindowViewModel
-{
-    public string Summary
+    private async void RefreshMenu_Click(object sender, RoutedEventArgs e)
     {
-        get
+        if (_viewModel is not null) await _viewModel.RefreshAsync();
+    }
+
+    private void OpenServicesBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
         {
-            if (Type == "Interval")
-                return $"Интервал: {StartTime}-{EndTime} кажд. {RepeatIntervalMinutes}мин";
-
-            var times = ExactTimes?.Count > 0 ? string.Join(", ", ExactTimes) : "?";
-            var parts = new List<string>();
-
-            if (DaysOfWeek?.Count > 0)
-                parts.Add(string.Join("/", DaysOfWeek.Select(d => d.ToString()[..2])));
-            if (DaysOfMonth?.Count > 0)
-                parts.Add("дни " + string.Join(",", DaysOfMonth));
-            if (SpecificDates?.Count > 0)
-                parts.Add(string.Join(", ", SpecificDates.Select(d => d.ToString("dd.MM"))));
-
-            return parts.Count > 0
-                ? $"{times} [{string.Join(" ", parts)}]"
-                : $"Точно: {times}";
+            Process.Start(new ProcessStartInfo("services.msc") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(Strings.Format("Main_OpenServicesError", ex.Message));
         }
     }
-    public string Type { get; set; } = "ExactTimes";
-    public List<string> ExactTimes { get; set; } = [];
-    public string? StartTime { get; set; }
-    public string? EndTime { get; set; }
-    public int? RepeatIntervalMinutes { get; set; }
-    public List<DayOfWeek>? DaysOfWeek { get; set; }
-    public List<int>? DaysOfMonth { get; set; }
-    public List<DateTime>? SpecificDates { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public string? RepeatUntil { get; set; }
-}
 
-public class RunHistoryViewModel
-{
-    public DateTime StartTime { get; set; }
-    public DateTime? EndTime { get; set; }
-    public string Status { get; set; } = "";
-    public int? ExitCode { get; set; }
-    public string ErrorMessage { get; set; } = "";
+    private void DiagnosticsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null) return;
+
+        var window = new DiagnosticsWindow(_services.Ipc, _services.Elevation) { Owner = this };
+        window.ShowDialog();
+    }
+
+    private void RelaunchBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null) return;
+
+        if (!_services.Elevation.RelaunchAsAdmin())
+        {
+            ShowActionError(Strings.Get("Admin_RelaunchFailed"));
+        }
+    }
+
+    private void ShowActionError(string message)
+    {
+        ActionBannerText.Text = message;
+        ActionBanner.Visibility = Visibility.Visible;
+    }
+
+    private void HideActionError()
+    {
+        ActionBannerText.Text = string.Empty;
+        ActionBanner.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>Горячие клавиши из <see cref="ShortcutCatalog"/> (контракт UI.md, раздел 3).</summary>
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        // В поле поиска Enter и Delete обрабатывает сам TextBox.
+        if (e.OriginalSource is System.Windows.Controls.TextBox &&
+            e.Key is Key.Enter or Key.Delete)
+        {
+            return;
+        }
+
+        if (Matches(e, ShortcutCatalog.Refresh))
+        {
+            if (_viewModel is not null) _ = _viewModel.RefreshAsync();
+            e.Handled = true;
+        }
+        else if (Matches(e, ShortcutCatalog.AddTask))
+        {
+            AddBtn_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Matches(e, ShortcutCatalog.EditTask))
+        {
+            EditBtn_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Matches(e, ShortcutCatalog.DeleteTask))
+        {
+            DeleteBtn_Click(sender, e);
+            e.Handled = true;
+        }
+        else if (Matches(e, ShortcutCatalog.RunNow))
+        {
+            RunNowBtn_Click(sender, e);
+            e.Handled = true;
+        }
+    }
+
+    private static bool Matches(KeyEventArgs e, KeyGesture gesture)
+        => e.Key == gesture.Key && Keyboard.Modifiers == gesture.Modifiers;
 }
