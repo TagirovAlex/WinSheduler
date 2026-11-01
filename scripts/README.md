@@ -7,8 +7,10 @@
 | `./scripts/build.ps1` | Сборка `./WinSheduler.sln` (C++ служба, C# UI, тесты) в `Release|x64`. |
 | `./scripts/test.ps1` | Запуск тестов `./tests/WinSheduler.Tests` без повторной сборки. |
 | `./scripts/format.ps1` | Проверка форматирования C# (`dotnet format`) и C++ (`clang-format`). |
-| `./scripts/verify.ps1 -Scope <track>` | Полный локальный gate: сборка, тесты, форматирование, схемы, smoke-тест службы. |
+| `./scripts/verify.ps1 -Scope <track>` | Полный локальный gate: сборка, тесты, форматирование, контрактные тесты, схемы, smoke-тест службы. |
 | `./scripts/bench.ps1` | Заглушка бенчмарков (будут в Track G). |
+| `./scripts/installer/build.ps1` | Сборка службы, self-contained UI и MSI; `-SkipMsi` — без MSI, `-RequireWix` — ошибка при отсутствии WiX. |
+| `./tests/e2e/ui-smoke.ps1` | UI smoke через UI Automation: окно и кнопка «Добавить»; нужен интерактивный рабочий стол. |
 
 ## build.ps1
 
@@ -43,15 +45,21 @@
 1. `build.ps1`
 2. `test.ps1`
 3. `format.ps1`
-4. Проверка JSON-схем в `./docs/contracts/schemas/` (если файлов нет — предупреждение).
-5. Smoke-тест `./src/WinShedulerSvc/bin/Release/WinShedulerSvc.exe --standalone`:
+4. Контрактные тесты C++ (`./tests/contract/cpp`).
+5. Контрактные тесты C# (`./tests/contract/WinSheduler.ContractTests`).
+6. Проверка JSON-схем в `./docs/contracts/schemas/`.
+7. Smoke-тест `./src/WinShedulerSvc/bin/Release/WinShedulerSvc.exe --standalone`:
    запуск, ожидание 2 секунды, остановка. Если процесс завершился сам — ошибка.
-   Если exe не найден — предупреждение.
 
-Параметр `-Scope` пока зарезервирован и не влияет на набор шагов.
+Дополнительно: `-Analyze` — MSVC `/analyze` и `clang-tidy` (если есть);
+`-CleanCheckout` — сборка снимка `git archive HEAD` в `./temp/verify/clean`.
+
+Параметр `-Scope` зарезервирован и не влияет на набор шагов.
 
 ## Требования
 
 - Visual Studio 2022 (MSVC v143, Windows 10 SDK) или Build Tools с MSBuild.
 - .NET 8 SDK.
+- WiX 5 для MSI: `dotnet tool install --global wix --version 5.0.2`,
+  `wix extension add -g WixToolset.UI.wixext/5.0.2`.
 - Опционально: `clang-format` для проверки C++.
