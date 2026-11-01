@@ -14,13 +14,30 @@ public partial class MainWindow : Window
         Converters = { new JsonStringEnumConverter() }
     };
 
+    private static readonly System.Windows.Media.Brush SuccessBrush =
+        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x10, 0x7C, 0x10));
+    private static readonly System.Windows.Media.Brush ErrorBrush =
+        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xC4, 0x2B, 0x1C));
+
     private readonly IpcClient _ipc = new();
     private List<TaskDefinitionViewModel> _tasks = [];
+    private bool _offline;
 
     public MainWindow()
     {
         InitializeComponent();
+        ApplyWorkAreaLimits();
         Loaded += async (_, _) => await Refresh();
+    }
+
+    /// <summary>Не даёт окну выйти за рабочую область при DPI 100–200 %.</summary>
+    private void ApplyWorkAreaLimits()
+    {
+        var area = SystemParameters.WorkArea;
+        MaxWidth = area.Width;
+        MaxHeight = area.Height;
+        Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 32));
+        Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 32));
     }
 
     private async Task Refresh()
@@ -30,56 +47,131 @@ public partial class MainWindow : Window
             StatusBarText.Text = "Загрузка...";
 
             var statusResp = await _ipc.SendAsync(new IpcRequest { Action = "GetStatus" });
+            ServiceStatus? status = null;
             if (statusResp.Success)
+                status = JsonSerializer.Deserialize<ServiceStatus>(statusResp.Payload);
+
+            if (status?.Running != true)
             {
-                var status = JsonSerializer.Deserialize<ServiceStatus>(statusResp.Payload);
-                StatusText.Text = status?.Running == true
-                    ? $"✅ Работает (задач: {status.TaskCount}, активных: {status.RunningTaskCount})"
-                    : "❌ Остановлена";
-                StatusText.Foreground = status?.Running == true
-                    ? System.Windows.Media.Brushes.Green
-                    : System.Windows.Media.Brushes.Red;
+                StatusText.Text = "Служба: недоступна";
+                StatusText.Foreground = ErrorBrush;
+                SetOffline(true, statusResp.Success
+                    ? "Служба не сообщает о готовности."
+                    : statusResp.Error);
+                return;
             }
-            else
-            {
-                StatusText.Text = "❌ Служба недоступна";
-                StatusText.Foreground = System.Windows.Media.Brushes.Red;
-            }
+
+            StatusText.Text = $"Служба: работает (задач: {status.TaskCount}, выполняется: {status.RunningTaskCount})";
+            StatusText.Foreground = SuccessBrush;
 
             var tasksResp = await _ipc.SendAsync(new IpcRequest { Action = "ListTasks" });
-            if (tasksResp.Success)
+            if (!tasksResp.Success)
             {
-                var tasks = JsonSerializer.Deserialize<List<TaskDefinitionViewModel>>(tasksResp.Payload) ?? [];
-                foreach (var t in tasks)
-                {
-                    t.UpdateDerivedFields();
-                    var windowsResp = await _ipc.SendAsync(new IpcRequest { Action = "GetTimeWindows", Payload = t.Id.ToString() });
-                    if (windowsResp.Success)
-                    {
-                        var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload, JsonOpts) ?? [];
-                        t.ScheduleSummary = windows.Count > 0
-                            ? string.Join(", ", windows.Select(w => w.Summary))
-                            : "Нет расписания";
-                    }
-
-                    var historyResp = await _ipc.SendAsync(new IpcRequest { Action = "GetHistory", Payload = t.Id.ToString() });
-                    if (historyResp.Success)
-                    {
-                        var history = JsonSerializer.Deserialize<List<RunHistoryViewModel>>(historyResp.Payload) ?? [];
-                        t.LastRun = history.Count > 0 ? history[0].StartTime.ToString("dd.MM.yy HH:mm") : "-";
-                    }
-                }
-                _tasks = tasks;
-                TaskListView.ItemsSource = _tasks;
+                SetOffline(true, tasksResp.Error);
+                StatusBarText.Text = "Не удалось загрузить список задач";
+                return;
             }
 
-            StatusBarText.Text = $"Готов. Задач: {_tasks.Count}";
+            var tasks = JsonSerializer.Deserialize<List<TaskDefinitionViewModel>>(tasksResp.Payload) ?? [];
+            foreach (var t in tasks)
+            {
+                t.UpdateDerivedFields();
+                var windowsResp = await _ipc.SendAsync(new IpcRequest { Action = "GetTimeWindows", Payload = t.Id.ToString() });
+                if (windowsResp.Success)
+                {
+                    var windows = JsonSerializer.Deserialize<List<TimeWindowViewModel>>(windowsResp.Payload, JsonOpts) ?? [];
+                    t.ScheduleSummary = windows.Count > 0
+                        ? string.Join(", ", windows.Select(w => w.Summary))
+                        : "Нет расписания";
+                }
+
+                var historyResp = await _ipc.SendAsync(new IpcRequest { Action = "GetHistory", Payload = t.Id.ToString() });
+                if (historyResp.Success)
+                {
+                    var history = JsonSerializer.Deserialize<List<RunHistoryViewModel>>(historyResp.Payload) ?? [];
+                    if (history.Count > 0)
+                    {
+                        var last = history[0].StartTime;
+                        if (last.Kind != DateTimeKind.Local)
+                            last = DateTime.SpecifyKind(last, DateTimeKind.Utc).ToLocalTime();
+                        t.LastRun = last.ToString("dd.MM.yyyy HH:mm");
+                    }
+                }
+            }
+            _tasks = tasks;
+            TaskListView.ItemsSource = _tasks;
+
+            SetOffline(false, null);
+            StatusBarText.Text = $"Готов. Задач: {_tasks.Count} · обновлено {DateTime.Now:dd.MM.yyyy HH:mm:ss}";
         }
         catch (Exception ex)
         {
-            StatusText.Text = "❌ Ошибка подключения к службе";
-            StatusBarText.Text = $"Ошибка: {ex.Message}";
+            StatusText.Text = "Служба: ошибка подключения";
+            StatusText.Foreground = ErrorBrush;
+            SetOffline(true, ex.Message);
         }
+    }
+
+    /// <summary>Переключает интерфейс в режим «служба недоступна»: баннер, инструкция, блокировка действий.</summary>
+    private void SetOffline(bool offline, string? detail)
+    {
+        _offline = offline;
+        OfflineBanner.Visibility = offline ? Visibility.Visible : Visibility.Collapsed;
+        TaskListView.IsEnabled = !offline;
+        AddBtn.IsEnabled = !offline;
+
+        if (offline)
+        {
+            OfflineDetail.Text =
+                "Если служба не установлена — установите WinSheduler. Если установлена — запустите её " +
+                "через «Службы» (services.msc) или командой «sc start WinSheduler» от имени администратора." +
+                (string.IsNullOrWhiteSpace(detail) ? "" : $"\nПричина: {detail}");
+            EmptyState.Visibility = Visibility.Collapsed;
+            StatusBarText.Text = $"Нет связи со службой · обновлено {DateTime.Now:dd.MM.yyyy HH:mm:ss}";
+        }
+        else
+        {
+            EmptyState.Visibility = _tasks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        UpdateActionButtons();
+    }
+
+    private void UpdateActionButtons()
+    {
+        var hasSelection = !_offline && GetSelected() != null;
+        EditBtn.IsEnabled = hasSelection;
+        DeleteBtn.IsEnabled = hasSelection;
+        HistoryBtn.IsEnabled = hasSelection;
+        RunNowBtn.IsEnabled = hasSelection;
+    }
+
+    private void TaskListView_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateActionButtons();
+
+    private async void RetryBtn_Click(object sender, RoutedEventArgs e)
+    {
+        await Refresh();
+    }
+
+    private void OpenServicesBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("services.msc")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            StatusBarText.Text = $"Не удалось открыть «Службы»: {ex.Message}";
+        }
+    }
+
+    private void DiagnosticsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new DiagnosticsWindow(_ipc) { Owner = this };
+        window.ShowDialog();
     }
 
     private async void RefreshBtn_Click(object sender, RoutedEventArgs e)
