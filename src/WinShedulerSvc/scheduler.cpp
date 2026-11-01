@@ -1,24 +1,24 @@
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 #include "scheduler.h"
+#include "db_compat.h"
 #include "json.h"
-#include <sstream>
+
+#include <fstream>
 #include <iomanip>
+#include <sstream>
 #include <rpc.h>
 #include <rpcdce.h>
-#include <fstream>
-#include <cmath>
-#include <userenv.h>
+#include <cwchar>
 
 #pragma comment(lib, "rpcrt4.lib")
-#pragma comment(lib, "crypt32.lib")
-#pragma comment(lib, "userenv.lib")
 
-static constexpr size_t MAX_LOG_SIZE = 512 * 1024; // 512 KB
+static constexpr size_t MAX_LOG_SIZE = 512 * 1024; // 512 КБ
 
+// Общая функция логирования: используется планировщиком и IPC (см. ipc.h).
 void log_msg(const std::wstring& log_dir, const std::string& msg) {
     auto path = log_dir + L"\\scheduler.log";
-    // Rotate if too large
+    // Ротация по размеру.
     {
         std::ifstream check(path, std::ios::binary | std::ios::ate);
         if (check.is_open() && static_cast<size_t>(check.tellg()) > MAX_LOG_SIZE) {
@@ -39,7 +39,9 @@ void log_msg(const std::wstring& log_dir, const std::string& msg) {
     }
 }
 
-static std::wstring generate_guid() {
+namespace {
+
+std::wstring generate_guid() {
     GUID guid;
     UuidCreate(&guid);
     wchar_t buf[64];
@@ -50,17 +52,7 @@ static std::wstring generate_guid() {
     return s;
 }
 
-static std::wstring now_to_string() {
-    auto now = std::chrono::system_clock::now();
-    auto now_t = std::chrono::system_clock::to_time_t(now);
-    std::tm tm;
-    localtime_s(&tm, &now_t);
-    std::ostringstream ss;
-    ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
-    return u2ws(ss.str());
-}
-
-static std::string detect_pe_architecture(const std::wstring& path) {
+std::string detect_pe_architecture(const std::wstring& path) {
     HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
     if (hFile == INVALID_HANDLE_VALUE) return "unknown (file not found)";
     IMAGE_DOS_HEADER dos = {};
@@ -90,58 +82,58 @@ static std::string detect_pe_architecture(const std::wstring& path) {
     }
 }
 
-static long long time_to_minutes(const std::wstring& time_str) {
-    // Parse HH:MM format
-    int h = 0, m = 0;
-    swscanf_s(time_str.c_str(), L"%d:%d", &h, &m);
-    return h * 60LL + m;
+bool is_system_sid(const std::wstring& sid) {
+    return sid.empty() || _wcsicmp(sid.c_str(), L"S-1-5-18") == 0;
 }
 
-bool decrypt_password(const std::wstring& encrypted_base64, std::wstring& password_out) {
-    // DPAPI CryptUnprotectData
-    DATA_BLOB encrypted_blob = {};
-    DATA_BLOB decrypted_blob = {};
-
-    // Decode base64
-    std::string encoded = ws2u(encrypted_base64);
-    DWORD decoded_len = 0;
-    if (!CryptStringToBinaryA(encoded.c_str(), (DWORD)encoded.size(), CRYPT_STRING_BASE64, nullptr, &decoded_len, nullptr, nullptr))
-        return false;
-
-    std::vector<BYTE> decoded(decoded_len);
-    if (!CryptStringToBinaryA(encoded.c_str(), (DWORD)encoded.size(), CRYPT_STRING_BASE64, decoded.data(), &decoded_len, nullptr, nullptr))
-        return false;
-
-    encrypted_blob.cbData = decoded_len;
-    encrypted_blob.pbData = decoded.data();
-
-    if (!CryptUnprotectData(&encrypted_blob, nullptr, nullptr, nullptr, nullptr, CRYPTPROTECT_LOCAL_MACHINE, &decrypted_blob))
-        return false;
-
-    // Convert to wchar_t
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, (char*)decrypted_blob.pbData, decrypted_blob.cbData, nullptr, 0);
-    password_out.resize(wlen);
-    MultiByteToWideChar(CP_UTF8, 0, (char*)decrypted_blob.pbData, decrypted_blob.cbData, &password_out[0], wlen);
-
-    SecureZeroMemory(decrypted_blob.pbData, decrypted_blob.cbData);
-    LocalFree(decrypted_blob.pbData);
-    return true;
+// Пауза перед повтором: 1, 2, 4, 8 … минут, не более 30 минут.
+std::chrono::seconds retry_backoff(int attempt) {
+    const int exponent = attempt < 5 ? attempt : 5;
+    const int minutes = (1 << exponent) < 30 ? (1 << exponent) : 30;
+    return std::chrono::minutes(minutes);
 }
+
+} // namespace
 
 Scheduler::Scheduler(Database& db, const std::wstring& log_dir)
-    : db_(db), log_dir_(log_dir) {
-    InitializeCriticalSection(&lock_);
+    : Scheduler(db, log_dir, std::make_unique<Win32ProcessRunner>(), nullptr, nullptr) {
+}
+
+Scheduler::Scheduler(Database& db, const std::wstring& log_dir,
+    std::unique_ptr<IProcessRunner> runner, std::unique_ptr<ITriggerStateStore> state,
+    std::unique_ptr<IClock> clock)
+    : db_(db),
+      log_dir_(log_dir),
+      clock_(std::move(clock)),
+      runner_(std::move(runner)),
+      state_(std::move(state)),
+      cache_(std::make_unique<ScheduleCache>(db)) {
+    if (!clock_) clock_ = std::make_unique<SystemClock>();
+    if (!runner_) runner_ = std::make_unique<Win32ProcessRunner>();
+
+    // По умолчанию состояние срабатываний хранится в БД (trigger_state, трек C).
+    if (!state_) state_ = std::make_unique<DatabaseTriggerStateStore>(db_);
 }
 
 Scheduler::~Scheduler() {
     stop();
-    DeleteCriticalSection(&lock_);
 }
 
 void Scheduler::start() {
     if (running_) return;
+
+    // Осиротевшие Running после падения службы помечаются Aborted (ADR 0003, п. 7).
+    recover_orphaned_runs();
+
+    // Прогрев кэша расписания: первый тик не должен читать БД по задачам.
+    cache_->get();
+
+    // Чистка файлов вывода по retention (DB.md, раздел 6).
+    dbcompat::purge_expired_outputs(db_);
+    last_purge_day_ = current_day();
+
     running_ = true;
-    started_at_ = std::chrono::system_clock::now();
+    started_at_ = clock_->now_utc();
     stop_event_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     thread_ = std::thread(&Scheduler::worker_thread, this);
 }
@@ -149,23 +141,27 @@ void Scheduler::start() {
 void Scheduler::stop() {
     running_ = false;
     if (stop_event_) SetEvent(stop_event_);
-    if (tick_timer_) { CancelWaitableTimer(tick_timer_); }
+    if (tick_timer_) CancelWaitableTimer(tick_timer_);
 
-    // Don't join - thread might be blocked inside tick()/DB calls.
-    // ExitProcess(0) in service_main will terminate it.
+    // Тик короткий (кэш в памяти), поэтому поток завершается за один период.
+    if (thread_.joinable()) thread_.join();
 
-    // Kill all running processes
-    EnterCriticalSection(&lock_);
-    auto running = running_map_;
-    running_map_.clear();
-    LeaveCriticalSection(&lock_);
-
-    for (auto& [id, rp] : running) {
-        if (rp.process_handle) {
-            TerminateProcess(rp.process_handle, 1);
-            CloseHandle(rp.process_handle);
-        }
-        if (rp.thread_handle) CloseHandle(rp.thread_handle);
+    // Оставшиеся процессы завершаем и помечаем Killed.
+    std::vector<RunningProcess> remaining;
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        for (auto& [history_id, run] : running_processes_) remaining.push_back(run);
+    }
+    for (auto& run : remaining) {
+        runner_->terminate(run.handle);
+        finish_run(run, RunStatus::Killed, std::optional<int>(1), L"Служба остановлена");
+    }
+    {
+        // Страховка от записей, которых уже нет в running_processes_.
+        std::lock_guard<std::mutex> guard(mutex_);
+        for (auto& [history_id, run] : running_processes_) runner_->release(run.handle);
+        running_processes_.clear();
+        pending_.clear();
     }
 
     if (stop_event_) { CloseHandle(stop_event_); stop_event_ = nullptr; }
@@ -177,21 +173,21 @@ ServiceStatus Scheduler::get_status() {
     s.running = running_;
     s.task_count = task_count();
     s.running_task_count = running_task_count();
-    auto t = std::chrono::system_clock::to_time_t(started_at_);
-    std::tm tm;
-    localtime_s(&tm, &t);
-    std::ostringstream ss;
-    ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
-    s.started_at = u2ws(ss.str());
+    // Время старта — событие, поэтому в UTC (см. DB.md).
+    s.started_at = trigger::format_utc_iso(started_at_);
     return s;
 }
 
+void Scheduler::tick_once() {
+    tick();
+}
+
 int Scheduler::task_count() const {
-    // Use COUNT query instead of loading all tasks
+    if (!db_.get_db()) return 0;
     auto sql = "SELECT COUNT(*) FROM tasks";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db_.get_db(), sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return (int)db_.list_tasks().size(); // fallback
+        return (int)db_.list_tasks().size(); // запасной путь
     int count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) count = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
@@ -199,10 +195,32 @@ int Scheduler::task_count() const {
 }
 
 int Scheduler::running_task_count() const {
-    EnterCriticalSection(&lock_);
-    int count = (int)running_map_.size();
-    LeaveCriticalSection(&lock_);
-    return count;
+    std::lock_guard<std::mutex> guard(mutex_);
+    // Считаем уникальные задачи: при StartAnother их может быть несколько.
+    std::vector<std::wstring> seen;
+    for (const auto& [history_id, run] : running_processes_) {
+        bool known = false;
+        for (const auto& task_id : seen) {
+            if (task_id == run.task_id) { known = true; break; }
+        }
+        if (!known) seen.push_back(run.task_id);
+    }
+    return static_cast<int>(seen.size());
+}
+
+void Scheduler::invalidate_schedule() {
+    cache_->invalidate();
+}
+
+void Scheduler::on_task_changed(const std::wstring& task_id) {
+    // Кэш перечитывается, состояние слотов задачи сбрасывается: после правки
+    // расписания старые отметки не должны блокировать новые запуски.
+    cache_->invalidate();
+    if (!task_id.empty()) state_->forget_task(task_id);
+}
+
+int64_t Scheduler::current_day() const {
+    return std::chrono::duration_cast<std::chrono::hours>(clock_->now_utc().time_since_epoch()).count() / 24;
 }
 
 void Scheduler::worker_thread() {
@@ -210,7 +228,7 @@ void Scheduler::worker_thread() {
     if (!tick_timer_) return;
 
     LARGE_INTEGER due;
-    due.QuadPart = -10000LL; // 1ms from now for immediate first tick
+    due.QuadPart = -10000LL; // первый тик через 1 мс
     SetWaitableTimer(tick_timer_, &due, SCHEDULER_TICK_MS, nullptr, nullptr, FALSE);
 
     log_msg(log_dir_, "worker_thread started");
@@ -218,75 +236,28 @@ void Scheduler::worker_thread() {
         HANDLE events[2] = { tick_timer_, stop_event_ };
         DWORD wait = WaitForMultipleObjects(2, events, FALSE, INFINITE);
         if (wait == WAIT_OBJECT_0 + 1 || !running_) break;
-        if (wait == WAIT_OBJECT_0) {
-            tick();
-        }
+        if (wait == WAIT_OBJECT_0) tick();
     }
     log_msg(log_dir_, "worker_thread stopped");
 }
 
 void Scheduler::tick() {
     try {
-        auto tasks = db_.list_tasks();
-        auto now = std::chrono::system_clock::now();
-        auto now_t = std::chrono::system_clock::to_time_t(now);
-        std::tm now_tm;
-        localtime_s(&now_tm, &now_t);
-        int current_minute = now_tm.tm_hour * 60 + now_tm.tm_min;
+        check_running();
 
-        for (auto& task : tasks) {
-            if (!task.enabled) continue;
-
-            auto windows = db_.get_time_windows(task.id);
-            bool should_run = false;
-
-            for (auto& w : windows) {
-                if (!is_in_window(w, now)) continue;
-
-                if (w.type == TimeWindowType::ExactTimes) {
-                    EnterCriticalSection(&lock_);
-                    auto it = last_run_minute_.find(task.id);
-                    int last_min = (it != last_run_minute_.end()) ? it->second : -1;
-                    if (last_min == current_minute) {
-                        LeaveCriticalSection(&lock_);
-                        continue;
-                    }
-                    last_run_minute_[task.id] = current_minute;
-                    LeaveCriticalSection(&lock_);
-                    should_run = true;
-                    break;
-                } else {
-                    should_run = true;
-                    break;
-                }
-            }
-
-            if (!should_run) continue;
-
-            // Check overlap
-            EnterCriticalSection(&lock_);
-            bool already_running = running_map_.find(task.id) != running_map_.end();
-            if (already_running) {
-                switch (task.on_overlap) {
-                case OnOverlapAction::WaitNext:
-                    LeaveCriticalSection(&lock_);
-                    continue;
-                case OnOverlapAction::WaitComplete:
-                    pending_queue_[task.id].push(now);
-                    LeaveCriticalSection(&lock_);
-                    continue;
-                case OnOverlapAction::StartAnother:
-                    break;
-                }
-            }
-            LeaveCriticalSection(&lock_);
-
-            log_msg(log_dir_, "launching task " + ws2u(task.id));
-            launch_task(task);
+        // Чистка файлов вывода по retention — не чаще раза в сутки.
+        const int64_t today = current_day();
+        if (today != last_purge_day_) {
+            last_purge_day_ = today;
+            dbcompat::purge_expired_outputs(db_);
         }
 
-        process_pending_queue();
-        check_timeouts();
+        const auto now_utc = clock_->now_utc();
+        const auto now_local = clock_->to_local(now_utc);
+        auto entries = cache_->get();
+        dispatch(*entries, now_local);
+
+        process_pending();
     } catch (const std::exception& e) {
         log_msg(log_dir_, "tick exception: " + std::string(e.what()));
     } catch (...) {
@@ -294,367 +265,356 @@ void Scheduler::tick() {
     }
 }
 
-bool Scheduler::is_in_window(const TimeWindow& w, const std::chrono::system_clock::time_point& now) {
-    auto now_t = std::chrono::system_clock::to_time_t(now);
-    std::tm now_tm;
-    localtime_s(&now_tm, &now_t);
+void Scheduler::dispatch(const std::vector<ScheduleCache::Entry>& entries, const LocalDateTime& now_local) {
+    for (const auto& entry : entries) {
+        if (!entry.task.enabled) continue;
 
-    // Date range check
-    if (w.start_date.has_value()) {
-        auto sd = time_to_minutes(w.start_date.value());
-        // Simple date compare - parse YYYY-MM-DD
-        // For now, skip date comparison for brevity
-    }
-
-    // Day of week check
-    if (!w.days_of_week.empty()) {
-        int dow = now_tm.tm_wday; // 0=Sun
-        if (std::find(w.days_of_week.begin(), w.days_of_week.end(), dow) == w.days_of_week.end())
-            return false;
-    }
-
-    // Day of month check
-    if (!w.days_of_month.empty()) {
-        if (std::find(w.days_of_month.begin(), w.days_of_month.end(), now_tm.tm_mday) == w.days_of_month.end())
-            return false;
-    }
-
-    int current_minutes = now_tm.tm_hour * 60 + now_tm.tm_min;
-
-    if (w.type == TimeWindowType::ExactTimes) {
-        for (auto& et : w.exact_times) {
-            int et_minutes = (int)time_to_minutes(et);
-            if (std::abs(current_minutes - et_minutes) < 1) return true;
-
-            // Repeat after exact time
-            if (w.repeat_interval_minutes.has_value() && w.repeat_interval_minutes.value() > 0
-                && current_minutes > et_minutes) {
-                int elapsed = current_minutes - et_minutes;
-                if (elapsed % w.repeat_interval_minutes.value() == 0) {
-                    if (w.repeat_until.has_value()) {
-                        int ru_min = (int)time_to_minutes(w.repeat_until.value());
-                        if (current_minutes > ru_min) continue;
-                    }
-                    return true;
-                }
+        for (const auto& window : entry.windows) {
+            // Окно catch-up покрывает задержку тика и переход через полночь.
+            const auto slots = trigger::due_slots(window, now_local, trigger::CATCH_UP_MINUTES);
+            for (const auto& slot : slots) {
+                const std::wstring slot_key = trigger::format_slot(slot);
+                // Идемпотентность в минуту: слот фиксируется в trigger_state.
+                if (state_->was_fired(entry.task.id, window.id, slot_key)) continue;
+                request_start(entry.task, window.id, slot_key, TriggeredBy::Schedule, 0, nullptr, true);
             }
         }
-        return false;
     }
-
-    // Interval type
-    if (!w.start_time.has_value() || !w.end_time.has_value() || !w.repeat_interval_minutes.has_value())
-        return false;
-
-    int st_min = (int)time_to_minutes(w.start_time.value());
-    int et_min = (int)time_to_minutes(w.end_time.value());
-
-    if (current_minutes < st_min || current_minutes > et_min) return false;
-
-    if (w.repeat_until.has_value()) {
-        int ru_min = (int)time_to_minutes(w.repeat_until.value());
-        if (current_minutes > ru_min) return false;
-    }
-
-    int elapsed = current_minutes - st_min;
-    return (elapsed % w.repeat_interval_minutes.value()) < 1;
 }
 
-void Scheduler::launch_task(const TaskDefinition& task) {
-    log_msg(log_dir_, "launch_task: " + ws2u(task.name));
-    // Create history record
+std::wstring Scheduler::request_start(const TaskDefinition& task, const std::wstring& window_id,
+    const std::wstring& slot, TriggeredBy triggered_by, int attempt,
+    HANDLE client_token, bool caller_is_admin) {
+    // v1 поддерживает только headless-задачи (ADR 0003, п. 9).
+    if (task.session_mode != SessionMode::Headless) {
+        log_msg(log_dir_, "отклонён запуск ActiveUser: task=" + ws2u(task.id));
+        return {};
+    }
+
+    // Политика наложения запусков.
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        bool already_running = false;
+        for (const auto& [history_id, run] : running_processes_) {
+            if (run.task_id == task.id) { already_running = true; break; }
+        }
+
+        if (already_running) {
+            switch (task.on_overlap) {
+            case OnOverlapAction::WaitNext:
+                return {};
+            case OnOverlapAction::WaitComplete: {
+                // Коалесинг: на задачу хранится один ожидающий запуск.
+                PendingRun pending;
+                pending.task_id = task.id;
+                pending.window_id = window_id;
+                pending.slot = slot;
+                pending.triggered_by = triggered_by;
+                pending.attempt = attempt;
+                pending.not_before = clock_->now_utc();
+                pending_[task.id] = pending;
+                return {};
+            }
+            case OnOverlapAction::StartAnother:
+            default:
+                break;
+            }
+        }
+    }
+
+    const std::wstring fired_at = trigger::format_utc_iso(clock_->now_utc());
+
+    // Слот фиксируется до запуска: повторный тик не создаст второй процесс.
+    // Для повторов (attempt > 0) слот уже зафиксирован ранее.
+    if (triggered_by == TriggeredBy::Schedule && attempt == 0) {
+        if (!state_->try_mark_fired(task.id, window_id, slot, fired_at)) return {};
+    }
+
     RunHistory history;
     history.id = generate_guid();
     history.task_id = task.id;
-    history.start_time = now_to_string();
+    history.start_time = fired_at;
     history.status = RunStatus::Running;
+    history.triggered_by = triggered_by;
 
-    db_.insert_history(history);
+    try {
+        dbcompat::insert_history(db_, history, window_id);
+    } catch (const std::exception& e) {
+        log_msg(log_dir_, "insert_history: " + std::string(e.what()));
+        return {};
+    }
 
-    // Launch process
-    std::wstring output_path;
+    ProcessLaunchSpec spec;
+    spec.program_path = task.program_path;
+    spec.arguments = task.arguments;
+    spec.working_directory = task.working_directory;
+    spec.window_style = task.window_style;
+    spec.has_run_as = task.run_as_user.has_value();
+    if (spec.has_run_as) spec.run_as = task.run_as_user.value();
+    spec.client_token = client_token;
+    spec.caller_is_admin = caller_is_admin;
+    // Не-админская задача без токена владельца не запускается от SYSTEM.
+    spec.require_client_token = !is_system_sid(task.owner_sid) && client_token == nullptr;
+
+    std::optional<std::wstring> output_path;
     if (task.log_output) {
-        output_path = log_dir_ + L"\\output\\" + task.id + L"\\" + history.id + L".log";
-        // Create directory
-        std::wstring dir = log_dir_ + L"\\output\\" + task.id;
-        CreateDirectoryW(dir.c_str(), nullptr);
+        const std::wstring directory = log_dir_ + L"\\output\\" + task.id;
+        CreateDirectoryW(directory.c_str(), nullptr);
+        output_path = directory + L"\\" + history.id + L".log";
+        spec.output_path = output_path.value();
     }
 
-    DWORD pid = run_process(task, output_path);
-    log_msg(log_dir_, "run_process result: pid=" + std::to_string(pid));
+    log_msg(log_dir_, "launch task=" + ws2u(task.id) + " history=" + ws2u(history.id)
+        + " arch=" + detect_pe_architecture(task.program_path));
 
-    // Update history with PID
-    history.pid = pid;
-    db_.update_history(history);
+    RunningProcessHandle handle;
+    std::wstring error;
+    if (!runner_->launch(spec, handle, error)) {
+        history.end_time = trigger::format_utc_iso(clock_->now_utc());
+        history.status = RunStatus::Failed;
+        history.error_message = error;
+        history.output_path = output_path;
+        try {
+            db_.update_history(history);
+            trim_history(task.id, task.max_history_records);
+        } catch (...) {
+        }
+        log_msg(log_dir_, "launch failed: task=" + ws2u(task.id) + " error=" + ws2u(error));
+        return {};
+    }
 
-    // Track running
-    EnterCriticalSection(&lock_);
-    // The process handle is opened by run_process, but for monitoring we need the handle
-    // For simplicity, we don't track the handle here; timeout monitoring uses pid-based approach
-    LeaveCriticalSection(&lock_);
+    history.pid = static_cast<int>(handle.pid);
+    history.output_path = output_path;
+    try {
+        db_.update_history(history);
+    } catch (...) {
+    }
+
+    RunningProcess run;
+    run.handle = handle;
+    run.history_id = history.id;
+    run.task_id = task.id;
+    run.window_id = window_id;
+    run.slot = slot;
+    run.triggered_by = triggered_by;
+    run.output_path = output_path;
+    run.start_time = clock_->now_utc();
+    run.timeout_minutes = task.timeout_minutes.value_or(0);
+    run.kill_on_timeout = task.kill_on_timeout;
+    run.attempt = attempt;
+
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        running_processes_[history.id] = run;
+    }
+
+    log_msg(log_dir_, "started pid=" + std::to_string(handle.pid) + " history=" + ws2u(history.id));
+    return history.id;
 }
 
-DWORD Scheduler::run_process(const TaskDefinition& task, const std::wstring& output_path) {
-    std::wstring command = L"\"" + task.program_path + L"\" " + task.arguments;
-
-    PROCESS_INFORMATION pi = {};
-    STARTUPINFOW si = {};
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    switch (task.window_style) {
-        case WindowStyle::Normal: si.wShowWindow = SW_SHOWNORMAL; break;
-        case WindowStyle::Hidden: si.wShowWindow = SW_HIDE; break;
-        case WindowStyle::Minimized: si.wShowWindow = SW_SHOWMINIMIZED; break;
-        case WindowStyle::Maximized: si.wShowWindow = SW_SHOWMAXIMIZED; break;
-        default: si.wShowWindow = SW_SHOWNORMAL;
+void Scheduler::check_running() {
+    std::vector<RunningProcess> snapshot;
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        for (const auto& [history_id, run] : running_processes_) snapshot.push_back(run);
     }
 
-    // Handle output redirection
-    HANDLE hStdoutRead = nullptr, hStdoutWrite = nullptr;
-    SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, TRUE };
-
-    if (!output_path.empty()) {
-        // Redirect to file
-        si.dwFlags |= STARTF_USESTDHANDLES;
-        hStdoutWrite = CreateFileW(output_path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &sa,
-            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        si.hStdOutput = hStdoutWrite;
-        si.hStdError = hStdoutWrite;
-    }
-
-    BOOL result;
-    std::wstring working_dir = task.working_directory;
-    if (working_dir.empty()) {
-        working_dir = task.program_path;
-        auto pos = working_dir.find_last_of(L"\\/");
-        if (pos != std::wstring::npos) working_dir.resize(pos);
-    }
-    std::wstring command_line = command; // non-const copy needed
-
-    log_msg(log_dir_, "target arch: " + detect_pe_architecture(task.program_path) + " exe=" + ws2u(task.program_path));
-
-    if (task.run_as_user.has_value()) {
-        // Launch with alternate credentials using LogonUser + CreateProcessAsUser
-        std::wstring password;
-        if (!task.run_as_user->encrypted_password.empty()) {
-            if (!decrypt_password(task.run_as_user->encrypted_password, password)) {
-                log_msg(log_dir_, "Failed to decrypt password for user: " + ws2u(task.run_as_user->user_name));
-                if (hStdoutWrite) CloseHandle(hStdoutWrite);
-                return 0;
+    const auto now = clock_->now_utc();
+    for (auto& run : snapshot) {
+        const ProcessStatus status = runner_->poll(run.handle);
+        if (status.exited) {
+            if (run.timed_out) {
+                finish_run(run, RunStatus::Timeout, std::optional<int>(static_cast<int>(status.exit_code)),
+                    L"Превышен таймаут");
+            } else if (status.exit_code == 0) {
+                finish_run(run, RunStatus::Completed, std::optional<int>(0), L"");
+            } else {
+                finish_run(run, RunStatus::Failed, std::optional<int>(static_cast<int>(status.exit_code)),
+                    L"Код возврата: " + std::to_wstring(status.exit_code));
             }
-        }
-
-        std::wstring domain = task.run_as_user->domain;
-        std::wstring username = task.run_as_user->user_name;
-
-        HANDLE hToken = nullptr;
-        BOOL logged_on = LogonUserW(
-            username.c_str(),
-            domain.empty() ? nullptr : domain.c_str(),
-            password.c_str(),
-            LOGON32_LOGON_INTERACTIVE,
-            LOGON32_PROVIDER_DEFAULT,
-            &hToken);
-
-        // Clear password from memory
-        if (!password.empty()) {
-            SecureZeroMemory(&password[0], password.size() * sizeof(wchar_t));
-            password.clear();
-        }
-
-        if (!logged_on || !hToken) {
-            DWORD err = GetLastError();
-            log_msg(log_dir_, "LogonUser failed: error=" + std::to_string(err) + " user=" + ws2u(username));
-            if (hStdoutWrite) CloseHandle(hStdoutWrite);
-            return 0;
-        }
-
-        // Load user profile and environment
-        PROFILEINFOW pi_profile = {};
-        pi_profile.dwSize = sizeof(pi_profile);
-        pi_profile.lpUserName = const_cast<wchar_t*>(username.c_str());
-        pi_profile.dwFlags = PI_NOUI;
-        LoadUserProfile(hToken, &pi_profile);
-
-        LPVOID env_block = nullptr;
-        CreateEnvironmentBlock(&env_block, hToken, FALSE);
-
-        // CreateProcessAsUser requires a modifiable command line buffer
-        std::vector<wchar_t> cmd_buf(command_line.begin(), command_line.end());
-        cmd_buf.push_back(0);
-
-        std::vector<wchar_t> dir_buf(working_dir.begin(), working_dir.end());
-        dir_buf.push_back(0);
-
-        result = CreateProcessAsUserW(
-            hToken,
-            nullptr, // application name
-            cmd_buf.data(), // command line
-            nullptr, nullptr, TRUE,
-            CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | (task.window_style == WindowStyle::Hidden ? CREATE_NO_WINDOW : 0),
-            env_block,
-            dir_buf.data(),
-            &si, &pi);
-
-        if (!result) {
-            DWORD err = GetLastError();
-            log_msg(log_dir_, "CreateProcessAsUser failed: error=" + std::to_string(err) + " cmd=" + ws2u(command_line));
-        }
-
-        if (env_block) DestroyEnvironmentBlock(env_block);
-        CloseHandle(hToken);
-    } else {
-        // Launch as current user
-        std::vector<wchar_t> cmd_buf(command_line.begin(), command_line.end());
-        cmd_buf.push_back(0);
-
-        std::vector<wchar_t> dir_buf(working_dir.begin(), working_dir.end());
-        dir_buf.push_back(0);
-
-        result = CreateProcessW(
-            nullptr, cmd_buf.data(),
-            nullptr, nullptr, TRUE,
-            CREATE_DEFAULT_ERROR_MODE | CREATE_UNICODE_ENVIRONMENT | (task.window_style == WindowStyle::Hidden ? CREATE_NO_WINDOW : 0),
-            nullptr,
-            dir_buf.data(),
-            &si, &pi);
-    }
-
-    if (hStdoutWrite) CloseHandle(hStdoutWrite);
-
-    if (!result) {
-        DWORD err = GetLastError();
-        log_msg(log_dir_, "CreateProcess failed: error=" + std::to_string(err) + " cmd=" + ws2u(command_line));
-        if (hStdoutWrite) CloseHandle(hStdoutWrite);
-        return 0;
-    }
-
-    log_msg(log_dir_, "CreateProcess OK: pid=" + std::to_string(pi.dwProcessId) + " cmd=" + ws2u(command_line) + " dir=" + ws2u(working_dir) + " (service=x64)");
-
-    CloseHandle(pi.hThread);
-    DWORD pid = pi.dwProcessId;
-
-    // Store for timeout monitoring
-    EnterCriticalSection(&lock_);
-    RunningProcess rp;
-    rp.process_handle = pi.hProcess;
-    rp.thread_handle = nullptr;
-    rp.task_id = task.id;
-    rp.start_time = std::chrono::system_clock::now();
-    running_map_[task.id] = std::move(rp);
-    LeaveCriticalSection(&lock_);
-
-    return pid;
-}
-
-void Scheduler::check_timeouts() {
-    auto now = std::chrono::system_clock::now();
-
-    // Phase 1: Under lock, copy what we need, release lock immediately
-    struct TaskInfo { std::wstring task_id; RunningProcess rp; };
-    std::vector<TaskInfo> to_check;
-
-    EnterCriticalSection(&lock_);
-    for (auto& [task_id, rp] : running_map_) {
-        to_check.push_back({task_id, rp});
-    }
-    LeaveCriticalSection(&lock_);
-
-    // Phase 2: Outside lock - do all DB calls and process checks
-    std::vector<std::wstring> exited_tasks;
-    std::vector<std::wstring> timed_out_tasks;
-
-    for (auto& info : to_check) {
-        auto task = db_.get_task(info.task_id);
-        if (!task.has_value()) continue;
-
-        DWORD exit_code = 0;
-        bool exited = GetExitCodeProcess(info.rp.process_handle, &exit_code) && exit_code != STILL_ACTIVE;
-
-        if (exited) {
-            exited_tasks.push_back(info.task_id);
-            log_msg(log_dir_, "Process exited: task=" + ws2u(info.task_id) + " pid=" + std::to_string(info.rp.process_handle ? GetProcessId(info.rp.process_handle) : 0) + " exit_code=" + std::to_string(exit_code));
-            auto history_list = db_.get_history(info.task_id, 1);
-            if (!history_list.empty()) {
-                history_list[0].end_time = now_to_string();
-                history_list[0].exit_code = static_cast<int>(exit_code);
-                history_list[0].status = RunStatus::Completed;
-                db_.update_history(history_list[0]);
-            }
-            CloseHandle(info.rp.process_handle);
             continue;
         }
 
-        if (!task->timeout_minutes.has_value()) continue;
-        auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - info.rp.start_time);
-        if (elapsed.count() >= task->timeout_minutes.value()) {
-            timed_out_tasks.push_back(info.task_id);
+        // timeout_minutes = 0 или NULL — таймаут не задан.
+        if (run.timeout_minutes <= 0) continue;
+        const auto elapsed = std::chrono::duration_cast<std::chrono::minutes>(now - run.start_time).count();
+        if (elapsed < run.timeout_minutes) continue;
+
+        if (run.kill_on_timeout) {
+            runner_->terminate(run.handle);
+            finish_run(run, RunStatus::Timeout, std::nullopt, L"Превышен таймаут, дерево процессов завершено");
+        } else if (!run.timed_out) {
+            // Процесс не убиваем, но фиксируем Timeout один раз и продолжаем следить.
+            mark_timeout(run);
+        }
+    }
+}
+
+void Scheduler::mark_timeout(const RunningProcess& run) {
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        auto it = running_processes_.find(run.history_id);
+        if (it != running_processes_.end()) it->second.timed_out = true;
+    }
+
+    RunHistory history;
+    history.id = run.history_id;
+    history.task_id = run.task_id;
+    history.pid = static_cast<int>(run.handle.pid);
+    history.status = RunStatus::Timeout;
+    history.error_message = L"Превышен таймаут (процесс оставлен работать)";
+    history.output_path = run.output_path;
+    try {
+        db_.update_history(history);
+    } catch (const std::exception& e) {
+        log_msg(log_dir_, "mark_timeout: " + std::string(e.what()));
+    }
+    log_msg(log_dir_, "timeout history=" + ws2u(run.history_id) + " (без kill)");
+}
+
+void Scheduler::finish_run(const RunningProcess& run, RunStatus status,
+    std::optional<int> exit_code, const std::wstring& message) {
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        auto it = running_processes_.find(run.history_id);
+        if (it != running_processes_.end()) {
+            runner_->release(it->second.handle);
+            running_processes_.erase(it);
         }
     }
 
-    // Phase 3: Under lock, erase exited tasks
-    EnterCriticalSection(&lock_);
-    for (auto& task_id : exited_tasks) {
-        running_map_.erase(task_id);
+    RunHistory history;
+    history.id = run.history_id;
+    history.task_id = run.task_id;
+    history.end_time = trigger::format_utc_iso(clock_->now_utc());
+    history.exit_code = exit_code;
+    history.pid = static_cast<int>(run.handle.pid);
+    history.status = status;
+    history.error_message = message;
+    history.output_path = run.output_path;
+
+    try {
+        db_.update_history(history);
+        const auto entries = cache_->get();
+        const TaskDefinition* task = find_task(*entries, run.task_id);
+        trim_history(run.task_id, task ? task->max_history_records : 1000);
+    } catch (const std::exception& e) {
+        log_msg(log_dir_, "update_history: " + std::string(e.what()));
     }
-    LeaveCriticalSection(&lock_);
 
-    // Phase 4: Handle timeouts outside lock
-    for (auto& task_id : timed_out_tasks) {
-        RunningProcess rp;
-        EnterCriticalSection(&lock_);
-        auto it = running_map_.find(task_id);
-        if (it == running_map_.end()) { LeaveCriticalSection(&lock_); continue; }
-        rp = it->second;
-        running_map_.erase(it);
-        LeaveCriticalSection(&lock_);
+    log_msg(log_dir_, "finished history=" + ws2u(run.history_id) + " status=" + ws2u(ToWide(status)));
 
-        auto task = db_.get_task(task_id);
-        bool kill = task.has_value() && task->kill_on_timeout;
+    if (status == RunStatus::Failed) enqueue_retry(run);
+}
 
-        if (kill) {
-            TerminateProcess(rp.process_handle, 1);
-        }
+void Scheduler::enqueue_retry(const RunningProcess& run) {
+    // Retry/OnError с backoff и лимитом попыток (A-11).
+    const auto entries = cache_->get();
+    const TaskDefinition* task = find_task(*entries, run.task_id);
+    if (!task || task->on_error != OnErrorAction::Retry) return;
+    if (run.attempt >= task->retry_count) return;
 
-        auto history_list = db_.get_history(task_id, 1);
-        if (!history_list.empty()) {
-            history_list[0].end_time = now_to_string();
-            history_list[0].status = RunStatus::Timeout;
-            if (kill) history_list[0].error_message = L"Killed by timeout";
-            else history_list[0].error_message = L"Timeout exceeded";
-            db_.update_history(history_list[0]);
-        }
+    PendingRun pending;
+    pending.task_id = run.task_id;
+    pending.window_id = run.window_id;
+    pending.slot = run.slot;
+    pending.triggered_by = run.triggered_by;
+    pending.attempt = run.attempt + 1;
+    pending.not_before = clock_->now_utc() + retry_backoff(run.attempt);
 
-        CloseHandle(rp.process_handle);
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        pending_[run.task_id] = pending;
     }
+    log_msg(log_dir_, "retry scheduled task=" + ws2u(run.task_id) + " attempt=" + std::to_string(pending.attempt));
+}
+
+void Scheduler::process_pending() {
+    std::vector<PendingRun> ready;
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        const auto now = clock_->now_utc();
+        for (auto it = pending_.begin(); it != pending_.end();) {
+            if (it->second.not_before <= now) {
+                ready.push_back(it->second);
+                it = pending_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+    if (ready.empty()) return;
+
+    const auto entries = cache_->get();
+    for (const auto& pending : ready) {
+        const TaskDefinition* task = find_task(*entries, pending.task_id);
+        if (!task || !task->enabled) continue;
+        request_start(*task, pending.window_id, pending.slot, pending.triggered_by,
+            pending.attempt, nullptr, true);
+    }
+}
+
+const TaskDefinition* Scheduler::find_task(const std::vector<ScheduleCache::Entry>& entries,
+    const std::wstring& task_id) const {
+    for (const auto& entry : entries) {
+        if (entry.task.id == task_id) return &entry.task;
+    }
+    return nullptr;
 }
 
 void Scheduler::trim_history(const std::wstring& task_id, int max_records) {
     db_.trim_history(task_id, max_records);
 }
 
-void Scheduler::process_pending_queue() {
-    EnterCriticalSection(&lock_);
-    auto copy = pending_queue_;
-    LeaveCriticalSection(&lock_);
+void Scheduler::recover_orphaned_runs() {
+    sqlite3* db = db_.get_db();
+    if (!db) return;
 
-    for (auto& [task_id, queue] : copy) {
-        if (queue.empty()) continue;
+    // Осиротевшие запуски после падения службы: Running → Aborted (ADR 0003, п. 7).
+    const char* sql = "UPDATE run_history SET status=?, end_time=?, error_message=? WHERE status=?";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) return;
 
-        EnterCriticalSection(&lock_);
-        bool running = running_map_.find(task_id) != running_map_.end();
-        LeaveCriticalSection(&lock_);
+    const std::string message = ws2u(L"Осиротевший запуск: служба была перезапущена");
+    const std::string end_time = ws2u(trigger::format_utc_iso(clock_->now_utc()));
+    sqlite3_bind_int(stmt, 1, static_cast<int>(RunStatus::Aborted));
+    sqlite3_bind_text(stmt, 2, end_time.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, message.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 4, static_cast<int>(RunStatus::Running));
 
-        if (running) continue;
-
-        queue.pop();
-
-        auto task = db_.get_task(task_id);
-        if (task.has_value()) launch_task(task.value());
-
-        EnterCriticalSection(&lock_);
-        auto& q = pending_queue_[task_id];
-        if (q.empty()) pending_queue_.erase(task_id);
-        LeaveCriticalSection(&lock_);
+    if (sqlite3_step(stmt) == SQLITE_DONE && sqlite3_changes(db) > 0) {
+        log_msg(log_dir_, "recovery: осиротевших запусков помечено Aborted: "
+            + std::to_string(sqlite3_changes(db)));
     }
+    sqlite3_finalize(stmt);
+}
+
+std::wstring Scheduler::run_now(const std::wstring& task_id, std::wstring& error) {
+    return run_now(task_id, nullptr, true, error);
+}
+
+std::wstring Scheduler::run_now(const std::wstring& task_id, HANDLE client_token,
+    bool caller_is_admin, std::wstring& error) {
+    auto task = db_.get_task(task_id);
+    if (!task.has_value()) {
+        error = L"Задача не найдена";
+        return {};
+    }
+
+    const std::wstring history_id = request_start(task.value(), L"", L"", TriggeredBy::Manual, 0,
+        client_token, caller_is_admin);
+    if (history_id.empty()) error = L"Запуск отклонён (политика наложения или ошибка запуска)";
+    return history_id;
+}
+
+void Scheduler::launch_task(const TaskDefinition& task) {
+    request_start(task, L"", L"", TriggeredBy::Manual, 0, nullptr, true);
+}
+
+bool Scheduler::task_is_running(const std::wstring& task_id) const {
+    std::lock_guard<std::mutex> guard(mutex_);
+    for (const auto& [history_id, run] : running_processes_) {
+        if (run.task_id == task_id) return true;
+    }
+    return false;
 }
