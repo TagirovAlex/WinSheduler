@@ -59,7 +59,10 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
         CreateDirectoryW((svc.log_dir_ + L"\\output").c_str(), nullptr);
 
         g_db = new Database();
-        if (!g_db->open(svc.db_path_)) {
+        DatabaseOptions db_options;
+        db_options.output_dir = svc.log_dir_ + L"\\output";
+        db_options.require_secure_acl = true;
+        if (!g_db->open(svc.db_path_, db_options)) {
             svc.status_.dwCurrentState = SERVICE_STOPPED;
             svc.status_.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
             SetServiceStatus(svc.status_handle_, &svc.status_);

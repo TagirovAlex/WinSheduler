@@ -9,7 +9,9 @@ static void run_standalone(const std::wstring& db_path, const std::wstring& log_
     CreateDirectoryW((log_dir + L"\\output").c_str(), nullptr);
 
     Database db;
-    if (!db.open(db_path)) {
+    DatabaseOptions db_options;
+    db_options.output_dir = log_dir + L"\\output";
+    if (!db.open(db_path, db_options)) {
         MessageBoxW(nullptr, L"Failed to open database", L"WinSheduler", MB_ICONERROR);
         return;
     }
