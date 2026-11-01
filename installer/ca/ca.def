@@ -1,0 +1,8 @@
+LIBRARY WinShedulerCA
+EXPORTS
+    ValidatePaths
+    ApplySecurity
+    ConfigureService
+    MigrateData
+    RemoveData
+    LaunchUi

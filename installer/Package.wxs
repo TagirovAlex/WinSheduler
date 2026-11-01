@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Основной файл пакета WinSheduler (WiX 5, per-machine MSI).
+  Контракт: ./docs/contracts/INSTALL.md, ADR: ./docs/adr/0002-installer-and-layout.md.
+
+  Версия передаётся из ./scripts/installer/build.ps1 (git-тег) через -d ProductVersion.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!-- Лицензия для диалога WixUI_InstallDir. -->
+  <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+  <Package Name="WinSheduler"
+           Manufacturer="WinSheduler"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="{B4E1C7A2-9F3D-4C58-8A61-2D7E5F0B9C43}"
+           Scope="perMachine"
+           Compressed="yes"
+           InstallerVersion="500">
+
+    <!-- Major upgrade: старый продукт удаляется после InstallValidate; downgrade запрещён. -->
+    <MajorUpgrade Schedule="afterInstallValidate"
+                  DowngradeErrorMessage="Установлена более новая версия WinSheduler. Понижение версии не поддерживается." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Публичные свойства (доступны для silent install и GPO/Intune). -->
+    <Property Id="CREATEGROUP" Value="1" />
+    <Property Id="ADDINSTALLERTOGROUP" Value="1" />
+    <Property Id="STARTUI" Value="0" />
+    <Property Id="KEEPDATA" Value="1" />
+    <Property Id="ALLOWUNSAFEPATH" Value="0" />
+
+    <!--
+      INSTALLDIR и DATADIR читаются из реестра предыдущей установки, чтобы repair и
+      upgrade сохраняли выбранные пути. Значения из командной строки имеют приоритет:
+      AppSearch не перезаписывает уже заданное свойство.
+    -->
+    <Property Id="INSTALLDIR">
+      <RegistrySearch Id="InstallDirSearch" Root="HKLM" Key="SOFTWARE\WinSheduler"
+                      Name="InstallDir" Type="raw" Win64="yes" />
+    </Property>
+    <Property Id="DATADIR">
+      <RegistrySearch Id="DataDirSearch" Root="HKLM" Key="SOFTWARE\WinSheduler"
+                      Name="DataDir" Type="raw" Win64="yes" />
+    </Property>
+
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPCOMMENTS" Value="Планировщик задач WinSheduler" />
+
+    <!-- Данные для отложенных действий (свойство с именем действия). -->
+    <Property Id="ApplySecurity"
+              Value="installdir=[INSTALLDIR];datadir=[DATADIR];creategroup=[CREATEGROUP];addinstaller=[ADDINSTALLERTOGROUP];userdomain=[%USERDOMAIN];username=[%USERNAME];version=[ProductVersion]" />
+    <Property Id="ConfigureService"
+              Value="serviceexe=[SVCDIR]WinShedulerSvc.exe;datadir=[DATADIR]" />
+    <Property Id="MigrateData" Value="olddatadir=[OLDDATADIR];datadir=[DATADIR]" />
+    <Property Id="RemoveData" Value="datadir=[DATADIR];keepdata=[KEEPDATA]" />
+    <Property Id="LaunchUi" Value="uipath=[UIDIR]WinSheduler.UI.exe" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.UiIcon)" />
+
+    <Launch Condition="Installed OR Privileged"
+            Message="Для установки WinSheduler требуются права администратора." />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="WinSheduler">
+          <Directory Id="SVCDIR" Name="service" />
+          <Directory Id="UIDIR" Name="ui" />
+        </Directory>
+      </Directory>
+      <Directory Id="CommonAppDataFolder">
+        <Directory Id="DATADIR" Name="WinSheduler" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="WinSheduler" />
+      </Directory>
+    </Directory>
+
+    <Feature Id="ProductFeature" Title="WinSheduler" Level="1">
+      <ComponentGroupRef Id="ServiceComponents" />
+      <ComponentGroupRef Id="UiComponents" />
+      <ComponentGroupRef Id="DocumentationComponents" />
+      <ComponentGroupRef Id="ShortcutComponents" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLDIR" />
+
+    <InstallUISequence>
+      <Custom Action="ValidatePaths" After="CostFinalize">NOT Installed</Custom>
+    </InstallUISequence>
+
+    <InstallExecuteSequence>
+      <Custom Action="ValidatePaths" After="CostFinalize">NOT Installed</Custom>
+      <Custom Action="ApplySecurity" Before="InstallFiles">NOT Installed OR REINSTALL</Custom>
+      <Custom Action="MigrateData" After="ApplySecurity">NOT Installed</Custom>
+      <Custom Action="ConfigureService" Before="StartServices">NOT Installed OR REINSTALL</Custom>
+      <Custom Action="LaunchUi" Before="InstallFinalize">STARTUI="1" AND NOT Installed</Custom>
+      <Custom Action="RemoveData" After="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>
