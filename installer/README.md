@@ -302,6 +302,16 @@ msiexec /i ./artifacts/WinSheduler.msi /qn OLDDATADIR="c:/OldWinSheduler/publish
 
 Self-contained UI даёт пакет 60–80 МБ — это принято ADR 0002.
 
+## 12.1. Проверка версии ОС
+
+- Основной источник — реестр `HKLM/SOFTWARE/Microsoft/Windows NT/CurrentVersion`
+  (`CurrentMajorVersionNumber`, `CurrentBuildNumber`); он не подвержен
+  compatibility shim.
+- Резерв — версия `kernel32.dll`; последний резерв — `RtlGetVersion`.
+- В процессе `msiexec` `RtlGetVersion` может вернуть 6.0.6000; это не версия ОС,
+  поэтому она не используется как основной источник.
+- Для стенда с неподдерживаемой ОС: `ALLOWUNSUPPORTEDOS=1` (только для тестов).
+
 ## 13. Ограничения
 
 - Диалоги MSI локализованы на русский (`./installer/ru-RU.wxl`, `-culture ru-RU`);

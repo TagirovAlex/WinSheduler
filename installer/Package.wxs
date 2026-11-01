@@ -34,6 +34,7 @@
     <Property Id="STARTUI" Value="0" />
     <Property Id="KEEPDATA" Value="1" />
     <Property Id="ALLOWUNSAFEPATH" Value="0" />
+    <Property Id="ALLOWUNSUPPORTEDOS" Value="0" />
 
     <!--
       INSTALLDIR и DATADIR читаются из реестра предыдущей установки, чтобы repair и

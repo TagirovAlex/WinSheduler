@@ -23,6 +23,7 @@
 #include <sddl.h>
 #include <lm.h>
 #include <shellapi.h>
+#include <winver.h>
 
 #include <cwchar>
 #include <cwctype>
@@ -34,6 +35,7 @@
 #pragma comment(lib, "netapi32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "version.lib")
 
 namespace {
 
@@ -478,66 +480,170 @@ bool ValidatePathAcl(const std::wstring& path, const PathPolicy& policy, std::ws
     return true;
 }
 
-bool CheckWindowsVersion(MSIHANDLE hInstall) {
+struct OsVersionInfo {
+    DWORD major = 0;
+    DWORD minor = 0;
+    DWORD build = 0;
+    const wchar_t* source = L"unknown";
+};
+
+bool ReadRegistryVersion(OsVersionInfo& info) {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                      0,
+                      KEY_READ | KEY_WOW64_64KEY,
+                      &key) != ERROR_SUCCESS) {
+        return false;
+    }
+
+    DWORD major = 0;
+    DWORD minor = 0;
+    DWORD type = 0;
+    DWORD size = sizeof(DWORD);
+    RegQueryValueExW(key, L"CurrentMajorVersionNumber", nullptr, &type,
+                     reinterpret_cast<LPBYTE>(&major), &size);
+
+    size = sizeof(DWORD);
+    type = 0;
+    RegQueryValueExW(key, L"CurrentMinorVersionNumber", nullptr, &type,
+                     reinterpret_cast<LPBYTE>(&minor), &size);
+
+    wchar_t build[32] = {};
+    size = sizeof(build);
+    type = 0;
+    const LONG buildResult = RegQueryValueExW(key, L"CurrentBuildNumber", nullptr, &type,
+                                              reinterpret_cast<LPBYTE>(build), &size);
+
+    if (major == 0) {
+        wchar_t version[32] = {};
+        size = sizeof(version);
+        type = 0;
+        if (RegQueryValueExW(key, L"CurrentVersion", nullptr, &type,
+                             reinterpret_cast<LPBYTE>(version), &size) == ERROR_SUCCESS &&
+            type == REG_SZ) {
+            unsigned long versionMajor = 0;
+            unsigned long versionMinor = 0;
+            if (swscanf_s(version, L"%lu.%lu", &versionMajor, &versionMinor) >= 1) {
+                major = static_cast<DWORD>(versionMajor);
+                minor = static_cast<DWORD>(versionMinor);
+            }
+        }
+    }
+
+    RegCloseKey(key);
+
+    if (major == 0 || buildResult != ERROR_SUCCESS || type != REG_SZ || build[0] == L'\0') {
+        return false;
+    }
+
+    info.major = major;
+    info.minor = minor;
+    info.build = static_cast<DWORD>(std::wcstoul(build, nullptr, 10));
+    info.source = L"registry";
+    return true;
+}
+
+bool ReadKernelVersion(OsVersionInfo& info) {
+    wchar_t systemDir[MAX_PATH] = {};
+    if (GetSystemDirectoryW(systemDir, MAX_PATH) == 0) {
+        return false;
+    }
+
+    const std::wstring path = std::wstring(systemDir) + L"\\kernel32.dll";
+    DWORD dummy = 0;
+    const DWORD size = GetFileVersionInfoSizeW(path.c_str(), &dummy);
+    if (size == 0) {
+        return false;
+    }
+
+    std::vector<BYTE> data(size);
+    if (!GetFileVersionInfoW(path.c_str(), 0, size, data.data())) {
+        return false;
+    }
+
+    VS_FIXEDFILEINFO* fixed = nullptr;
+    UINT length = 0;
+    if (!VerQueryValueW(data.data(), L"\\", reinterpret_cast<LPVOID*>(&fixed), &length) ||
+        fixed == nullptr) {
+        return false;
+    }
+
+    info.major = HIWORD(fixed->dwFileVersionMS);
+    info.minor = LOWORD(fixed->dwFileVersionMS);
+    info.build = HIWORD(fixed->dwFileVersionLS);
+    info.source = L"kernel32";
+    return info.major != 0;
+}
+
+bool ReadRtlVersion(OsVersionInfo& info) {
     HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
     if (!ntdll) {
-        LogInfo(hInstall, L"WinSheduler: OS check — ntdll не найден.");
         return false;
     }
 
     using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
     auto rtlGetVersion = reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"));
     if (!rtlGetVersion) {
-        LogInfo(hInstall, L"WinSheduler: OS check — RtlGetVersion не найден.");
         return false;
     }
 
-    OSVERSIONINFOW info{};
-    info.dwOSVersionInfoSize = sizeof(info);
-    const LONG rc = rtlGetVersion(&info);
+    OSVERSIONINFOW raw{};
+    raw.dwOSVersionInfoSize = sizeof(raw);
+    if (rtlGetVersion(&raw) != 0) {
+        return false;
+    }
+
+    info.major = raw.dwMajorVersion;
+    info.minor = raw.dwMinorVersion;
+    info.build = raw.dwBuildNumber;
+    info.source = L"RtlGetVersion";
+    return true;
+}
+
+void LogOsVersion(MSIHANDLE hInstall, const OsVersionInfo& info) {
     LogInfo(hInstall,
-            L"WinSheduler: OS check rc=" + std::to_wstring(rc) +
-            L" version=" + std::to_wstring(info.dwMajorVersion) + L"." +
-            std::to_wstring(info.dwMinorVersion) +
-            L" build=" + std::to_wstring(info.dwBuildNumber));
-    if (rc == 0) {
-        if (info.dwMajorVersion > 10) {
-            return true;
-        }
-        if (info.dwMajorVersion == 10 && info.dwBuildNumber >= 17763) {
+            L"WinSheduler: OS check source=" + std::wstring(info.source) +
+            L" version=" + std::to_wstring(info.major) + L"." +
+            std::to_wstring(info.minor) +
+            L" build=" + std::to_wstring(info.build));
+}
+
+bool CheckWindowsVersion(MSIHANDLE hInstall) {
+    if (GetProperty(hInstall, L"ALLOWUNSUPPORTEDOS") == L"1") {
+        LogInfo(hInstall, L"WinSheduler: OS check пропущен (ALLOWUNSUPPORTEDOS=1).");
+        return true;
+    }
+
+    // Основной источник — реестр: он не подвержен compatibility shim,
+    // из-за которого RtlGetVersion внутри msiexec может вернуть 6.0.6000.
+    OsVersionInfo registry;
+    if (ReadRegistryVersion(registry)) {
+        LogOsVersion(hInstall, registry);
+        return registry.major > 10 ||
+               (registry.major == 10 && registry.build >= 17763);
+    }
+
+    // Резерв — версия kernel32.dll, тоже не шимится.
+    OsVersionInfo kernel;
+    if (ReadKernelVersion(kernel)) {
+        LogOsVersion(hInstall, kernel);
+        return kernel.major > 10 ||
+               (kernel.major == 10 && kernel.build >= 17763);
+    }
+
+    // Последний резерв — RtlGetVersion; при сомнении установку не блокируем.
+    OsVersionInfo rtl;
+    if (ReadRtlVersion(rtl)) {
+        LogOsVersion(hInstall, rtl);
+        if (rtl.major > 10 || (rtl.major == 10 && rtl.build >= 17763)) {
             return true;
         }
     }
 
-    // В процессе msiexec RtlGetVersion может вернуть версию совместимости
-    // (например, 6.0.6000). Резервный источник — реестр, он не шимится.
-    HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-                      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
-                      0,
-                      KEY_READ | KEY_WOW64_64KEY,
-                      &key) == ERROR_SUCCESS) {
-        wchar_t buffer[32] = {};
-        DWORD size = sizeof(buffer);
-        DWORD type = 0;
-        const LONG query = RegQueryValueExW(key,
-                                            L"CurrentBuildNumber",
-                                            nullptr,
-                                            &type,
-                                            reinterpret_cast<LPBYTE>(buffer),
-                                            &size);
-        RegCloseKey(key);
-
-        if (query == ERROR_SUCCESS && type == REG_SZ) {
-            const unsigned long build = std::wcstoul(buffer, nullptr, 10);
-            LogInfo(hInstall,
-                    L"WinSheduler: OS check registry build=" + std::to_wstring(build));
-            return build >= 17763;
-        }
-    }
-
-    LogInfo(hInstall, L"WinSheduler: OS check — не удалось определить версию ОС.");
-    return false;
+    LogInfo(hInstall,
+            L"WinSheduler: OS check — версию определить не удалось, установка продолжается.");
+    return true;
 }
 
 // ---------------------------------------------------------------------------
