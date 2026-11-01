@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Строки интерфейса. Язык по умолчанию — русский (контракт UI.md, раздел 6).
+    Ключи в формате Area_Element. Новые ключи добавляются в конец файла.
+    Экраны Track E добавляют свои ключи здесь же, не дублируя существующие.
+  -->
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Title" xml:space="preserve">
+    <value>WinSheduler</value>
+  </data>
+
+  <data name="Common_Ok" xml:space="preserve">
+    <value>ОК</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="Common_Retry" xml:space="preserve">
+    <value>Повторить</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="Common_Add" xml:space="preserve">
+    <value>Добавить</value>
+  </data>
+  <data name="Common_Edit" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="Common_Browse" xml:space="preserve">
+    <value>Обзор…</value>
+  </data>
+  <data name="Common_Yes" xml:space="preserve">
+    <value>Да</value>
+  </data>
+  <data name="Common_No" xml:space="preserve">
+    <value>Нет</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="Common_Warning" xml:space="preserve">
+    <value>Предупреждение</value>
+  </data>
+  <data name="Common_Information" xml:space="preserve">
+    <value>Сведения</value>
+  </data>
+  <data name="Common_Loading" xml:space="preserve">
+    <value>Загрузка…</value>
+  </data>
+  <data name="Common_None" xml:space="preserve">
+    <value>Нет</value>
+  </data>
+  <data name="Common_Dash" xml:space="preserve">
+    <value>—</value>
+  </data>
+
+  <data name="Main_Title" xml:space="preserve">
+    <value>WinSheduler — Управление заданиями</value>
+  </data>
+  <data name="Main_ActionRefresh" xml:space="preserve">
+    <value>Обновить</value>
+  </data>
+  <data name="Main_ActionAdd" xml:space="preserve">
+    <value>Добавить</value>
+  </data>
+  <data name="Main_ActionEdit" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
+  <data name="Main_ActionDelete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="Main_ActionHistory" xml:space="preserve">
+    <value>Журнал</value>
+  </data>
+  <data name="Main_ActionRun" xml:space="preserve">
+    <value>Запустить</value>
+  </data>
+  <data name="Main_ActionEnable" xml:space="preserve">
+    <value>Включить</value>
+  </data>
+  <data name="Main_ActionDisable" xml:space="preserve">
+    <value>Отключить</value>
+  </data>
+  <data name="Main_ColumnName" xml:space="preserve">
+    <value>Название</value>
+  </data>
+  <data name="Main_ColumnProgram" xml:space="preserve">
+    <value>Программа</value>
+  </data>
+  <data name="Main_ColumnOwner" xml:space="preserve">
+    <value>Владелец</value>
+  </data>
+  <data name="Main_ColumnStatus" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Main_ColumnSchedule" xml:space="preserve">
+    <value>Расписание</value>
+  </data>
+  <data name="Main_ColumnLastRun" xml:space="preserve">
+    <value>Последний запуск</value>
+  </data>
+  <data name="Main_FilterAll" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="Main_FilterMine" xml:space="preserve">
+    <value>Мои</value>
+  </data>
+  <data name="Main_FilterEnabled" xml:space="preserve">
+    <value>Включённые</value>
+  </data>
+  <data name="Main_FilterDisabled" xml:space="preserve">
+    <value>Отключённые</value>
+  </data>
+  <data name="Main_SearchPlaceholder" xml:space="preserve">
+    <value>Поиск по названию или пути</value>
+  </data>
+  <data name="Main_EmptyTitle" xml:space="preserve">
+    <value>Задач пока нет</value>
+  </data>
+  <data name="Main_EmptyHint" xml:space="preserve">
+    <value>Создайте первую задачу, чтобы она появилась в списке.</value>
+  </data>
+  <data name="Main_StatusTasks" xml:space="preserve">
+    <value>Задач: {0}</value>
+  </data>
+  <data name="Main_StatusLastRefresh" xml:space="preserve">
+    <value>Обновлено: {0}</value>
+  </data>
+  <data name="Main_StatusReady" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="Main_StatusServiceRunning" xml:space="preserve">
+    <value>Служба работает</value>
+  </data>
+  <data name="Main_StatusServiceStopped" xml:space="preserve">
+    <value>Служба остановлена</value>
+  </data>
+  <data name="Main_StatusServiceUnavailable" xml:space="preserve">
+    <value>Служба недоступна</value>
+  </data>
+
+  <data name="Status_Operator" xml:space="preserve">
+    <value>Оператор</value>
+  </data>
+  <data name="Status_Administrator" xml:space="preserve">
+    <value>Администратор</value>
+  </data>
+  <data name="Status_RequiresAdmin" xml:space="preserve">
+    <value>Требуются права администратора</value>
+  </data>
+  <data name="Status_NoAccess" xml:space="preserve">
+    <value>Недостаточно прав</value>
+  </data>
+  <data name="Status_ReadOnly" xml:space="preserve">
+    <value>Только просмотр</value>
+  </data>
+  <data name="Status_Loading" xml:space="preserve">
+    <value>Загрузка…</value>
+  </data>
+
+  <data name="Admin_Relaunch" xml:space="preserve">
+    <value>Запустить от администратора</value>
+  </data>
+  <data name="Admin_RelaunchTitle" xml:space="preserve">
+    <value>Повышение прав</value>
+  </data>
+  <data name="Admin_RelaunchPrompt" xml:space="preserve">
+    <value>Для этого действия нужны права администратора. Перезапустить WinSheduler от имени администратора?</value>
+  </data>
+  <data name="Admin_RelaunchFailed" xml:space="preserve">
+    <value>Не удалось перезапустить приложение с правами администратора.</value>
+  </data>
+  <data name="Admin_BadgeSystem" xml:space="preserve">
+    <value>SYSTEM</value>
+  </data>
+  <data name="Admin_OwnerYou" xml:space="preserve">
+    <value>Вы</value>
+  </data>
+  <data name="Admin_OwnerOther" xml:space="preserve">
+    <value>Другой пользователь</value>
+  </data>
+
+  <data name="Dialog_ErrorTitle" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="Dialog_WarningTitle" xml:space="preserve">
+    <value>Предупреждение</value>
+  </data>
+  <data name="Dialog_ConfirmTitle" xml:space="preserve">
+    <value>Подтверждение</value>
+  </data>
+  <data name="Dialog_InfoTitle" xml:space="preserve">
+    <value>Сведения</value>
+  </data>
+  <data name="Dialog_DeleteTask" xml:space="preserve">
+    <value>Удалить задачу «{0}»?</value>
+  </data>
+  <data name="Dialog_UnsavedChanges" xml:space="preserve">
+    <value>Есть несохранённые изменения. Закрыть без сохранения?</value>
+  </data>
+  <data name="Dialog_BrowseProgram" xml:space="preserve">
+    <value>Выберите программу</value>
+  </data>
+  <data name="Dialog_BrowseFolder" xml:space="preserve">
+    <value>Выберите папку</value>
+  </data>
+  <data name="Dialog_FileFilterProgram" xml:space="preserve">
+    <value>Программы (*.exe)|*.exe|Все файлы (*.*)|*.*</value>
+  </data>
+  <data name="Dialog_FileFilterAll" xml:space="preserve">
+    <value>Все файлы (*.*)|*.*</value>
+  </data>
+  <data name="Dialog_ServiceUnavailable" xml:space="preserve">
+    <value>Служба WinSheduler недоступна. Проверьте, что служба запущена.</value>
+  </data>
+
+  <data name="Error_AuthDenied" xml:space="preserve">
+    <value>Недостаточно прав для выполнения действия.</value>
+  </data>
+  <data name="Error_NotFound" xml:space="preserve">
+    <value>Объект не найден.</value>
+  </data>
+  <data name="Error_Validation" xml:space="preserve">
+    <value>Данные не прошли проверку.</value>
+  </data>
+  <data name="Error_Conflict" xml:space="preserve">
+    <value>Конфликт: объект уже существует или занят.</value>
+  </data>
+  <data name="Error_TooLarge" xml:space="preserve">
+    <value>Запрос слишком большой.</value>
+  </data>
+  <data name="Error_UnsupportedVersion" xml:space="preserve">
+    <value>Версия протокола не поддерживается.</value>
+  </data>
+  <data name="Error_Database" xml:space="preserve">
+    <value>Ошибка базы данных.</value>
+  </data>
+  <data name="Error_Internal" xml:space="preserve">
+    <value>Внутренняя ошибка службы.</value>
+  </data>
+  <data name="Error_Unavailable" xml:space="preserve">
+    <value>Служба недоступна.</value>
+  </data>
+  <data name="Error_Timeout" xml:space="preserve">
+    <value>Превышено время ожидания ответа службы.</value>
+  </data>
+  <data name="Error_Unknown" xml:space="preserve">
+    <value>Неизвестная ошибка.</value>
+  </data>
+
+  <data name="History_StatusRunning" xml:space="preserve">
+    <value>Выполняется</value>
+  </data>
+  <data name="History_StatusCompleted" xml:space="preserve">
+    <value>Завершено</value>
+  </data>
+  <data name="History_StatusFailed" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="History_StatusKilled" xml:space="preserve">
+    <value>Остановлено</value>
+  </data>
+  <data name="History_StatusTimeout" xml:space="preserve">
+    <value>Таймаут</value>
+  </data>
+  <data name="History_StatusAborted" xml:space="preserve">
+    <value>Прервано</value>
+  </data>
+
+  <data name="Validation_Required" xml:space="preserve">
+    <value>Обязательное поле.</value>
+  </data>
+  <data name="Validation_TooLong" xml:space="preserve">
+    <value>Слишком длинное значение (максимум {1} символов).</value>
+  </data>
+  <data name="Validation_Range" xml:space="preserve">
+    <value>Значение должно быть от {1} до {2}.</value>
+  </data>
+
+  <data name="Time_DurationDays" xml:space="preserve">
+    <value>д</value>
+  </data>
+  <data name="Time_DurationHours" xml:space="preserve">
+    <value>ч</value>
+  </data>
+  <data name="Time_DurationMinutes" xml:space="preserve">
+    <value>мин</value>
+  </data>
+  <data name="Time_DurationSeconds" xml:space="preserve">
+    <value>с</value>
+  </data>
+
+  <data name="Theme_Light" xml:space="preserve">
+    <value>Светлая</value>
+  </data>
+  <data name="Theme_Dark" xml:space="preserve">
+    <value>Тёмная</value>
+  </data>
+  <data name="Theme_System" xml:space="preserve">
+    <value>Как в системе</value>
+  </data>
+
+  <data name="Common_Enabled" xml:space="preserve">
+    <value>Включено</value>
+  </data>
+  <data name="Common_Disabled" xml:space="preserve">
+    <value>Отключено</value>
+  </data>
+  <data name="Common_Unknown" xml:space="preserve">
+    <value>Неизвестно</value>
+  </data>
+
+  <data name="WindowStyle_Normal" xml:space="preserve">
+    <value>Обычное окно</value>
+  </data>
+  <data name="WindowStyle_Hidden" xml:space="preserve">
+    <value>Скрыто</value>
+  </data>
+  <data name="WindowStyle_Minimized" xml:space="preserve">
+    <value>Свёрнуто</value>
+  </data>
+  <data name="WindowStyle_Maximized" xml:space="preserve">
+    <value>Развёрнуто</value>
+  </data>
+
+  <data name="OnError_SkipNext" xml:space="preserve">
+    <value>Пропустить следующий запуск</value>
+  </data>
+  <data name="OnError_Retry" xml:space="preserve">
+    <value>Повторить</value>
+  </data>
+  <data name="OnError_Fail" xml:space="preserve">
+    <value>Завершить с ошибкой</value>
+  </data>
+
+  <data name="OnOverlap_WaitComplete" xml:space="preserve">
+    <value>Ждать завершения</value>
+  </data>
+  <data name="OnOverlap_WaitNext" xml:space="preserve">
+    <value>Ждать следующего слота</value>
+  </data>
+  <data name="OnOverlap_StartAnother" xml:space="preserve">
+    <value>Запустить ещё один экземпляр</value>
+  </data>
+
+  <data name="TriggerKind_Once" xml:space="preserve">
+    <value>Однократно</value>
+  </data>
+  <data name="TriggerKind_Daily" xml:space="preserve">
+    <value>Ежедневно</value>
+  </data>
+  <data name="TriggerKind_Weekly" xml:space="preserve">
+    <value>Еженедельно</value>
+  </data>
+  <data name="TriggerKind_Monthly" xml:space="preserve">
+    <value>Ежемесячно</value>
+  </data>
+  <data name="TriggerKind_Interval" xml:space="preserve">
+    <value>Интервал</value>
+  </data>
+
+  <data name="SessionMode_Headless" xml:space="preserve">
+    <value>Без отображения</value>
+  </data>
+  <data name="SessionMode_ActiveUser" xml:space="preserve">
+    <value>В сессии пользователя</value>
+  </data>
+
+  <data name="TriggeredBy_Schedule" xml:space="preserve">
+    <value>По расписанию</value>
+  </data>
+  <data name="TriggeredBy_Manual" xml:space="preserve">
+    <value>Вручную</value>
+  </data>
+
+  <data name="DayOfWeek_Monday" xml:space="preserve">
+    <value>Понедельник</value>
+  </data>
+  <data name="DayOfWeek_Tuesday" xml:space="preserve">
+    <value>Вторник</value>
+  </data>
+  <data name="DayOfWeek_Wednesday" xml:space="preserve">
+    <value>Среда</value>
+  </data>
+  <data name="DayOfWeek_Thursday" xml:space="preserve">
+    <value>Четверг</value>
+  </data>
+  <data name="DayOfWeek_Friday" xml:space="preserve">
+    <value>Пятница</value>
+  </data>
+  <data name="DayOfWeek_Saturday" xml:space="preserve">
+    <value>Суббота</value>
+  </data>
+  <data name="DayOfWeek_Sunday" xml:space="preserve">
+    <value>Воскресенье</value>
+  </data>
+  <data name="Error_BadResponse" xml:space="preserve">
+    <value>Служба вернула некорректный ответ.</value>
+  </data>
+  <data name="Error_EmptyResponse" xml:space="preserve">
+    <value>Служба вернула пустой ответ.</value>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>Произошла непредвиденная ошибка. Подробности записаны в журнал.</value>
+  </data>
+</root>

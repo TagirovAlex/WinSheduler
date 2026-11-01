@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/IpcRequest.schema.json",
+  "title": "IPC request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "action", "payload"],
+  "properties": {
+    "v": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "action": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "payload": { "type": "object" }
+  }
+}
