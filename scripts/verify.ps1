@@ -15,11 +15,17 @@
 .PARAMETER CleanCheckout
     Дополнительно собрать проект из чистого снимка HEAD (git archive) в
     ./temp/verify/clean. Проверка G-10; по умолчанию выключена из-за времени.
+
+.PARAMETER Analyze
+    Дополнительно выполнить статический анализ (G-5): MSVC /analyze для
+    контрактного проекта C++ и clang-tidy для json.cpp, если утилита
+    установлена. .NET analyzers уже включены в обычную сборку.
 #>
 [CmdletBinding()]
 param(
     [string]$Scope = 'all',
-    [switch]$CleanCheckout
+    [switch]$CleanCheckout,
+    [switch]$Analyze
 )
 
 $ErrorActionPreference = 'Stop'
@@ -267,6 +273,41 @@ if ($CleanCheckout) {
         if ($LASTEXITCODE -ne 0) {
             throw "Сборка чистого checkout завершилась с кодом $LASTEXITCODE."
         }
+    } -ShowOutput
+}
+
+# 9. Статический анализ (G-5), только по запросу -Analyze.
+# .NET analyzers включены через ./Directory.Build.props и работают в обычной сборке.
+if ($Analyze) {
+    $results['analyze'] = Invoke-Step 'Статический анализ' {
+        $msbuild = Find-MSBuild
+        if (-not $msbuild) {
+            throw 'MSBuild не найден: MSVC /analyze недоступен.'
+        }
+
+        $project = Join-Path $root 'tests/contract/cpp/WinSheduler.ContractTests.vcxproj'
+        & $msbuild $project '/p:Configuration=Release' '/p:Platform=x64' '/p:RunCodeAnalysis=true' '/nologo' '/verbosity:minimal'
+        if ($LASTEXITCODE -ne 0) {
+            throw "MSVC /analyze завершился с кодом $LASTEXITCODE."
+        }
+
+        $clangTidy = Get-Command 'clang-tidy.exe' -ErrorAction SilentlyContinue
+        if ($null -eq $clangTidy) {
+            $clangTidy = Get-Command 'clang-tidy' -ErrorAction SilentlyContinue
+        }
+
+        if ($null -eq $clangTidy) {
+            Write-Warning 'clang-tidy не найден — проверка C++ пропущена.'
+        }
+        else {
+            $source = Join-Path $root 'src/WinShedulerSvc/json.cpp'
+            & $clangTidy.Source '--quiet' $source '--' '-std=c++20' "-I$(Join-Path $root 'src/WinShedulerSvc')"
+            if ($LASTEXITCODE -ne 0) {
+                throw "clang-tidy нашёл замечания (код $LASTEXITCODE)."
+            }
+        }
+
+        Write-Host '    .NET analyzers: работают в обычной сборке (EnableNETAnalyzers=true).'
     } -ShowOutput
 }
 

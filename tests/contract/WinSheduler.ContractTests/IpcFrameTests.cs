@@ -69,4 +69,25 @@ public class IpcFrameTests
         Assert.False(IpcFrame.TryDecode(frame.AsSpan(0, frame.Length - 1), out _));
         Assert.False(IpcFrame.TryDecode(frame.AsSpan(0, 3), out _));
     }
+
+    [Fact]
+    public void Декодер_УстойчивКСлучайнымБайтам()
+    {
+        // Fuzz-цель для кадрирования: произвольный буфер не должен бросать
+        // исключение, а успешный разбор обязан укладываться в буфер.
+        var random = new Random(20261101);
+
+        for (var iteration = 0; iteration < 500; ++iteration)
+        {
+            var frame = new byte[random.Next(0, 64)];
+            random.NextBytes(frame);
+
+            var decoded = IpcFrame.TryDecode(frame, out var body);
+            if (decoded)
+            {
+                Assert.True(body.Length <= IpcFrame.MaxFrameBytes);
+                Assert.True(body.Length <= frame.Length - IpcFrame.HeaderBytes);
+            }
+        }
+    }
 }
