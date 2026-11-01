@@ -1,0 +1,17 @@
+WinSheduler — сторонние компоненты
+==================================
+
+1. SQLite (https://sqlite.org)
+   Файлы: sqlite3.c, sqlite3.h (встроены в службу WinShedulerSvc.exe).
+   Лицензия: Public Domain.
+
+2. .NET Runtime и WPF (https://dotnet.microsoft.com)
+   Файлы: содержимое каталога ui/ (self-contained publish).
+   Лицензия: MIT. Текст лицензии: https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+
+3. WiX Toolset (https://wixtoolset.org)
+   Используется только при сборке MSI, в пакет не входит.
+   Лицензия: Microsoft Reciprocal License (MS-RL).
+
+Полные тексты лицензий сторонних компонентов поставляются вместе с
+соответствующими пакетами и доступны по указанным ссылкам.

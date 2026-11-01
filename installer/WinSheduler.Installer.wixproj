@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WiX-проект пакета WinSheduler (WiX 5, per-machine MSI).
+
+  Основной путь сборки — ./scripts/installer/build.ps1 (wix build CLI, работает
+  без сети при установленном инструменте). Этот проект нужен для IDE и для
+  `dotnet build`, он использует те же .wxs и те же переменные.
+
+  Пример (пути к артефактам — относительно каталога ./installer):
+    dotnet build ./installer/WinSheduler.Installer.wixproj -c Release `
+      -p:ProductVersion=1.2.0 `
+      -p:ServiceExePath=../artifacts/service/WinShedulerSvc.exe `
+      -p:UiIconPath=../src/WinSheduler.UI/170.ico `
+      -p:CaDllPath=ca/bin/Release/WinShedulerCA.dll `
+      -p:LicenseTxtPath=LICENSE.txt `
+      -p:ThirdPartyNoticesPath=THIRD-PARTY-NOTICES.txt `
+      -p:LicenseRtfPath=License.rtf `
+      -p:GeneratedComponentsFile=../temp/installer/generated/UiComponents.wxs
+-->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <OutputName>WinSheduler</OutputName>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <DefineConstants>ProductVersion=$(ProductVersion);ServiceExe=$(ServiceExePath);UiIcon=$(UiIconPath);CaDll=$(CaDllPath);LicenseTxt=$(LicenseTxtPath);ThirdPartyNotices=$(ThirdPartyNoticesPath);LicenseRtf=$(LicenseRtfPath)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <!-- Список файлов UI генерируется ./scripts/installer/gen-components.ps1. -->
+  <ItemGroup Condition="'$(GeneratedComponentsFile)' != ''">
+    <Compile Include="$(GeneratedComponentsFile)" />
+  </ItemGroup>
+
+</Project>

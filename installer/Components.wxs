@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Компоненты и пользовательские действия установщика WinSheduler.
+  Раскладка: %ProgramFiles%/WinSheduler/{service,ui} (см. ./docs/contracts/INSTALL.md).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+    <!-- Нативная DLL действий; собирается из ./installer/ca. -->
+    <Binary Id="WinShedulerCA" SourceFile="$(var.CaDll)" />
+
+    <CustomAction Id="ValidatePaths" BinaryKey="WinShedulerCA" DllEntry="ValidatePaths"
+                  Execute="immediate" Return="check" />
+    <CustomAction Id="ApplySecurity" BinaryKey="WinShedulerCA" DllEntry="ApplySecurity"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="ConfigureService" BinaryKey="WinShedulerCA" DllEntry="ConfigureService"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="MigrateData" BinaryKey="WinShedulerCA" DllEntry="MigrateData"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="RemoveData" BinaryKey="WinShedulerCA" DllEntry="RemoveData"
+                  Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="LaunchUi" BinaryKey="WinShedulerCA" DllEntry="LaunchUi"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ServiceComponents">
+      <Component Id="ServiceComponent" Guid="{5A1D2E7C-3B48-4F69-A0C2-8D4E6F1B3A57}" Win64="yes">
+        <File Id="ServiceExe" Source="$(var.ServiceExe)" KeyPath="yes" />
+        <ServiceInstall Id="ServiceInstall"
+                        Name="WinSheduler"
+                        DisplayName="WinSheduler Task Scheduler"
+                        Description="Планировщик задач WinSheduler"
+                        Type="ownProcess"
+                        Start="auto"
+                        ErrorControl="normal"
+                        Account="LocalSystem" />
+        <ServiceControl Id="ServiceControl" Name="WinSheduler"
+                        Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="DocumentationComponents">
+      <Component Id="DocumentationComponent" Guid="{2F6B9C4D-8E31-4A57-B0D9-6C3A1E5F7B28}" Win64="yes">
+        <File Id="LicenseFile" Source="$(var.LicenseTxt)" />
+        <File Id="ThirdPartyNoticesFile" Source="$(var.ThirdPartyNotices)" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ShortcutComponents">
+      <Component Id="ApplicationShortcutComponent" Guid="{9C4E7A2B-1D65-4F08-8B3A-5E7C9D0F1A46}" Win64="yes">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="WinSheduler"
+                  Description="Планировщик задач WinSheduler"
+                  Target="[UIDIR]WinSheduler.UI.exe"
+                  WorkingDirectory="UIDIR"
+                  Icon="AppIcon" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder"
+                      Directory="ApplicationProgramsFolder"
+                      On="uninstall" />
+        <RegistryValue Root="HKLM" Key="SOFTWARE\WinSheduler" Name="StartMenuShortcut"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>
