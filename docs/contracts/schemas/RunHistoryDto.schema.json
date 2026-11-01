@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/RunHistoryDto.schema.json",
+  "title": "RunHistoryDto",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "taskId",
+    "startTime",
+    "endTime",
+    "exitCode",
+    "pid",
+    "status",
+    "errorMessage",
+    "outputPath",
+    "triggeredBy"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "startTime": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "endTime": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "exitCode": { "type": ["integer", "null"] },
+    "pid": { "type": "integer", "minimum": 0 },
+    "status": {
+      "type": "string",
+      "enum": ["Running", "Completed", "Failed", "Killed", "Timeout", "Aborted"]
+    },
+    "errorMessage": { "type": "string", "maxLength": 8192 },
+    "outputPath": { "type": ["string", "null"], "maxLength": 4096 },
+    "triggeredBy": {
+      "type": "string",
+      "enum": ["Schedule", "Manual"]
+    }
+  }
+}

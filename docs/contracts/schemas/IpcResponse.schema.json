@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/IpcResponse.schema.json",
+  "title": "IPC response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "id", "ok", "error", "payload"],
+  "properties": {
+    "v": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "ok": { "type": "boolean" },
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "AUTH_DENIED",
+            "NOT_FOUND",
+            "VALIDATION",
+            "CONFLICT",
+            "TOO_LARGE",
+            "UNSUPPORTED_VERSION",
+            "DB",
+            "INTERNAL"
+          ]
+        },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    },
+    "payload": { "type": ["object", "null"] }
+  }
+}

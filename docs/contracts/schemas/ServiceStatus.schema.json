@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/ServiceStatus.schema.json",
+  "title": "ServiceStatus",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "running",
+    "isAdmin",
+    "isOperator",
+    "canManageSystemTasks",
+    "serviceVersion",
+    "startedAt",
+    "taskCount",
+    "runningTaskCount",
+    "dbReady"
+  ],
+  "properties": {
+    "running": { "type": "boolean" },
+    "isAdmin": { "type": "boolean" },
+    "isOperator": { "type": "boolean" },
+    "canManageSystemTasks": { "type": "boolean" },
+    "serviceVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "startedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "taskCount": { "type": "integer", "minimum": 0 },
+    "runningTaskCount": { "type": "integer", "minimum": 0 },
+    "dbReady": { "type": "boolean" }
+  }
+}

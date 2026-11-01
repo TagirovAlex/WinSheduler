@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/IpcLegacyResponse.schema.json",
+  "title": "Переходный IPC-ответ",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["Success", "Error", "Payload"],
+  "properties": {
+    "Success": { "type": "boolean" },
+    "Error": { "type": "string" },
+    "Payload": { "type": "string" }
+  }
+}

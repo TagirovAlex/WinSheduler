@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winsheduler.local/schemas/TaskDto.schema.json",
+  "title": "TaskDto",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "description",
+    "enabled",
+    "programPath",
+    "arguments",
+    "workingDirectory",
+    "windowStyle",
+    "sessionMode",
+    "runAsUser",
+    "runAsDomain",
+    "hasPassword",
+    "onError",
+    "retryCount",
+    "onOverlap",
+    "timeoutMinutes",
+    "killOnTimeout",
+    "logOutput",
+    "maxHistoryRecords",
+    "timeWindows",
+    "createdAt",
+    "modifiedAt",
+    "owner",
+    "isOwn"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "description": { "type": "string", "maxLength": 4096 },
+    "enabled": { "type": "boolean" },
+    "programPath": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "arguments": { "type": "string", "maxLength": 8192 },
+    "workingDirectory": { "type": "string", "maxLength": 4096 },
+    "windowStyle": {
+      "type": "string",
+      "enum": ["Normal", "Hidden", "Minimized", "Maximized"]
+    },
+    "sessionMode": {
+      "type": "string",
+      "enum": ["Headless", "ActiveUser"]
+    },
+    "runAsUser": { "type": ["string", "null"], "maxLength": 256 },
+    "runAsDomain": { "type": ["string", "null"], "maxLength": 256 },
+    "hasPassword": { "type": "boolean" },
+    "onError": {
+      "type": "string",
+      "enum": ["SkipNext", "Retry", "Fail"]
+    },
+    "retryCount": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "onOverlap": {
+      "type": "string",
+      "enum": ["WaitComplete", "WaitNext", "StartAnother"]
+    },
+    "timeoutMinutes": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 10080
+    },
+    "killOnTimeout": { "type": "boolean" },
+    "logOutput": { "type": "boolean" },
+    "maxHistoryRecords": { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "timeWindows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "startDate",
+          "endDate",
+          "daysOfWeek",
+          "daysOfMonth",
+          "specificDates",
+          "exactTimes",
+          "startTime",
+          "endTime",
+          "repeatIntervalMinutes",
+          "repeatUntil",
+          "dayInterval",
+          "weekInterval",
+          "monthInterval"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["Once", "Daily", "Weekly", "Monthly", "Interval"]
+          },
+          "startDate": {
+            "type": ["string", "null"],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": ["string", "null"],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "daysOfWeek": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+            }
+          },
+          "daysOfMonth": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 1, "maximum": 31 }
+          },
+          "specificDates": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+          },
+          "exactTimes": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" }
+          },
+          "startTime": {
+            "type": ["string", "null"],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "endTime": {
+            "type": ["string", "null"],
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "repeatIntervalMinutes": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "repeatUntil": {
+            "type": ["string", "null"],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "dayInterval": { "type": "integer", "minimum": 1, "maximum": 365 },
+          "weekInterval": { "type": "integer", "minimum": 1, "maximum": 52 },
+          "monthInterval": { "type": "integer", "minimum": 1, "maximum": 12 }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "modifiedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isOwn", "label"],
+      "properties": {
+        "isOwn": { "type": "boolean" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "sid": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "isOwn": { "type": "boolean" }
+  }
+}
