@@ -192,42 +192,7 @@
         <Setter Property="CaretBrush" Value="{DynamicResource App_ForegroundBrush}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource App_AccentBrush}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="Chrome"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Corner_Radius}"
-                            SnapsToDevicePixels="True">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center"
-                                      Focusable="False"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Hidden" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_SecondaryTextBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_FocusBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource App_ControlDisabledBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource App_DisabledTextBrush}" />
-                        </Trigger>
-                        <Trigger Property="Validation.HasError" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Status_ErrorBrush}" />
-                            <Setter Property="ToolTip"
-                                    Value="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors)[0].ErrorContent}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <!-- Стандартный шаблон WPF: текст и каретка позиционируются корректно. -->
     </Style>
 
     <Style x:Key="FormPasswordBox" TargetType="PasswordBox">
@@ -243,34 +208,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource Border_Width}" />
         <Setter Property="CaretBrush" Value="{DynamicResource App_ForegroundBrush}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="PasswordBox">
-                    <Border x:Name="Chrome"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Corner_Radius}"
-                            SnapsToDevicePixels="True">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center"
-                                      Focusable="False"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Hidden" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_FocusBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource App_ControlDisabledBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource App_DisabledTextBrush}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <!-- Стандартный шаблон WPF: текст и каретка позиционируются корректно. -->
     </Style>
 
     <Style x:Key="FormComboBoxItem" TargetType="ComboBoxItem">
@@ -299,81 +237,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource Border_Width}" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource Control_FocusVisual}" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource FormComboBoxItem}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ComboBox">
-                    <Grid>
-                        <Border x:Name="Chrome"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{StaticResource Corner_Radius}"
-                                SnapsToDevicePixels="True">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="24" />
-                                </Grid.ColumnDefinitions>
-                                <ContentPresenter Grid.Column="0"
-                                                  Margin="{TemplateBinding Padding}"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Left"
-                                                  Content="{TemplateBinding SelectionBoxItem}"
-                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
-                                <Path Grid.Column="1"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      Data="M 0 0 L 4 4 L 8 0"
-                                      Stroke="{DynamicResource App_SecondaryTextBrush}"
-                                      StrokeThickness="1.5" />
-                            </Grid>
-                        </Border>
-                        <ToggleButton x:Name="Toggle"
-                                      Background="Transparent"
-                                      BorderThickness="0"
-                                      Focusable="False"
-                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                            <ToggleButton.Template>
-                                <ControlTemplate TargetType="ToggleButton">
-                                    <Border Background="Transparent" />
-                                </ControlTemplate>
-                            </ToggleButton.Template>
-                        </ToggleButton>
-                        <Popup x:Name="PART_Popup"
-                               IsOpen="{TemplateBinding IsDropDownOpen}"
-                               Placement="Bottom"
-                               AllowsTransparency="True"
-                               Focusable="False"
-                               PopupAnimation="Fade">
-                            <Border Background="{DynamicResource App_SurfaceBrush}"
-                                    BorderBrush="{DynamicResource App_BorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="{StaticResource Corner_Radius}"
-                                    MinWidth="{TemplateBinding ActualWidth}"
-                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
-                                    Margin="0,2,0,0">
-                                <ScrollViewer>
-                                    <ItemsPresenter />
-                                </ScrollViewer>
-                            </Border>
-                        </Popup>
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_SecondaryTextBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource App_FocusBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource App_ControlDisabledBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource App_DisabledTextBrush}" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <!-- Стандартный шаблон WPF: цвета и выпадающий список системные. -->
     </Style>
 
     <Style x:Key="StatusBarStyle" TargetType="StatusBar">

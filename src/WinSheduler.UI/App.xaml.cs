@@ -36,7 +36,8 @@ public partial class App : Application
             "App",
             $"Запуск UI {typeof(App).Assembly.GetName().Version}; журнал: {Services.Logger.DirectoryPath}");
 
-        Services.Theme.Apply(ParseTheme(Services.WindowState.State.Theme));
+        // Стандартная светлая схема Windows; тёмная тема пока не используется.
+        Services.Theme.Apply(ThemeMode.Light);
 
         if (!TakeSingleInstance())
         {
