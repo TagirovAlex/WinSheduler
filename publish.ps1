@@ -70,7 +70,7 @@ if (Test-Path -LiteralPath $wixpdb) {
     Remove-Item -LiteralPath $wixpdb -Force
 }
 
-$displayVersion = if ($Version) { $Version } else { '2.0.0' }
+$displayVersion = if ($Version) { $Version } else { '2.0.2' }
 $msiLine = if ($SkipMsi) {
     'MSI не собирался (SkipMsi).'
 }

@@ -24,6 +24,7 @@
 
     <!-- Major upgrade: старый продукт удаляется после InstallValidate; downgrade запрещён. -->
     <MajorUpgrade Schedule="afterInstallValidate"
+                  AllowSameVersionUpgrades="yes"
                   DowngradeErrorMessage="Установлена более новая версия WinSheduler. Понижение версии не поддерживается." />
 
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
@@ -98,6 +99,7 @@
     </InstallUISequence>
 
     <InstallExecuteSequence>
+      <Custom Action="CloseUi" Before="InstallInitialize" />
       <Custom Action="NormalizePaths" Before="CostFinalize" />
       <Custom Action="FixRegistryPaths" Before="RemoveExistingProducts" Condition="Installed" />
       <Custom Action="ValidatePaths" After="CostFinalize" Condition="NOT Installed" />

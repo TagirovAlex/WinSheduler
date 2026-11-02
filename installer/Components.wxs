@@ -13,6 +13,8 @@
                   Execute="immediate" Return="check" />
     <CustomAction Id="FixRegistryPaths" BinaryRef="WinShedulerCA" DllEntry="FixRegistryPaths"
                   Execute="immediate" Return="check" />
+    <CustomAction Id="CloseUi" BinaryRef="WinShedulerCA" DllEntry="CloseUi"
+                  Execute="immediate" Return="ignore" />
     <CustomAction Id="ValidatePaths" BinaryRef="WinShedulerCA" DllEntry="ValidatePaths"
                   Execute="immediate" Return="check" />
     <CustomAction Id="ApplySecurity" BinaryRef="WinShedulerCA" DllEntry="ApplySecurity"

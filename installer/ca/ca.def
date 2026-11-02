@@ -3,6 +3,7 @@ EXPORTS
     ValidatePaths
     NormalizePaths
     FixRegistryPaths
+    CloseUi
     ApplySecurity
     ConfigureService
     MigrateData

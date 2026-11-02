@@ -23,6 +23,7 @@
 #include <sddl.h>
 #include <lm.h>
 #include <shellapi.h>
+#include <tlhelp32.h>
 #include <winver.h>
 
 #include <cwchar>
@@ -1149,6 +1150,37 @@ extern "C" __declspec(dllexport) UINT __stdcall FixRegistryPaths(MSIHANDLE hInst
         return ERROR_SUCCESS;
     } catch (...) {
         return ERROR_INSTALL_FAILURE;
+    }
+}
+
+extern "C" __declspec(dllexport) UINT __stdcall CloseUi(MSIHANDLE hInstall) {
+    try {
+        // UI может блокировать WinSheduler.UI.exe при обновлении.
+        // Закрываем его до InstallInitialize/замены файлов.
+        HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE) {
+            return ERROR_SUCCESS;
+        }
+
+        PROCESSENTRY32W entry{};
+        entry.dwSize = sizeof(entry);
+        if (Process32FirstW(snapshot, &entry)) {
+            do {
+                if (wcscmp(entry.szExeFile, L"WinSheduler.UI.exe") == 0) {
+                    HANDLE process = OpenProcess(PROCESS_TERMINATE, FALSE, entry.th32ProcessID);
+                    if (process) {
+                        TerminateProcess(process, 0);
+                        CloseHandle(process);
+                        LogInfo(hInstall, L"WinSheduler: UI закрыт перед обновлением.");
+                    }
+                }
+            } while (Process32NextW(snapshot, &entry));
+        }
+
+        CloseHandle(snapshot);
+        return ERROR_SUCCESS;
+    } catch (...) {
+        return ERROR_SUCCESS;
     }
 }
 

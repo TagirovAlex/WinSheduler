@@ -8,7 +8,7 @@
 
   Пример (пути к артефактам — относительно каталога ./installer):
     dotnet build ./installer/WinSheduler.Installer.wixproj -c Release `
-      -p:ProductVersion=2.0.0 `
+      -p:ProductVersion=2.0.2 `
       -p:ServiceExePath=../artifacts/service/WinShedulerSvc.exe `
       -p:UiIconPath=../ico/installer/app.ico `
       -p:BannerBmpPath=../ico/installer/banner.bmp `

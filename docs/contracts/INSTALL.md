@@ -124,7 +124,7 @@ ACL выставляется установщиком явно и повторн
 - .NET 8 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).
-- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.0.0` из `./Directory.Build.props`.
+- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.0.2` из `./Directory.Build.props`.
 
 ## 9. Установка
 
@@ -143,6 +143,9 @@ msiexec /x ./published/WinSheduler.msi /qn
 ```
 
 ## 10. Обновление и удаление
+
+- `MajorUpgrade` разрешает same-version upgrade (2.0.2 поверх 2.0.2 с другим ProductCode).
+- Перед заменой файлов `CloseUi` закрывает `WinSheduler.UI.exe`; служба останавливается через `ServiceControl`.
 
 - Major upgrade, `Schedule="afterInstallValidate"`, блокировка downgrade.
 - `DATADIR` не входит в компоненты MSI: данные не удаляются при upgrade.
