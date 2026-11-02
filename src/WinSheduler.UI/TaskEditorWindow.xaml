@@ -53,7 +53,7 @@
                             <TextBox x:Name="PathBox" Grid.Row="2" Grid.Column="1" Style="{StaticResource FormTextBox}"/>
                             <Button Grid.Row="2" Grid.Column="2"
                                     Style="{StaticResource SecondaryButton}" Click="BrowseBtn_Click"
-                                    Margin="4">
+                                    Margin="4,0,0,8" VerticalAlignment="Top">
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="{StaticResource IconOpenFolder}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                                     <TextBlock Text="{loc:Loc Common_Browse}" VerticalAlignment="Center" />
@@ -118,7 +118,7 @@
                                     <Button x:Name="ClearPasswordBtn" Grid.Row="2" Grid.Column="2"
                                             Style="{StaticResource SecondaryButton}"
                                             Click="ClearPasswordBtn_Click"
-                                            Margin="4">
+                                            Margin="4,0,0,8" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
                                             <Image Source="{StaticResource IconCancel}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                                             <TextBlock Text="{loc:Loc Editor_ClearPassword}" VerticalAlignment="Center" />

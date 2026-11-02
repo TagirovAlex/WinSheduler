@@ -50,7 +50,8 @@
                             <Label Grid.Row="0" Grid.Column="0" Content="{loc:Loc Trigger_Date}"
                                    Style="{StaticResource FormLabel}" Target="{Binding ElementName=OnceDatePicker}"/>
                             <DatePicker x:Name="OnceDatePicker" Grid.Row="0" Grid.Column="1"
-                                        Margin="0,0,0,6" SelectedDateChanged="Field_Changed"/>
+                                        Style="{StaticResource FormDatePicker}" Margin="0,0,0,8"
+                                        SelectedDateChanged="Field_Changed"/>
                             <Label Grid.Row="1" Grid.Column="0" Content="{loc:Loc Trigger_Time}"
                                    Style="{StaticResource FormLabel}" Target="{Binding ElementName=OnceTimeBox}"/>
                             <TextBox x:Name="OnceTimeBox" Grid.Row="1" Grid.Column="1" Width="80"
@@ -235,19 +236,23 @@
 
                         <Label Grid.Row="0" Grid.Column="0" Content="{loc:Loc Trigger_StartDate}"
                                Style="{StaticResource FormLabel}" Target="{Binding ElementName=StartDatePicker}"/>
-                        <DatePicker x:Name="StartDatePicker" Grid.Row="0" Grid.Column="1" Margin="0,0,8,6"
+                        <DatePicker x:Name="StartDatePicker" Grid.Row="0" Grid.Column="1"
+                                    Style="{StaticResource FormDatePicker}" Margin="0,0,8,8"
                                     SelectedDateChanged="Field_Changed"/>
                         <Label Grid.Row="0" Grid.Column="2" Content="{loc:Loc Trigger_EndDate}"
                                Style="{StaticResource FormLabel}" Target="{Binding ElementName=EndDatePicker}"
                                Margin="0,0,8,0"/>
-                        <DatePicker x:Name="EndDatePicker" Grid.Row="0" Grid.Column="3" Margin="0,0,0,6"
+                        <DatePicker x:Name="EndDatePicker" Grid.Row="0" Grid.Column="3"
+                                    Style="{StaticResource FormDatePicker}" Margin="0,0,0,8"
                                     SelectedDateChanged="Field_Changed"/>
 
                         <Label Grid.Row="1" Grid.Column="0" Content="{loc:Loc Trigger_RepeatUntil}"
                                Style="{StaticResource FormLabel}" Target="{Binding ElementName=RepeatUntilPicker}"/>
-                        <DatePicker x:Name="RepeatUntilPicker" Grid.Row="1" Grid.Column="1" Margin="0,0,8,0"
+                        <DatePicker x:Name="RepeatUntilPicker" Grid.Row="1" Grid.Column="1"
+                                    Style="{StaticResource FormDatePicker}" Margin="0,0,8,8"
                                     SelectedDateChanged="Field_Changed"/>
                         <TextBox x:Name="RepeatUntilTimeBox" Grid.Row="1" Grid.Column="2" Width="70"
+                                 Margin="8,0,0,8" VerticalAlignment="Top"
                                  Text="23:59" ToolTip="{loc:Loc Trigger_RepeatUntilTooltip}"
                                  Style="{StaticResource FormTextBox}"
                                  TextChanged="Field_TextChanged"/>

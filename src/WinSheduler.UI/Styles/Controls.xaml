@@ -223,6 +223,15 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="FormDatePicker" TargetType="DatePicker">
+        <Setter Property="Height" Value="{StaticResource Control_Height}" />
+        <Setter Property="Margin" Value="{StaticResource Margin_Field}" />
+        <Setter Property="FontFamily" Value="{StaticResource Font_Ui}" />
+        <Setter Property="FontSize" Value="{StaticResource Font_Size}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+
     <Style x:Key="FormComboBox" TargetType="ComboBox">
         <Setter Property="Height" Value="{StaticResource Control_Height}" />
         <Setter Property="MinWidth" Value="120" />
