@@ -9,6 +9,10 @@
     <!-- Нативная DLL действий; собирается из ./installer/ca. -->
     <Binary Id="WinShedulerCA" SourceFile="$(var.CaDll)" />
 
+    <CustomAction Id="NormalizePaths" BinaryRef="WinShedulerCA" DllEntry="NormalizePaths"
+                  Execute="immediate" Return="check" />
+    <CustomAction Id="FixRegistryPaths" BinaryRef="WinShedulerCA" DllEntry="FixRegistryPaths"
+                  Execute="immediate" Return="check" />
     <CustomAction Id="ValidatePaths" BinaryRef="WinShedulerCA" DllEntry="ValidatePaths"
                   Execute="immediate" Return="check" />
     <CustomAction Id="ApplySecurity" BinaryRef="WinShedulerCA" DllEntry="ApplySecurity"

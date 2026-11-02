@@ -1,6 +1,8 @@
 LIBRARY WinShedulerCA
 EXPORTS
     ValidatePaths
+    NormalizePaths
+    FixRegistryPaths
     ApplySecurity
     ConfigureService
     MigrateData

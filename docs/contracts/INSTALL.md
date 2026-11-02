@@ -159,6 +159,16 @@ msiexec /x ./published/WinSheduler.msi /qn
 3. Запустить службу: миграция схемы v1→v2 выполнится автоматически.
 4. Старый файл не удалять (оставить на усмотрение администратора).
 
+## 11.1. Нормализация путей в реестре
+
+Старые версии писали `InstallDir`/`DataDir` с прямыми слэшами. Windows Installer
+считает такой путь сетевым и блокирует удаление/обновление.
+
+- `NormalizePaths` нормализует `INSTALLDIR`/`DATADIR`/`OLDDATADIR` до `CostFinalize`.
+- `FixRegistryPaths` исправляет старые значения в `HKLM/SOFTWARE/WinSheduler`
+  перед `RemoveExistingProducts`.
+- Новые значения записываются с обратными слэшами.
+
 ## 12. Подпись
 
 - Если задан сертификат: подписать exe и MSI через `signtool`, timestamp SHA256.

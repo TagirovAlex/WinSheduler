@@ -93,10 +93,13 @@
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLDIR" />
 
     <InstallUISequence>
+      <Custom Action="NormalizePaths" Before="CostFinalize" />
       <Custom Action="ValidatePaths" After="CostFinalize" Condition="NOT Installed" />
     </InstallUISequence>
 
     <InstallExecuteSequence>
+      <Custom Action="NormalizePaths" Before="CostFinalize" />
+      <Custom Action="FixRegistryPaths" Before="RemoveExistingProducts" Condition="Installed" />
       <Custom Action="ValidatePaths" After="CostFinalize" Condition="NOT Installed" />
       <Custom Action="SetApplySecurity" Before="ApplySecurity" Condition="NOT Installed OR REINSTALL" />
       <Custom Action="ApplySecurity" Before="InstallFiles" Condition="NOT Installed OR REINSTALL" />

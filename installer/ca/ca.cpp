@@ -927,8 +927,8 @@ extern "C" __declspec(dllexport) UINT __stdcall ApplySecurity(MSIHANDLE hInstall
             LogInfo(hInstall, L"WinSheduler: предупреждение — SID группы не определён.");
         }
 
-        if (!SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"InstallDir", installdir) ||
-            !SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"DataDir", datadir) ||
+        if (!SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"InstallDir", ToNative(installdir)) ||
+            !SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"DataDir", ToNative(datadir)) ||
             !SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"GroupSid", groupSid) ||
             !SetRegistryString(HKEY_LOCAL_MACHINE, kRegistryKey, L"Version", version)) {
             return Fail(hInstall, L"WinSheduler: не удалось записать параметры в реестр.");
@@ -1071,6 +1071,81 @@ extern "C" __declspec(dllexport) UINT __stdcall RemoveData(MSIHANDLE hInstall) {
         }
 
         RegDeleteTreeW(HKEY_LOCAL_MACHINE, kRegistryKey);
+        return ERROR_SUCCESS;
+    } catch (...) {
+        return ERROR_INSTALL_FAILURE;
+    }
+}
+
+extern "C" __declspec(dllexport) UINT __stdcall NormalizePaths(MSIHANDLE hInstall) {
+    try {
+        // Windows Installer не принимает прямые слэши в свойствах каталогов
+        // и считает такой путь сетевым. Нормализуем значения из реестра
+        // и командной строки до CostFinalize.
+        for (const wchar_t* name : { L"INSTALLDIR", L"DATADIR", L"OLDDATADIR" }) {
+            const std::wstring value = GetProperty(hInstall, name);
+            if (value.find(L'/') == std::wstring::npos) {
+                continue;
+            }
+
+            const std::wstring normalized = ToNative(value);
+            MsiSetPropertyW(hInstall, name, normalized.c_str());
+            LogInfo(hInstall,
+                    L"WinSheduler: " + std::wstring(name) + L" нормализован: " + normalized);
+        }
+
+        return ERROR_SUCCESS;
+    } catch (...) {
+        return ERROR_INSTALL_FAILURE;
+    }
+}
+
+bool FixRegistryPathValue(HKEY key, const wchar_t* name) {
+    DWORD type = 0;
+    DWORD size = 0;
+    if (RegQueryValueExW(key, name, nullptr, &type, nullptr, &size) != ERROR_SUCCESS ||
+        type != REG_SZ || size == 0) {
+        return true;
+    }
+
+    std::vector<wchar_t> buffer(size / sizeof(wchar_t) + 1, L'\0');
+    if (RegQueryValueExW(key, name, nullptr, &type,
+                         reinterpret_cast<LPBYTE>(buffer.data()), &size) != ERROR_SUCCESS ||
+        type != REG_SZ) {
+        return true;
+    }
+
+    const std::wstring value(buffer.data());
+    if (value.find(L'/') == std::wstring::npos) {
+        return true;
+    }
+
+    const std::wstring fixed = ToNative(value);
+    const DWORD bytes = static_cast<DWORD>((fixed.size() + 1) * sizeof(wchar_t));
+    return RegSetValueExW(key, name, 0, REG_SZ,
+                          reinterpret_cast<const BYTE*>(fixed.c_str()), bytes) == ERROR_SUCCESS;
+}
+
+extern "C" __declspec(dllexport) UINT __stdcall FixRegistryPaths(MSIHANDLE hInstall) {
+    try {
+        HKEY key = nullptr;
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                          kRegistryKey,
+                          0,
+                          KEY_READ | KEY_WRITE | KEY_WOW64_64KEY,
+                          &key) != ERROR_SUCCESS) {
+            return ERROR_SUCCESS;
+        }
+
+        const bool ok = FixRegistryPathValue(key, L"InstallDir") &&
+                        FixRegistryPathValue(key, L"DataDir");
+        RegCloseKey(key);
+
+        if (!ok) {
+            return Fail(hInstall, L"WinSheduler: не удалось исправить пути в реестре.");
+        }
+
+        LogInfo(hInstall, L"WinSheduler: пути в реестре нормализованы.");
         return ERROR_SUCCESS;
     } catch (...) {
         return ERROR_INSTALL_FAILURE;
