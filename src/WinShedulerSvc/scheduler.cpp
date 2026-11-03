@@ -10,8 +10,11 @@
 #include <rpc.h>
 #include <rpcdce.h>
 #include <cwchar>
+#include <lm.h>
+#include <sddl.h>
 
 #pragma comment(lib, "rpcrt4.lib")
+#pragma comment(lib, "netapi32.lib")
 
 static constexpr size_t MAX_LOG_SIZE = 512 * 1024; // 512 КБ
 
@@ -84,6 +87,78 @@ std::string detect_pe_architecture(const std::wstring& path) {
 
 bool is_system_sid(const std::wstring& sid) {
     return sid.empty() || _wcsicmp(sid.c_str(), L"S-1-5-18") == 0;
+}
+
+// Задача, созданная администратором, по контракту SECURITY.md запускается
+// токеном службы (SYSTEM). Проверяем членство владельца в локальной группе
+// Administrators, включая косвенное (доменные группы). Имя группы берём через
+// SID: на русской Windows она называется «Администраторы».
+bool is_admin_sid(const std::wstring& sid_text) {
+    if (is_system_sid(sid_text)) return true;
+
+    PSID sid = nullptr;
+    if (!ConvertStringSidToSidW(sid_text.c_str(), &sid)) return false;
+
+    BYTE admin_sid[SECURITY_MAX_SID_SIZE] = {};
+    DWORD admin_sid_size = sizeof(admin_sid);
+    wchar_t admin_name[256] = {};
+    wchar_t admin_domain[256] = {};
+    DWORD admin_name_length = 256;
+    DWORD admin_domain_length = 256;
+    SID_NAME_USE admin_use = SidTypeUnknown;
+    const bool have_admin_name =
+        CreateWellKnownSid(WinBuiltinAdministratorsSid, nullptr, admin_sid, &admin_sid_size) &&
+        LookupAccountSidW(nullptr, admin_sid, admin_name, &admin_name_length,
+                          admin_domain, &admin_domain_length, &admin_use);
+
+    bool member = false;
+
+    if (have_admin_name) {
+        LPBYTE buffer = nullptr;
+        DWORD read = 0;
+        DWORD total = 0;
+        if (NetLocalGroupGetMembers(nullptr, admin_name, 0, &buffer, MAX_PREFERRED_LENGTH,
+                &read, &total, nullptr) == NERR_Success && buffer != nullptr) {
+            auto* members = reinterpret_cast<LOCALGROUP_MEMBERS_INFO_0*>(buffer);
+            for (DWORD i = 0; i < read; ++i) {
+                if (EqualSid(members[i].lgrmi0_sid, sid)) {
+                    member = true;
+                    break;
+                }
+            }
+            NetApiBufferFree(buffer);
+        }
+    }
+
+    if (!member) {
+        wchar_t name[256] = {};
+        wchar_t domain[256] = {};
+        DWORD name_length = 256;
+        DWORD domain_length = 256;
+        SID_NAME_USE use = SidTypeUnknown;
+        if (LookupAccountSidW(nullptr, sid, name, &name_length, domain, &domain_length, &use)) {
+            const std::wstring account =
+                domain_length > 0 ? std::wstring(domain) + L"\\" + name : std::wstring(name);
+            LPBYTE groups = nullptr;
+            DWORD group_read = 0;
+            DWORD group_total = 0;
+            if (NetUserGetLocalGroups(nullptr, account.c_str(), 0, LG_INCLUDE_INDIRECT,
+                    &groups, MAX_PREFERRED_LENGTH, &group_read, &group_total) == NERR_Success &&
+                groups != nullptr) {
+                auto* info = reinterpret_cast<LOCALGROUP_USERS_INFO_0*>(groups);
+                for (DWORD i = 0; i < group_read; ++i) {
+                    if (have_admin_name && _wcsicmp(info[i].lgrui0_name, admin_name) == 0) {
+                        member = true;
+                        break;
+                    }
+                }
+                NetApiBufferFree(groups);
+            }
+        }
+    }
+
+    LocalFree(sid);
+    return member;
 }
 
 // Пауза перед повтором: 1, 2, 4, 8 … минут, не более 30 минут.
@@ -363,7 +438,7 @@ std::wstring Scheduler::request_start(const TaskDefinition& task, const std::wst
     spec.caller_is_admin = caller_is_admin;
     // Не-админская задача без токена владельца не запускается от SYSTEM.
     // Задача с RunAs запускается отдельным токеном пользователя (только админ).
-    spec.require_client_token = !spec.has_run_as && !is_system_sid(task.owner_sid) && client_token == nullptr;
+    spec.require_client_token = !spec.has_run_as && !is_admin_sid(task.owner_sid) && client_token == nullptr;
 
     std::optional<std::wstring> output_path;
     if (task.log_output) {

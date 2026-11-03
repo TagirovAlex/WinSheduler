@@ -154,7 +154,21 @@ public sealed class IpcClient : IAsyncDisposable
                 throw new IpcException(IpcErrorCode.TooLarge, "TOO_LARGE", Strings.Get("Error_TooLarge"));
             }
 
-            await WriteFrameAsync(pipe, body, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await WriteFrameAsync(pipe, body, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or UnauthorizedAccessException)
+            {
+                // Служба закрывает простаивающее соединение по таймауту чтения
+                // (READ_TIMEOUT_MS = 30 с). IsConnected при этом ещё true, и первая
+                // запись падает. Запрос не доставлен, поэтому его безопасно
+                // повторить на новом соединении даже для неидемпотентных действий.
+                ResetConnection();
+                pipe = await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
+                await WriteFrameAsync(pipe, body, cancellationToken).ConfigureAwait(false);
+            }
+
             var response = await ReadFrameAsync(pipe, cancellationToken).ConfigureAwait(false);
             return ParseResponse(requestId, response);
         }

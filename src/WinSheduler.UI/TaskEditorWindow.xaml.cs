@@ -566,7 +566,10 @@ public partial class TaskEditorWindow : Window
             : DateTime.TryParse(value, out var parsed) ? parsed.Date : null;
     }
 
-    private static string NormalizePath(string value) => value.Trim().Replace('\\', '/');
+    // Windows принимает оба разделителя, но храним и передаём службе
+    // канонический вид с обратными слэшами: так путь одинаков во всех
+    // журналах, реестре и командной строке процесса.
+    private static string NormalizePath(string value) => value.Trim().Replace('/', '\\');
 
     private static string? NullIfWhiteSpace(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

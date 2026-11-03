@@ -2,6 +2,8 @@
 #include "database.h"
 #include "scheduler.h"
 #include "ipc.h"
+#include "auth_token.h"
+#include "auth_policy.h"
 #include <sstream>
 #include <iomanip>
 
@@ -81,7 +83,17 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
                 auto task_opt = g_db->get_task(req.payload);
                 if (!task_opt.has_value())
                     return IpcResponse{ false, L"Task not found", L"" };
-                g_sched->launch_task(task_opt.value());
+                // Ручной запуск идёт токеном вызывающего пользователя:
+                // для не-админа это единственный способ запустить свою задачу.
+                const auth::Identity* identity = auth::current_identity();
+                std::wstring error;
+                const std::wstring history_id = g_sched->run_now(
+                    task_opt->id,
+                    auth::current_client_token(),
+                    identity != nullptr && identity->is_admin,
+                    error);
+                if (history_id.empty())
+                    return IpcResponse{ false, error.empty() ? L"Запуск отклонён" : error, L"" };
                 return IpcResponse{ true, L"", L"{}" };
             }
             return IpcResponse{ false, L"Unhandled by scheduler", L"" };

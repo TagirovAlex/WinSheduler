@@ -21,8 +21,12 @@
     <SolidColorBrush x:Key="App_ControlPressedBrush" Color="{x:Static SystemColors.ControlDarkColor}" />
     <SolidColorBrush x:Key="App_ControlDisabledBrush" Color="{x:Static SystemColors.ControlColor}" />
 
-    <SolidColorBrush x:Key="App_SelectionBrush" Color="{x:Static SystemColors.HighlightColor}" />
-    <SolidColorBrush x:Key="App_SelectionTextBrush" Color="{x:Static SystemColors.HighlightTextColor}" />
+    <!--
+        Мягкое выделение строки: системный синий делает цветной текст статуса
+        (зелёный/красный) нечитаемым. Светлая заливка сохраняет контраст.
+    -->
+    <SolidColorBrush x:Key="App_SelectionBrush" Color="#CCE8FF" />
+    <SolidColorBrush x:Key="App_SelectionTextBrush" Color="{x:Static SystemColors.ControlTextColor}" />
     <SolidColorBrush x:Key="App_AccentBrush" Color="{x:Static SystemColors.HighlightColor}" />
     <SolidColorBrush x:Key="App_AccentTextBrush" Color="{x:Static SystemColors.HighlightTextColor}" />
     <SolidColorBrush x:Key="App_FocusBrush" Color="{x:Static SystemColors.HighlightColor}" />

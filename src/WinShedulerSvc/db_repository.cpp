@@ -30,6 +30,17 @@ std::string text_col(sqlite3_stmt* stmt, int index) {
 
 std::wstring wide_col(sqlite3_stmt* stmt, int index) { return u2ws(text_col(stmt, index)); }
 
+// Старые сборки UI сохраняли пути с прямыми слэшами. Приводим их к
+// каноническому Windows-виду при чтении, чтобы уже созданные задачи
+// работали без повторного редактирования.
+std::wstring native_path(const std::wstring& value) {
+    std::wstring result = value;
+    for (wchar_t& c : result) {
+        if (c == L'/') c = L'\\';
+    }
+    return result;
+}
+
 std::optional<std::wstring> optional_wide_col(sqlite3_stmt* stmt, int index) {
     if (sqlite3_column_type(stmt, index) == SQLITE_NULL) return std::nullopt;
     return wide_col(stmt, index);
@@ -47,9 +58,9 @@ TaskDefinition read_task(sqlite3_stmt* stmt) {
     task.name = wide_col(stmt, 2);
     task.description = wide_col(stmt, 3);
     task.enabled = sqlite3_column_int(stmt, 4) != 0;
-    task.program_path = wide_col(stmt, 5);
+    task.program_path = native_path(wide_col(stmt, 5));
     task.arguments = wide_col(stmt, 6);
-    task.working_directory = wide_col(stmt, 7);
+    task.working_directory = native_path(wide_col(stmt, 7));
     task.window_style = static_cast<WindowStyle>(sqlite3_column_int(stmt, 8));
     task.session_mode = static_cast<SessionMode>(sqlite3_column_int(stmt, 9));
     if (sqlite3_column_type(stmt, 10) != SQLITE_NULL) {
@@ -87,9 +98,9 @@ void bind_task_fields(Statement& stmt, const TaskDefinition& task, bool include_
     stmt.bind_text(index++, ws2u(task.name));
     stmt.bind_text(index++, ws2u(task.description));
     stmt.bind_int(index++, task.enabled ? 1 : 0);
-    stmt.bind_text(index++, ws2u(task.program_path));
+    stmt.bind_text(index++, ws2u(native_path(task.program_path)));
     stmt.bind_text(index++, ws2u(task.arguments));
-    stmt.bind_text(index++, ws2u(task.working_directory));
+    stmt.bind_text(index++, ws2u(native_path(task.working_directory)));
     stmt.bind_int(index++, static_cast<int>(task.window_style));
     stmt.bind_int(index++, static_cast<int>(task.session_mode));
     if (task.run_as_user.has_value()) {
@@ -218,9 +229,9 @@ void TaskRepository::update(const TaskDefinition& task) {
     stmt.bind_text(index++, ws2u(task.name));
     stmt.bind_text(index++, ws2u(task.description));
     stmt.bind_int(index++, task.enabled ? 1 : 0);
-    stmt.bind_text(index++, ws2u(task.program_path));
+    stmt.bind_text(index++, ws2u(native_path(task.program_path)));
     stmt.bind_text(index++, ws2u(task.arguments));
-    stmt.bind_text(index++, ws2u(task.working_directory));
+    stmt.bind_text(index++, ws2u(native_path(task.working_directory)));
     stmt.bind_int(index++, static_cast<int>(task.window_style));
     stmt.bind_int(index++, static_cast<int>(task.session_mode));
     if (task.run_as_user.has_value()) {

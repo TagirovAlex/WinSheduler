@@ -35,6 +35,16 @@ bool file_exists(const std::wstring& path) {
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
+// Канонический Windows-путь: прямые слэши допустимы в API, но не во всех
+// разборщиках командной строки, поэтому перед запуском приводим к '\'.
+std::wstring to_native_path(const std::wstring& path) {
+    std::wstring result = path;
+    for (wchar_t& c : result) {
+        if (c == kSepForward) c = kSepBack;
+    }
+    return result;
+}
+
 // Каталог программы, если working_directory не задан.
 std::wstring parent_directory(const std::wstring& path) {
     const size_t position = path.find_last_of(L"/\\");
@@ -192,24 +202,27 @@ bool decrypt_password(const std::wstring& encrypted_base64, std::wstring& passwo
 }
 
 bool Win32ProcessRunner::launch(const ProcessLaunchSpec& spec, RunningProcessHandle& out, std::wstring& error) {
+    const std::wstring program_path = to_native_path(spec.program_path);
+    const std::wstring configured_directory = to_native_path(spec.working_directory);
+
     std::wstring path_error;
-    if (!process::validate_local_path(spec.program_path, false, path_error)) {
+    if (!process::validate_local_path(program_path, false, path_error)) {
         error = path_error;
         return false;
     }
-    if (!file_exists(spec.program_path)) {
-        error = L"Программа не найдена: " + spec.program_path;
+    if (!file_exists(program_path)) {
+        error = L"Программа не найдена: " + program_path;
         return false;
     }
 
-    std::wstring working_directory = spec.working_directory;
-    if (working_directory.empty()) working_directory = parent_directory(spec.program_path);
+    std::wstring working_directory = configured_directory;
+    if (working_directory.empty()) working_directory = parent_directory(program_path);
     if (!process::validate_working_directory(working_directory, path_error)) {
         error = path_error;
         return false;
     }
 
-    std::wstring command_line = L"\"" + spec.program_path + L"\"";
+    std::wstring command_line = L"\"" + program_path + L"\"";
     if (!spec.arguments.empty()) command_line += L" " + spec.arguments;
 
     STARTUPINFOW startup = {};
