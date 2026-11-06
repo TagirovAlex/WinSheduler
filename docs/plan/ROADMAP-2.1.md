@@ -1,8 +1,8 @@
 # План 2.1 — .NET 10, Server 2016, обмен задачами и живой статус
 
-Статус: реализовано 2026-11-06. Финальный комплект собран в `./published`,
-MSI 2.1.0 — 49,8 МБ. Остались smoke на реальной ВМ Server 2016 и публикация
-тега/релиза `v2.1.0`.
+Статус: релиз 2.1.0 опубликован 2026-11-06. Финальный комплект собран
+в `./published`, MSI 2.1.0 — 49,8 МБ; тег и GitHub Release созданы.
+Остался smoke на реальной ВМ Server 2016 (Desktop Experience и Core).
 Доска задач: `./docs/plan/TASKS.md`, раздел «Phase 3».
 Связанные документы: `./docs/contracts/IPC.md`, `./docs/contracts/UI.md`,
 `./docs/contracts/INSTALL.md`, `./docs/contracts/SECURITY.md`.

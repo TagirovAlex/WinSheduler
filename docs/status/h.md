@@ -43,6 +43,12 @@
   contract-cpp, contract-csharp, schemas, smoke).
 - UI smoke — окно и кнопка «Добавить» найдены.
 
+## Публикация
+
+- Тег `v2.1.0` отправлен в `origin/main`.
+- GitHub Release: https://github.com/TagirovAlex/WinSheduler/releases/tag/v2.1.0
+  (assets: `WinSheduler.msi`, `SHA256SUMS.txt`).
+
 ## Осталось
 
 - H-8: smoke на Server 2016 Desktop Experience и Server Core (MSI уже в

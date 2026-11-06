@@ -145,4 +145,6 @@
 - `./scripts/verify.ps1 -Scope integration` — зелёный; UI.Tests — 60/60.
 - `./publish.ps1` — финальный комплект в `./published`, MSI 2.1.0 — 49,8 МБ,
   SHA256 `57CDFCB4…062A`.
-- Осталось: smoke Server 2016 и публикация тега/релиза `v2.1.0`.
+- Тег `v2.1.0` и GitHub Release опубликованы:
+  https://github.com/TagirovAlex/WinSheduler/releases/tag/v2.1.0
+- Осталось: smoke Server 2016 (Desktop Experience и Core).

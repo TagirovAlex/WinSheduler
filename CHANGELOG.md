@@ -2,6 +2,8 @@
 
 ## 2.1.0 — 2026-11-06
 
+Релиз: https://github.com/TagirovAlex/WinSheduler/releases/tag/v2.1.0
+
 ### Добавлено
 
 - Экспорт задач в `*.wstasks.json`: одна задача или несколько выбранных.
