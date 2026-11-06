@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 using WinSheduler.Shared;
+using WinSheduler.Shared.Models;
 using WinSheduler.UI.Localization;
 using WinSheduler.UI.Services;
 
@@ -17,6 +18,45 @@ public enum TaskFilter
 }
 
 /// <summary>
+/// Параметры цикла сопровождения запущенных задач (ROADMAP 2.1, раздел 6.2).
+/// Значения по умолчанию заданы в конструкторе; тесты подставляют короткие интервалы.
+/// </summary>
+public sealed class RunFollowOptions
+{
+    /// <summary>Интервал опроса в первые <see cref="ShortPhase"/>.</summary>
+    public TimeSpan ShortInterval { get; init; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>Интервал опроса после <see cref="ShortPhase"/>.</summary>
+    public TimeSpan LongInterval { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Длительность фазы частого опроса.</summary>
+    public TimeSpan ShortPhase { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Защита от гонки старта: не завершать сопровождение раньше этого времени.</summary>
+    public TimeSpan StartGrace { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Предельное время сопровождения одной задачи.</summary>
+    public TimeSpan MaxDuration { get; init; } = TimeSpan.FromHours(24);
+}
+
+/// <summary>
+/// Запуск завершился. Тексты для пользователя формирует UI-слой:
+/// ViewModel передаёт только данные.
+/// </summary>
+public sealed class RunFinishedEventArgs : EventArgs
+{
+    public Guid TaskId { get; init; }
+
+    public string Name { get; init; } = string.Empty;
+
+    public RunStatus RunStatus { get; init; }
+
+    public int? ExitCode { get; init; }
+
+    public string ErrorMessage { get; init; } = string.Empty;
+}
+
+/// <summary>
 /// Состояние главного списка: batch-обновление одним запросом <c>GetDashboard</c>,
 /// прогресс, отмена и защита от повторного входа (задача D-7).
 ///
@@ -29,6 +69,14 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IElevationService? _elevation;
     private readonly WindowStateService? _windowState;
     private readonly ICollectionView _tasksView;
+    private readonly RunFollowOptions _followOptions;
+
+    // Сопровождение запусков: множество Id и один общий цикл опроса.
+    private readonly object _followSync = new();
+    private readonly Dictionary<Guid, FollowState> _followed = new();
+    private CancellationTokenSource? _followCts;
+    private bool _followLoopRunning;
+    private bool _followUnavailableReported;
 
     private CancellationTokenSource? _refreshCts;
     private int _refreshInProgress;
@@ -44,11 +92,13 @@ public sealed class DashboardViewModel : ViewModelBase
     public DashboardViewModel(
         IIpcService ipc,
         IElevationService? elevation = null,
-        WindowStateService? windowState = null)
+        WindowStateService? windowState = null,
+        RunFollowOptions? runFollowOptions = null)
     {
         _ipc = ipc ?? throw new ArgumentNullException(nameof(ipc));
         _elevation = elevation;
         _windowState = windowState;
+        _followOptions = runFollowOptions ?? new RunFollowOptions();
 
         _tasksView = CollectionViewSource.GetDefaultView(Tasks);
         _tasksView.Filter = FilterTask;
@@ -217,6 +267,11 @@ public sealed class DashboardViewModel : ViewModelBase
     public event EventHandler? RefreshCompleted;
 
     /// <summary>
+    /// Сопровождаемый запуск завершился. UI-слой сам формирует баннер и тексты.
+    /// </summary>
+    public event EventHandler<RunFinishedEventArgs>? RunFinished;
+
+    /// <summary>
     /// Обновляет список. Повторный вызов во время выполнения игнорируется,
     /// предыдущий запрос отменяется только через <see cref="CancelRefreshCommand"/>.
     /// </summary>
@@ -240,6 +295,7 @@ public sealed class DashboardViewModel : ViewModelBase
             var dashboard = await _ipc.GetDashboardAsync(token).ConfigureAwait(true);
             ApplyDashboard(dashboard);
             LastRefreshedAt = DateTimeOffset.Now;
+            TrackRunningTasks(dashboard);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -258,6 +314,37 @@ public sealed class DashboardViewModel : ViewModelBase
             IsLoading = false;
             Volatile.Write(ref _refreshInProgress, 0);
             RefreshCompleted?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// «Тихое» обновление без <see cref="IsLoading"/>: не блокирует кнопки,
+    /// не показывает прогресс и не затирает текущую ошибку пользователя.
+    /// Служебные сбои этого обновления остаются незаметными — их покажет
+    /// следующий ручной <see cref="RefreshAsync"/>.
+    /// </summary>
+    public async Task RefreshSilentlyAsync(CancellationToken cancellationToken = default)
+    {
+        // Ручное обновление уже идёт — не мешаем ему и не дублируем запрос.
+        if (Volatile.Read(ref _refreshInProgress) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var dashboard = await _ipc.GetDashboardAsync(cancellationToken).ConfigureAwait(true);
+            ApplyDashboard(dashboard);
+            LastRefreshedAt = DateTimeOffset.Now;
+            TrackRunningTasks(dashboard);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Отмена — штатный сценарий.
+        }
+        catch (Exception)
+        {
+            // Тихое обновление не трогает баннер: ошибку покажет ручное обновление.
         }
     }
 
@@ -286,6 +373,324 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         ErrorText = null;
         ErrorCode = null;
+    }
+
+    /// <summary>
+    /// Ставит задачу на сопровождение сразу после <c>RunNow</c>, не дожидаясь
+    /// обновления дашборда. Повторный вызов для той же задачи начинает grace заново.
+    /// </summary>
+    public void TrackRun(Guid taskId)
+    {
+        lock (_followSync)
+        {
+            _followed[taskId] = new FollowState { StartedAt = DateTimeOffset.UtcNow };
+        }
+
+        EnsureFollowLoop();
+    }
+
+    /// <summary>
+    /// Останавливает сопровождение всех задач и отменяет цикл опроса.
+    /// Вызывается при закрытии окна.
+    /// </summary>
+    public void StopFollowing()
+    {
+        CancellationTokenSource? cts;
+        lock (_followSync)
+        {
+            _followed.Clear();
+            cts = _followCts;
+        }
+
+        cts?.Cancel();
+    }
+
+    /// <summary>
+    /// После любого успешного обновления дашборда ставит на сопровождение
+    /// все задачи с признаком <c>running=true</c> (ручные и по расписанию).
+    /// </summary>
+    private void TrackRunningTasks(DashboardDto dashboard)
+    {
+        var now = DateTimeOffset.UtcNow;
+        lock (_followSync)
+        {
+            foreach (var task in dashboard.Tasks)
+            {
+                if (!task.Running || _followed.ContainsKey(task.Id))
+                {
+                    continue;
+                }
+
+                _followed[task.Id] = new FollowState { StartedAt = now, EverRunning = true };
+            }
+        }
+
+        EnsureFollowLoop();
+    }
+
+    /// <summary>Запускает единственный цикл опроса, если он ещё не работает.</summary>
+    private void EnsureFollowLoop()
+    {
+        CancellationToken token;
+        lock (_followSync)
+        {
+            if (_followLoopRunning || _followed.Count == 0)
+            {
+                return;
+            }
+
+            _followCts?.Dispose();
+            _followCts = new CancellationTokenSource();
+            token = _followCts.Token;
+            _followLoopRunning = true;
+            _followUnavailableReported = false;
+        }
+
+        _ = FollowLoopAsync(token);
+    }
+
+    /// <summary>
+    /// Один цикл на все сопровождаемые задачи: 2 с первые 30 с, затем 5 с.
+    /// </summary>
+    private async Task FollowLoopAsync(CancellationToken token)
+    {
+        var loopStartedAt = DateTimeOffset.UtcNow;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                Guid[] ids;
+                lock (_followSync)
+                {
+                    ids = [.. _followed.Keys];
+                }
+
+                if (ids.Length == 0)
+                {
+                    break;
+                }
+
+                foreach (var taskId in ids)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    await PollTaskAsync(taskId, token).ConfigureAwait(true);
+                }
+
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                var interval = DateTimeOffset.UtcNow - loopStartedAt < _followOptions.ShortPhase
+                    ? _followOptions.ShortInterval
+                    : _followOptions.LongInterval;
+                await Task.Delay(interval, token).ConfigureAwait(true);
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Остановка сопровождения — штатный сценарий.
+        }
+        catch (Exception)
+        {
+            // Цикл не должен падать из-за одной ошибки; следующий запуск начнёт заново.
+        }
+        finally
+        {
+            var restart = false;
+            lock (_followSync)
+            {
+                _followLoopRunning = false;
+                restart = _followed.Count > 0;
+            }
+
+            if (restart)
+            {
+                EnsureFollowLoop();
+            }
+        }
+    }
+
+    /// <summary>Один опрос истории сопровождаемой задачи.</summary>
+    private async Task PollTaskAsync(Guid taskId, CancellationToken token)
+    {
+        FollowState? state;
+        lock (_followSync)
+        {
+            _followed.TryGetValue(taskId, out state);
+        }
+
+        if (state is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (now - state.StartedAt >= _followOptions.MaxDuration)
+        {
+            StopFollowing(taskId);
+            return;
+        }
+
+        IReadOnlyList<RunHistory> history;
+        try
+        {
+            history = await _ipc.GetHistoryAsync(taskId, 1, token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (IpcException ex) when (ex.Code == IpcErrorCode.NotFound)
+        {
+            // Задача удалена — сопровождение прекращаем без баннера.
+            StopFollowing(taskId);
+            return;
+        }
+        catch (IpcException ex) when (ex.Code == IpcErrorCode.Unavailable)
+        {
+            // Служба пропала: останавливаем весь цикл и один раз показываем ошибку.
+            StopFollowingForUnavailable(ex);
+            return;
+        }
+        catch (Exception)
+        {
+            // Прочие сбои опроса не спамят баннером: ждём следующий опрос.
+            return;
+        }
+
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var run = history.Count > 0 ? history[0] : null;
+        if (run is null)
+        {
+            // Записи ещё нет: запуск мог не успеть попасть в историю.
+            return;
+        }
+
+        if (run.Status == RunStatus.Running)
+        {
+            state.EverRunning = true;
+            state.NotRunningPolls = 0;
+            if (!TryApplyRunStatus(taskId, run))
+            {
+                StopFollowing(taskId);
+            }
+
+            return;
+        }
+
+        // Grace-период: первый Running=false может быть гонкой старта.
+        if (DateTimeOffset.UtcNow - state.StartedAt < _followOptions.StartGrace)
+        {
+            return;
+        }
+
+        // Запись истории могла остаться от прошлого запуска: ждём новый.
+        if (!state.EverRunning && !IsRunOfCurrentTracking(state, run))
+        {
+            return;
+        }
+
+        state.NotRunningPolls++;
+        if (state.NotRunningPolls < 2)
+        {
+            return;
+        }
+
+        if (!TryApplyRunStatus(taskId, run))
+        {
+            StopFollowing(taskId);
+            return;
+        }
+
+        var item = FindTask(taskId);
+        StopFollowing(taskId);
+
+        if (item is not null)
+        {
+            RunFinished?.Invoke(this, new RunFinishedEventArgs
+            {
+                TaskId = taskId,
+                Name = item.Name,
+                RunStatus = run.Status,
+                ExitCode = run.ExitCode,
+                ErrorMessage = run.ErrorMessage,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Отличает запись нового запуска от прошлой истории: допускаем небольшое
+    /// расхождение часов UI и службы (запуск мог начаться до вызова <see cref="TrackRun"/>).
+    /// </summary>
+    private static bool IsRunOfCurrentTracking(FollowState state, RunHistory run)
+    {
+        if (run.StartTime == default)
+        {
+            return true;
+        }
+
+        return new DateTimeOffset(run.StartTime) >= state.StartedAt.AddSeconds(-2);
+    }
+
+    private bool TryApplyRunStatus(Guid taskId, RunHistory run)
+    {
+        var item = FindTask(taskId);
+        if (item is null)
+        {
+            return false;
+        }
+
+        item.ApplyRunStatus(run);
+        return true;
+    }
+
+    private TaskListItemViewModel? FindTask(Guid taskId)
+        => Tasks.FirstOrDefault(task => task.Id == taskId);
+
+    private void StopFollowing(Guid taskId)
+    {
+        lock (_followSync)
+        {
+            _followed.Remove(taskId);
+        }
+    }
+
+    private void StopFollowingForUnavailable(IpcException exception)
+    {
+        StopFollowing();
+
+        if (_followUnavailableReported)
+        {
+            return;
+        }
+
+        _followUnavailableReported = true;
+
+        // Не перекрываем уже показанную пользователю ошибку.
+        if (!HasError)
+        {
+            SetError(exception);
+        }
+    }
+
+    /// <summary>Состояние сопровождения одной задачи.</summary>
+    private sealed class FollowState
+    {
+        public DateTimeOffset StartedAt { get; init; }
+
+        /// <summary>Хотя бы один опрос подтвердил состояние <c>Running</c>.</summary>
+        public bool EverRunning { get; set; }
+
+        public int NotRunningPolls { get; set; }
     }
 
     private void ApplyDashboard(DashboardDto dashboard)

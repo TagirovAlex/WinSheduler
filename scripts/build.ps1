@@ -3,8 +3,9 @@
     Сборка решения WinSheduler: C++ служба, C# UI, общие модели и тесты.
 
 .DESCRIPTION
-    Находит MSBuild через vswhere (или PATH), восстанавливает NuGet-пакеты
-    C# проектов и собирает ./WinSheduler.sln в указанной конфигурации.
+    Управляемые проекты (C#) собираются через dotnet build из SDK 10.0.4xx,
+    нативные (C++) — через MSBuild из VS 2022. Решение целиком через
+    dotnet build не собирается: в нём есть C++ проект.
     Сборки сериализуются lock-файлом ./temp/locks/build.lock (ожидание до 10 минут).
 
 .PARAMETER Configuration
@@ -31,6 +32,7 @@ function Write-Step {
 
 # Поиск MSBuild: vswhere (ProgramFiles(x86), затем ProgramFiles),
 # явный путь VS 2022 Community, затем msbuild из PATH.
+# MSBuild нужен только для нативных (C++) проектов.
 function Find-MSBuild {
     $vswhereCandidates = @()
 
@@ -114,16 +116,27 @@ try {
         }
     }
 
+    # Управляемые проекты: dotnet build (SDK 10.0.4xx). MSBuild из VS 2022
+    # не поддерживает targeting net10.0 (NETSDK1209/NETSDK1233).
+    Write-Step "Сборка управляемых проектов ($Configuration)"
+    foreach ($project in $projects) {
+        & dotnet build $project -c $Configuration --no-restore --nologo
+        if ($LASTEXITCODE -ne 0) {
+            throw "dotnet build завершился с кодом $LASTEXITCODE ($project)."
+        }
+    }
+
+    # Нативные проекты: только MSBuild из VS 2022.
     $msbuild = Find-MSBuild
     if (-not $msbuild) {
         throw 'MSBuild не найден. Установите Visual Studio 2022 (MSVC v143) или добавьте msbuild в PATH.'
     }
 
-    Write-Step "Сборка решения ($Configuration|$Platform)"
+    Write-Step "Сборка нативных проектов ($Configuration|$Platform)"
     Write-Host "    MSBuild: $msbuild"
 
-    $solution = Join-Path $root 'WinSheduler.sln'
-    & $msbuild $solution "/p:Configuration=$Configuration" "/p:Platform=$Platform" '/m' '/nologo' '/verbosity:minimal'
+    $nativeProject = Join-Path $root 'src/WinShedulerSvc/WinShedulerSvc.vcxproj'
+    & $msbuild $nativeProject "/p:Configuration=$Configuration" "/p:Platform=$Platform" '/m' '/nologo' '/verbosity:minimal'
     if ($LASTEXITCODE -ne 0) {
         throw "Сборка завершилась с кодом $LASTEXITCODE."
     }

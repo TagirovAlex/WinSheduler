@@ -35,12 +35,8 @@ if ($isTestProject) {
 }
 else {
     # Консольный тестовый проект без внешних пакетов.
-    $exe = Join-Path $root "tests/WinSheduler.Tests/bin/$Configuration/net8.0/WinSheduler.Tests.exe"
-    if (-not (Test-Path -LiteralPath $exe)) {
-        throw "Не найден исполняемый файл тестов: $exe"
-    }
-
-    & $exe
+    # TFM не хардкодим: dotnet run сам выбирает целевую платформу проекта.
+    & dotnet run --project $project -c $Configuration --no-build
     if ($LASTEXITCODE -ne 0) {
         throw "Тесты завершились с кодом $LASTEXITCODE."
     }

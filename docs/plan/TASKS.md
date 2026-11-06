@@ -23,13 +23,16 @@
 | 3 | Данные — отдельный `DATADIR`, по умолчанию `%ProgramData%/WinSheduler`. |
 | 4 | Установщик — WiX MSI. |
 | 5 | UI публикуется self-contained, prerequisite .NET не требуется. |
-| 6 | Минимальная ОС — Windows 10 1809+ / Server 2019+. |
+| 6 | Минимальная ОС — Windows 10 1607+ / Server 2016+ (build 14393), ADR 0004. |
 | 7 | Язык UI — русский, строки через `resx`. |
 | 8 | Сертификата подписи нет: шаг подписи — заглушка, выпускается SHA256-манифест. |
 | 9 | CI нет: локальный `./scripts/verify.ps1` и агент Gatekeeper. |
 | 10 | Автоматическая миграция существующей БД. |
 | 11 | Максимальная параллельность после Phase 0; у каждого трека свои файлы. |
 | 12 | Только headless-задачи. Поле `session_mode` резервируется под будущий интерактивный режим. |
+
+> Решение 6 обновлено по ADR 0004 (`./docs/adr/0004-net10-server2016.md`).
+> Детали плана — в `./docs/plan/ROADMAP-2.1.md`.
 
 ## Phase 0 — контракты и швы
 
@@ -184,6 +187,60 @@
 | I-5 | F: установщик + аргументы службы + группа | F-1…F-13 | `[x]` |
 | I-6 | E2E на чистых Win10/Win11/Server, security review, perf sign-off | I-2…I-5 | `[~]` |
 | I-7 | RC: тег `v2.0.2` создан; подпись и release notes — по готовности | I-6 | `[~]` |
+| I-8 | Релиз 2.1: .NET 10, Server 2016, экспорт/импорт задач, живой статус; тег `v2.1.0` | H-8, X-7, Y-6 | `[~]` |
+
+## Phase 3 — платформа 2.1 (Server 2016, .NET 10, обмен задачами)
+
+Детальный план: `./docs/plan/ROADMAP-2.1.md`. Изменения контрактов и
+минимальной ОС — только после ADR H-1 и X-1.
+
+### Track H — платформа
+
+Зона: `./global.json`, `*.csproj`, `./scripts/build.ps1`, `./scripts/test.ps1`,
+`./installer/**`, `./src/WinShedulerSvc/WinShedulerSvc.vcxproj`, документация.
+
+| ID | Задача | Зависит | Владелец | Статус |
+|----|--------|---------|----------|--------|
+| H-1 | ADR: .NET 10 LTS и минимальная ОС Server 2016 (build 14393) | — | Architect | `[x]` |
+| H-2 | `./global.json` (SDK 10.0.4xx), TFM: UI `net10.0-windows`, Shared/тесты `net10.0`; версия 2.1.0 в `Directory.Build.props` | H-1 | Integrator | `[x]` |
+| H-3 | Сборка: managed — `dotnet build`, native — MSBuild; убрать хардкод `net8.0` из `test.ps1` и `ui-smoke.ps1`; обновить тестовые пакеты | H-2 | Track G | `[x]` |
+| H-4 | Установщик: порог ОС `17763` → `14393`, сообщение; `_WIN32_WINNT=0x0601` в оба vcxproj | H-1 | Track F | `[x]` |
+| H-5 | Проверить UI на .NET 10: WPF, `OpenFolderDialog`, `PerMonitorV2`/`activeCodePage` на 1607 | H-2 | Track D | `[x]` |
+| H-6 | Публикация self-contained win-x64, опционально ReadyToRun; версия в `publish.ps1`; бюджет MSI/старта | H-2, H-4 | Track F | `[x]` |
+| H-7 | Документация: README, SPECIFICATION, INSTALL, OPEN_QUESTIONS, RISKS | H-1 | Track G | `[x]` |
+| H-8 | Gate: build/test/verify/MSI + smoke на Server 2016 Desktop Experience и Server Core | H-2…H-7 | Track G | `[~]` |
+
+### Track X — экспорт и импорт задач
+
+Зона: `./src/WinSheduler.Shared/Models/**`, `./src/WinSheduler.UI/Services/**`,
+`./src/WinSheduler.UI/ViewModels/**`, `./src/WinSheduler.UI/MainWindow.*`,
+`./docs/contracts/UI.md`, `./docs/contracts/EXCHANGE.md`, `./tests/**`.
+
+| ID | Задача | Зависит | Владелец | Статус |
+|----|--------|---------|----------|--------|
+| X-1 | ADR и контракт `EXCHANGE.md`: формат JSON v1, лимиты, секреты, владелец | — | Architect | `[x]` |
+| X-2 | C#-модели обмена в `WinSheduler.Shared`: документ, опции, отчёт импорта; camelCase | X-1 | Architect | `[x]` |
+| X-3 | Экспорт в UI: `GetTask` для выбранных, сборка документа, `SaveFileDialog`, без секретов | X-2 | Track D | `[x]` |
+| X-4 | Импорт в UI: чтение/валидация, предпросмотр, режимы copy/skip/overwrite, отчёт | X-2 | Track D | `[x]` |
+| X-5 | UI: multi-select `DataGrid`, команды «Экспорт…»/«Импорт…», строки `resx` | X-3, X-4 | Track E | `[x]` |
+| X-6 | Безопасность: секреты не экспортируются; `hasPassword` без пароля → задача выключена; чужие задачи не перезаписываются | X-1, X-4 | Track B | `[x]` |
+| X-7 | Тесты: round-trip, отсутствие секретов, версия, битый JSON, лимиты, конфликты, права, UI | X-1…X-6 | Track G | `[x]` |
+| X-8 | Документация: `UI.md`, `SECURITY.md`, README, сценарий эксплуатации | X-5 | Track G | `[x]` |
+
+### Track Y — живой статус выполнения
+
+Зона: `./src/WinSheduler.UI/ViewModels/**`, `./src/WinSheduler.UI/MainWindow.*`,
+`./src/WinSheduler.UI/Localization/Strings.resx`, `./tests/ui/**`.
+
+| ID | Задача | Зависит | Владелец | Статус |
+|----|--------|---------|----------|--------|
+| Y-1 | VM: тихое обновление строки без `IsLoading` и без мигания баннера | — | Track D | `[x]` |
+| Y-2 | VM: цикл сопровождения запущенных задач через `GetHistory(taskId, 1)`; 2→5 с, grace 5 с, лимит 24 ч, отмена | Y-1 | Track D | `[x]` |
+| Y-3 | Строка списка: `LastRun.Status`, приоритет Running > ошибка > Enabled/Disabled | Y-2 | Track D | `[x]` |
+| Y-4 | UI: колонки «Статус»/«Последний запуск» с результатом, баннер завершения/ошибки | Y-3 | Track E | `[x]` |
+| Y-5 | Главное окно: запуск сопровождения после `RunNow` и при `running=true`; отмена при закрытии | Y-2 | Track E | `[x]` |
+| Y-6 | Тесты: fake IPC (Running→Completed/Failed), гонка старта, отмена, несколько задач, `UNAVAILABLE` | Y-1…Y-5 | Track G | `[x]` |
+| Y-7 | Документация `UI.md`: автообновление, интервалы, ограничения | Y-4 | Track G | `[x]` |
 
 ## Волны
 
@@ -193,10 +250,13 @@
 | 1 | A, B, C, D, E, F, G — параллельно | P0-9 зелёный |
 | 2 | Продолжение A…G + Integrator (слияния A+C, B+D) | контрактные тесты треков |
 | 3 | E2E, установщик, релиз | I-2…I-5 |
+| 4 | Платформа 2.1: H, X, Y — параллельно после H-2 | H-2, X-1, Y-1 |
 
 ## Критический путь
 
 `P0-6 → P0-7 → P0-9 → C-1 → A-1 → A-2 → A-3/A-4/A-5 → A-9 → A-10 → I-2 → I-6 → I-7`
+
+2.1: `H-1 → H-2 → H-4 → H-8`, `X-1 → X-2 → X-4 → X-7`, `Y-1 → Y-2 → Y-6` → `I-8`.
 
 ## Журнал изменений
 
@@ -206,3 +266,5 @@
 | 2026-11-01 | Phase 0 завершён, gate зелёный, коммит `6dfbf21` |
 | 2026-11-01 | Треки A–G завершены и влиты: C, D, A, B, E, F, G; полный gate зелёный |
 | 2026-11-01 | Исправлены UI-стили (`Border_Width`, видимость Tokens в Controls) и проверка gate для контрактных тестов C# |
+| 2026-11-06 | Добавлен план 2.1: .NET 10, Server 2016, экспорт/импорт задач, живой статус выполнения (`./docs/plan/ROADMAP-2.1.md`) |
+| 2026-11-06 | План 2.1 реализован: .NET 10, порог ОС 14393, экспорт/импорт, живой статус, иконки; gate зелёный, MSI 2.1.0 — 49,8 МБ. `./publish.ps1` собрал финальный комплект в `./published` (SHA256 `57CDFCB4…062A`). Остались smoke Server 2016 и тег `v2.1.0` |

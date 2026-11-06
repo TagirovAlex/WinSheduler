@@ -1,6 +1,6 @@
 # WinSheduler — техническая спецификация
 
-Актуальная версия: 2.0.2. Детальные контракты — в `./docs/contracts/`; этот документ описывает архитектуру и ключевые решения.
+Актуальная версия: 2.1.0. Детальные контракты — в `./docs/contracts/`; этот документ описывает архитектуру и ключевые решения.
 
 ## 1. Назначение
 
@@ -8,8 +8,8 @@
 
 ## 2. Платформы
 
-- Windows 10 1809+ / Windows Server 2019+ (x64).
-- Сборка: Visual Studio 2022 Build Tools (MSVC v143), .NET 8 SDK, WiX 5 для MSI.
+- Windows 10 1607+ / Windows Server 2016+ (x64). UI требует Desktop Experience.
+- Сборка: Visual Studio 2022 Build Tools (MSVC v143), .NET 10 SDK, WiX 5 для MSI.
 - UI: self-contained, .NET Runtime не требуется.
 
 ## 3. Стек
@@ -17,7 +17,7 @@
 | Компонент | Технология |
 |-----------|------------|
 | Служба | C++20, Win32, `/MT`, SQLite amalgamation |
-| UI | C# WPF, .NET 8 |
+| UI | C# WPF, .NET 10 |
 | IPC | именованный канал `//./pipe/WinSheduler`, v1, length-prefix |
 | Хранилище | SQLite, WAL, схема v2 |
 | Шифрование | DPAPI `CRYPTPROTECT_SYSTEM` |

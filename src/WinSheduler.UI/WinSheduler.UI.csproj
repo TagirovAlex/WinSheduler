@@ -29,6 +29,8 @@
     <Resource Include="Resources\Icons\task.png" />
     <Resource Include="Resources\Icons\edit_task.png" />
     <Resource Include="Resources\Icons\edit_schedule.png" />
+    <Resource Include="Resources\Icons\export.png" />
+    <Resource Include="Resources\Icons\import.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,7 +39,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

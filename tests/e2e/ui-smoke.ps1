@@ -12,7 +12,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Exe = './src/WinSheduler.UI/bin/Release/net8.0-windows/WinSheduler.UI.exe'
+    [string]$Exe = './src/WinSheduler.UI/bin/Release/net10.0-windows/WinSheduler.UI.exe'
 )
 
 $ErrorActionPreference = 'Stop'

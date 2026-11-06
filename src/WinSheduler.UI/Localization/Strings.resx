@@ -961,4 +961,155 @@
   <data name="Diagnostics_CopyError" xml:space="preserve">
     <value>Не удалось скопировать сведения: {0}</value>
   </data>
+
+  <data name="Exchange_ImportTitle" xml:space="preserve">
+    <value>Импорт задач</value>
+  </data>
+  <data name="Exchange_Summary" xml:space="preserve">
+    <value>Задач в файле: {0}. Проверьте список и выберите режим импорта.</value>
+  </data>
+  <data name="Exchange_WarningsTitle" xml:space="preserve">
+    <value>Предупреждения</value>
+  </data>
+  <data name="Exchange_NoWarnings" xml:space="preserve">
+    <value>Предупреждений нет.</value>
+  </data>
+  <data name="Exchange_ColumnName" xml:space="preserve">
+    <value>Имя</value>
+  </data>
+  <data name="Exchange_ColumnTriggers" xml:space="preserve">
+    <value>Триггеров</value>
+  </data>
+  <data name="Exchange_ColumnEnabled" xml:space="preserve">
+    <value>Включена</value>
+  </data>
+  <data name="Exchange_ColumnPassword" xml:space="preserve">
+    <value>Пароль</value>
+  </data>
+  <data name="Exchange_ModeLabel" xml:space="preserve">
+    <value>Режим импорта:</value>
+  </data>
+  <data name="Exchange_ModeCopy" xml:space="preserve">
+    <value>Копия (новые идентификаторы)</value>
+  </data>
+  <data name="Exchange_ModeSkip" xml:space="preserve">
+    <value>Пропустить существующие</value>
+  </data>
+  <data name="Exchange_ModeOverwrite" xml:space="preserve">
+    <value>Обновить свои задачи</value>
+  </data>
+  <data name="Exchange_ImportButton" xml:space="preserve">
+    <value>Импорт</value>
+  </data>
+  <data name="Exchange_CancelButton" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="Exchange_Importing" xml:space="preserve">
+    <value>Импорт: {0} из {1}</value>
+  </data>
+  <data name="Exchange_ImportCancelled" xml:space="preserve">
+    <value>Импорт отменён. Уже созданные задачи сохранены.</value>
+  </data>
+  <data name="Exchange_ImportError" xml:space="preserve">
+    <value>Не удалось выполнить импорт: {0}</value>
+  </data>
+  <data name="Exchange_SkipMessage" xml:space="preserve">
+    <value>Задача с таким идентификатором уже существует.</value>
+  </data>
+  <data name="Exchange_ImportAborted" xml:space="preserve">
+    <value>Импорт прерван: служба недоступна, оставшиеся задачи не обрабатывались.</value>
+  </data>
+  <data name="Exchange_ErrorPath" xml:space="preserve">
+    <value>Не задан путь к файлу обмена.</value>
+  </data>
+  <data name="Exchange_ErrorFileMissing" xml:space="preserve">
+    <value>Файл не найден.</value>
+  </data>
+  <data name="Exchange_ErrorFileTooLarge" xml:space="preserve">
+    <value>Файл больше допустимого размера ({0} байт).</value>
+  </data>
+  <data name="Exchange_ErrorRead" xml:space="preserve">
+    <value>Не удалось прочитать файл: {0}</value>
+  </data>
+  <data name="Exchange_ErrorJson" xml:space="preserve">
+    <value>Файл повреждён: не удалось прочитать JSON или недопустимые значения полей.</value>
+  </data>
+  <data name="Exchange_ErrorFormat" xml:space="preserve">
+    <value>Повреждённый файл: неверный формат или отсутствует обязательное поле.</value>
+  </data>
+  <data name="Exchange_ErrorNewerVersion" xml:space="preserve">
+    <value>Файл создан более новой версией WinSheduler.</value>
+  </data>
+  <data name="Exchange_ErrorTooManyTasks" xml:space="preserve">
+    <value>В файле слишком много задач: {0} (допустимо не более {1}).</value>
+  </data>
+  <data name="Exchange_WarningSecretFields" xml:space="preserve">
+    <value>В файле есть секретные или служебные поля; они проигнорированы.</value>
+  </data>
+  <data name="Exchange_WarningPassword" xml:space="preserve">
+    <value>Задача «{0}»: пароль не импортируется. Задайте пароль и включите задачу.</value>
+  </data>
+  <data name="Exchange_WarningProgramMissing" xml:space="preserve">
+    <value>Задача «{0}»: программа не найдена по пути {1}.</value>
+  </data>
+  <data name="Exchange_WarningWorkingDirectoryMissing" xml:space="preserve">
+    <value>Задача «{0}»: рабочий каталог не найден: {1}.</value>
+  </data>
+  <data name="Exchange_ValidationTask" xml:space="preserve">
+    <value>Некорректная запись задачи в файле.</value>
+  </data>
+  <data name="Exchange_ValidationName" xml:space="preserve">
+    <value>Не задано имя задачи.</value>
+  </data>
+  <data name="Exchange_ValidationTriggers" xml:space="preserve">
+    <value>Слишком много триггеров. Допустимо не более {0}.</value>
+  </data>
+  <data name="Exchange_ValidationString" xml:space="preserve">
+    <value>Поле «{0}» длиннее {1} символов.</value>
+  </data>
+  <data name="Exchange_ValidationEnum" xml:space="preserve">
+    <value>Недопустимое значение поля «{0}».</value>
+  </data>
+  <data name="Exchange_ValidationRange" xml:space="preserve">
+    <value>Недопустимое значение поля «{0}».</value>
+  </data>
+  <data name="Exchange_ValidationTime" xml:space="preserve">
+    <value>Недопустимое время в поле «{0}». Ожидается HH:mm.</value>
+  </data>
+  <data name="Main_ActionExport" xml:space="preserve">
+    <value>Экспорт</value>
+  </data>
+  <data name="Main_ActionImport" xml:space="preserve">
+    <value>Импорт</value>
+  </data>
+  <data name="Main_StatusError" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="Main_ExportTitle" xml:space="preserve">
+    <value>Экспорт задач</value>
+  </data>
+  <data name="Main_ImportTitle" xml:space="preserve">
+    <value>Импорт задач</value>
+  </data>
+  <data name="Main_ExchangeFilter" xml:space="preserve">
+    <value>Задачи WinSheduler (*.wstasks.json)|*.wstasks.json|JSON (*.json)|*.json</value>
+  </data>
+  <data name="Main_ExportNoSelection" xml:space="preserve">
+    <value>Выберите хотя бы одну задачу.</value>
+  </data>
+  <data name="Main_ExportSuccess" xml:space="preserve">
+    <value>Экспортировано задач: {0}</value>
+  </data>
+  <data name="Main_ImportEmpty" xml:space="preserve">
+    <value>В файле нет задач.</value>
+  </data>
+  <data name="Main_ImportSuccess" xml:space="preserve">
+    <value>Импорт: создано {0}, пропущено {1}, обновлено {2}, ошибок {3}</value>
+  </data>
+  <data name="Main_RunCompleted" xml:space="preserve">
+    <value>Задача «{0}» завершена</value>
+  </data>
+  <data name="Main_RunFailed" xml:space="preserve">
+    <value>Задача «{0}» завершилась с ошибкой (код {1})</value>
+  </data>
 </root>

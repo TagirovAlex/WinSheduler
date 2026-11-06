@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using WinSheduler.UI.Localization;
 using WinSheduler.UI.Services;
+using AppThemeMode = WinSheduler.UI.Services.ThemeMode;
 
 namespace WinSheduler.UI;
 
@@ -37,7 +38,7 @@ public partial class App : Application
             $"Запуск UI {typeof(App).Assembly.GetName().Version}; журнал: {Services.Logger.DirectoryPath}");
 
         // Стандартная светлая схема Windows; тёмная тема пока не используется.
-        Services.Theme.Apply(ThemeMode.Light);
+        Services.Theme.Apply(AppThemeMode.Light);
 
         if (!TakeSingleInstance())
         {
@@ -196,6 +197,6 @@ public partial class App : Application
         e.SetObserved();
     }
 
-    private static ThemeMode ParseTheme(string? value)
-        => Enum.TryParse<ThemeMode>(value, ignoreCase: true, out var mode) ? mode : ThemeMode.System;
+    private static AppThemeMode ParseTheme(string? value)
+        => Enum.TryParse<AppThemeMode>(value, ignoreCase: true, out var mode) ? mode : AppThemeMode.System;
 }

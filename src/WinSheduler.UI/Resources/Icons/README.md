@@ -13,6 +13,8 @@ Required files:
 - cancel.png
 - ok.png
 - trigger.png
+- export.png
+- import.png
 
 After adding icons, set their Build Action to "Resource" in Visual Studio:
 1. Right-click each icon file

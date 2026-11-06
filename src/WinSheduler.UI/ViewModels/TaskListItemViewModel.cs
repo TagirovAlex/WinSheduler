@@ -1,3 +1,5 @@
+using WinSheduler.Shared;
+using WinSheduler.Shared.Models;
 using WinSheduler.UI.Services;
 
 namespace WinSheduler.UI.ViewModels;
@@ -32,6 +34,21 @@ public sealed class TaskListItemViewModel : ViewModelBase
 
     public bool Running { get; private set; }
 
+    /// <summary>Статус последнего запуска; <c>null</c>, если запусков не было.</summary>
+    public RunStatus? LastRunStatus => LastRun?.Status;
+
+    /// <summary>Последний запуск завершился ошибкой или был прерван.</summary>
+    public bool HasRunError => LastRunStatus is RunStatus.Failed
+        or RunStatus.Killed
+        or RunStatus.Timeout
+        or RunStatus.Aborted;
+
+    /// <summary>Показывать «Ошибка» в колонке статуса (ошибка важнее «включена»).</summary>
+    public bool ShowRunError => !Running && HasRunError;
+
+    /// <summary>Показывать «Включена/Отключена»: нет запуска и нет ошибки.</summary>
+    public bool ShowEnabledState => !Running && !HasRunError;
+
     /// <summary>Копирует изменяемые поля из ответа службы.</summary>
     public void Apply(DashboardTaskDto task)
     {
@@ -53,6 +70,38 @@ public sealed class TaskListItemViewModel : ViewModelBase
             nameof(OwnerLabel),
             nameof(ScheduleSummary),
             nameof(LastRun),
+            nameof(LastRunStatus),
+            nameof(HasRunError),
+            nameof(ShowRunError),
+            nameof(ShowEnabledState),
+            nameof(Running));
+    }
+
+    /// <summary>
+    /// Точечно применяет запись истории сопровождаемого запуска: обновляет
+    /// <see cref="Running"/> и <see cref="LastRun"/> без перезагрузки списка.
+    /// </summary>
+    public void ApplyRunStatus(RunHistory? history)
+    {
+        if (history is null)
+        {
+            return;
+        }
+
+        LastRun = new DashboardLastRunDto
+        {
+            StartTime = history.StartTime == default ? null : new DateTimeOffset(history.StartTime),
+            Status = history.Status,
+            ExitCode = history.ExitCode,
+        };
+        Running = history.Status == RunStatus.Running;
+
+        OnPropertiesChanged(
+            nameof(LastRun),
+            nameof(LastRunStatus),
+            nameof(HasRunError),
+            nameof(ShowRunError),
+            nameof(ShowEnabledState),
             nameof(Running));
     }
 }

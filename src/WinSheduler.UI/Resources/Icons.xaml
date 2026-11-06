@@ -33,5 +33,7 @@
     <BitmapImage x:Key="IconTask" UriSource="pack://application:,,,/;component/Resources/Icons/task.png"/>
     <BitmapImage x:Key="IconEditTask" UriSource="pack://application:,,,/;component/Resources/Icons/edit_task.png"/>
     <BitmapImage x:Key="IconEditSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/edit_schedule.png"/>
+    <BitmapImage x:Key="IconExport" UriSource="pack://application:,,,/;component/Resources/Icons/export.png"/>
+    <BitmapImage x:Key="IconImport" UriSource="pack://application:,,,/;component/Resources/Icons/import.png"/>
 
 </ResourceDictionary>

@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Win32;
+using WinSheduler.Shared;
 using WinSheduler.UI.Localization;
 using WinSheduler.UI.Services;
 using WinSheduler.UI.ViewModels;
@@ -12,6 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly AppServices? _services;
     private readonly DashboardViewModel? _viewModel;
+    private readonly TaskExchangeService? _exchange;
 
     public MainWindow()
     {
@@ -26,9 +30,11 @@ public partial class MainWindow : Window
         }
 
         _viewModel = _services.CreateDashboardViewModel();
+        _exchange = new TaskExchangeService(_services.Ipc, _services.Logger);
         DataContext = _viewModel;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         _viewModel.RefreshCompleted += ViewModel_RefreshCompleted;
+        _viewModel.RunFinished += ViewModel_RunFinished;
 
         Loaded += MainWindow_Loaded;
         Closed += MainWindow_Closed;
@@ -56,8 +62,10 @@ public partial class MainWindow : Window
     {
         if (_viewModel is null) return;
 
+        _viewModel.StopFollowing();
         _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         _viewModel.RefreshCompleted -= ViewModel_RefreshCompleted;
+        _viewModel.RunFinished -= ViewModel_RunFinished;
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e) => UpdateUi();
@@ -66,6 +74,20 @@ public partial class MainWindow : Window
     {
         HideActionError();
         UpdateUi();
+    }
+
+    /// <summary>Сопровождаемый запуск завершился: обновляем статус-бар или баннер ошибки.</summary>
+    private void ViewModel_RunFinished(object? sender, RunFinishedEventArgs e)
+    {
+        if (e.RunStatus == RunStatus.Completed)
+        {
+            HideActionError();
+            StatusSummaryText.Text = Strings.Format("Main_RunCompleted", e.Name);
+            return;
+        }
+
+        var code = e.ExitCode?.ToString(Strings.Culture) ?? Strings.Get("Common_Dash");
+        ShowActionError(Strings.Format("Main_RunFailed", e.Name, code));
     }
 
     private void UpdateUi()
@@ -104,6 +126,10 @@ public partial class MainWindow : Window
         HistoryBtn.IsEnabled = canAct;
         RunNowBtn.IsEnabled = canAct;
         ToggleBtn.IsEnabled = canAct;
+        ExportBtn.IsEnabled = !_viewModel.IsLoading
+            && !_viewModel.IsServiceUnavailable
+            && TaskGrid.SelectedItems.Count > 0;
+        ImportBtn.IsEnabled = !_viewModel.IsLoading && !_viewModel.IsServiceUnavailable;
 
         UpdateEmptyState();
     }
@@ -135,6 +161,9 @@ public partial class MainWindow : Window
         if (_viewModel?.SelectedTask is not { } task) return;
         await OpenEditorAsync(task);
     }
+
+    private void TaskGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => UpdateUi();
 
     private async Task OpenEditorAsync(TaskListItemViewModel? task)
     {
@@ -177,7 +206,8 @@ public partial class MainWindow : Window
         {
             await _services.Ipc.RunNowAsync(task.Id);
             StatusSummaryText.Text = Strings.Format("Main_RunStarted", task.Name);
-            await _viewModel.RefreshAsync();
+            _viewModel.TrackRun(task.Id);
+            await _viewModel.RefreshSilentlyAsync();
         }
         catch (IpcException ex)
         {
@@ -214,6 +244,87 @@ public partial class MainWindow : Window
 
         var history = new HistoryWindow(_services.Ipc, task.Id, task.Name) { Owner = this };
         history.ShowDialog();
+    }
+
+    private async void ExportBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null || _exchange is null) return;
+
+        var taskIds = TaskGrid.SelectedItems
+            .OfType<TaskListItemViewModel>()
+            .Select(static task => task.Id)
+            .ToList();
+        if (taskIds.Count == 0)
+        {
+            ShowActionError(Strings.Get("Main_ExportNoSelection"));
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = Strings.Get("Main_ExportTitle"),
+            Filter = Strings.Get("Main_ExchangeFilter"),
+            DefaultExt = ".wstasks.json",
+            AddExtension = true,
+            FileName = $"winsheduler-tasks-{DateTime.Now:yyyyMMdd-HHmm}.wstasks.json",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            await _exchange.ExportAsync(taskIds, dialog.FileName);
+            HideActionError();
+            StatusSummaryText.Text = Strings.Format("Main_ExportSuccess", taskIds.Count);
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+    }
+
+    private async void ImportBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null || _exchange is null) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = Strings.Get("Main_ImportTitle"),
+            Filter = Strings.Get("Main_ExchangeFilter"),
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            var preview = await _exchange.PreviewAsync(dialog.FileName);
+            if (preview.Tasks.Count == 0)
+            {
+                _services.Dialogs.ShowInfo(Strings.Get("Main_ImportEmpty"));
+                return;
+            }
+
+            var window = new ImportPreviewWindow(_exchange, preview) { Owner = this };
+            if (window.ShowDialog() != true || window.Report is not { } report)
+            {
+                return;
+            }
+
+            HideActionError();
+            StatusSummaryText.Text = Strings.Format(
+                "Main_ImportSuccess",
+                report.Imported,
+                report.Skipped,
+                report.Updated,
+                report.Failed);
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+            return;
+        }
+
+        await _viewModel!.RefreshAsync();
+        await _viewModel.RefreshStatusAsync();
     }
 
     private async void RefreshMenu_Click(object sender, RoutedEventArgs e)

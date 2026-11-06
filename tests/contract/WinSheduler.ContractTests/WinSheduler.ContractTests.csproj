@@ -6,7 +6,7 @@
     чтобы не менять файл решения (зона Integrator).
   -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>WinSheduler.ContractTests</RootNamespace>

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using WinSheduler.UI.Localization;
 using WinSheduler.UI.Services;
+using AppThemeMode = WinSheduler.UI.Services.ThemeMode;
 using Xunit;
 
 namespace WinSheduler.UI.Tests;
@@ -46,7 +47,7 @@ public class DesignSystemAndAccessibilityTests
             var theme = new ThemeService();
             var changed = 0;
             theme.ThemeChanged += (_, _) => changed++;
-            theme.Apply(ThemeMode.Dark);
+            theme.Apply(AppThemeMode.Dark);
 
             var darkBackground = (SolidColorBrush)application.FindResource("App_BackgroundBrush");
 
@@ -55,7 +56,7 @@ public class DesignSystemAndAccessibilityTests
             Assert.NotEqual(lightBackground.Color, darkBackground.Color);
             Assert.Equal(Color.FromRgb(0x20, 0x20, 0x20), darkBackground.Color);
 
-            theme.Apply(ThemeMode.Light);
+            theme.Apply(AppThemeMode.Light);
             var backToLight = (SolidColorBrush)application.FindResource("App_BackgroundBrush");
             Assert.Equal(lightBackground.Color, backToLight.Color);
         });

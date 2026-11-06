@@ -2,7 +2,7 @@
 
 Собственный планировщик задач для Windows: привилегированная служба, WPF-интерфейс и локальный IPC. Не зависит от встроенного Task Scheduler.
 
-Текущая версия — **2.0.2**. Режим выполнения задач — **headless** (без видимого окна); интерактивный режим зарезервирован на будущее.
+Текущая версия — **2.1.0**. Режим выполнения задач — **headless** (без видимого окна); интерактивный режим зарезервирован на будущее.
 
 ## Возможности
 
@@ -15,13 +15,15 @@
 - Журнал запусков, аудит действий, ротация истории и файлов вывода.
 - SQLite (WAL), миграция схемы v1 → v2.
 - WPF-интерфейс: поиск, фильтры, сортировка, горячие клавиши, локальные даты, диагностика.
+- Экспорт и импорт задач (одна или несколько выбранных) в JSON без секретов.
+- Автообновление статуса после запуска: завершение и ошибка видны без F5.
 - Локальная группа `WinSheduler Users` для доступа к IPC без прав администратора.
 - Установщик WiX MSI с поддержкой кастомных каталогов и ACL.
 
 ## Архитектура
 
 ```
-WinSheduler.UI.exe (WPF, .NET 8, self-contained)
+WinSheduler.UI.exe (WPF, .NET 10, self-contained)
   │  named pipe //./pipe/WinSheduler, IPC v1
   │  4 байта длины LE + UTF-8 JSON
   ▼
@@ -51,8 +53,9 @@ WinShedulerSvc.exe (C++ Win32, /MT)
 
 ## Требования
 
-- Windows 10 1809+ / Windows Server 2019+ (x64).
-- Для сборки: Visual Studio 2022 Build Tools (MSVC v143), .NET 8 SDK.
+- Windows 10 1607+ / Windows Server 2016+ (x64).
+- UI требует Desktop Experience и интерактивной сессии; служба работает и на Server Core.
+- Для сборки: Visual Studio 2022 Build Tools (MSVC v143), .NET 10 SDK.
 - Для MSI: WiX Toolset 5 (`dotnet tool install --global wix`).
 - Для запуска UI: .NET Runtime не требуется (self-contained).
 
@@ -182,6 +185,8 @@ msiexec /x ./published/WinSheduler.msi /qn
 - `./docs/plan/AGENTS.md` — правила работы агентов.
 - `./docs/status/gate.md` — результаты локального gate.
 - `./docs/adr/` — принятые решения.
+- `./CHANGELOG.md` — история изменений.
+- `./docs/releases/v2.1.0.md` — заметки релиза 2.1.0.
 
 ## Ограничения v1
 

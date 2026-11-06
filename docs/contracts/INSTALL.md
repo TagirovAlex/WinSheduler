@@ -121,10 +121,10 @@ ACL выставляется установщиком явно и повторн
 Требования к сборке:
 
 - Visual Studio 2022 Build Tools (MSVC v143, Windows 10 SDK).
-- .NET 8 SDK.
+- .NET 10 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).
-- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.0.2` из `./Directory.Build.props`.
+- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.1.0` из `./Directory.Build.props`.
 
 ## 9. Установка
 
@@ -144,7 +144,7 @@ msiexec /x ./published/WinSheduler.msi /qn
 
 ## 10. Обновление и удаление
 
-- `MajorUpgrade` разрешает same-version upgrade (2.0.2 поверх 2.0.2 с другим ProductCode).
+- `MajorUpgrade` разрешает same-version upgrade (2.1.0 поверх 2.1.0 с другим ProductCode).
 - Перед заменой файлов `CloseUi` закрывает `WinSheduler.UI.exe`; служба останавливается через `ServiceControl`.
 
 - Major upgrade, `Schedule="afterInstallValidate"`, блокировка downgrade.
@@ -180,7 +180,7 @@ msiexec /x ./published/WinSheduler.msi /qn
 
 ## 13. Smoke-тест на чистой ВМ
 
-- [ ] Установка на Win10 1809+ / Server 2019+ без .NET Runtime.
+- [ ] Установка на Win10 1607+ / Server 2016+ без .NET Runtime.
 - [ ] Служба запущена, `GetStatus` отвечает.
 - [ ] UI запускается у пользователя из группы без elevation.
 - [ ] Задача создаётся, запускается от своего имени, история пишется.

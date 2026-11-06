@@ -22,7 +22,7 @@
         <Grid Grid.Row="0" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <WrapPanel Grid.Column="0" VerticalAlignment="Center">
@@ -96,10 +96,26 @@
                 </Button>
                 <Button x:Name="ToggleBtn" Click="ToggleBtn_Click"
                         Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,0,6">
+                        Margin="0,0,6,6">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconPause}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionToggle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="ExportBtn" Click="ExportBtn_Click"
+                        Style="{StaticResource ToolbarButton}"
+                        Margin="0,0,6,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconExport}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionExport}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="ImportBtn" Click="ImportBtn_Click"
+                        Style="{StaticResource ToolbarButton}"
+                        Margin="0,0,0,6">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconImport}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionImport}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
             </WrapPanel>
@@ -144,6 +160,8 @@
                       Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding TasksView}"
                       SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                      SelectionMode="Extended" SelectionUnit="FullRow"
+                      SelectionChanged="TaskGrid_SelectionChanged"
                       MouseDoubleClick="TaskGrid_MouseDoubleClick">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
@@ -155,6 +173,9 @@
                         <MenuItem Header="{loc:Loc Main_ActionHistory}" Click="HistoryBtn_Click"/>
                         <MenuItem Header="{loc:Loc Main_ActionRun}" Click="RunNowBtn_Click"/>
                         <MenuItem Header="{loc:Loc Main_ActionToggle}" Click="ToggleBtn_Click"/>
+                        <Separator/>
+                        <MenuItem Header="{loc:Loc Main_ActionExport}" Click="ExportBtn_Click"/>
+                        <MenuItem Header="{loc:Loc Main_ActionImport}" Click="ImportBtn_Click"/>
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -168,16 +189,30 @@
                                     <TextBlock Text="{loc:Loc Main_Running}"
                                                Foreground="{DynamicResource App_AccentBrush}"
                                                Visibility="{Binding Running, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Text="{loc:Loc Main_StatusError}"
+                                               Foreground="{DynamicResource Status_ErrorBrush}"
+                                               Visibility="{Binding ShowRunError, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     <TextBlock Text="{Binding Enabled, Converter={StaticResource BoolToStatusConverter}}"
                                                Foreground="{Binding Enabled, Converter={StaticResource BoolToColorConverter}}"
-                                               Visibility="{Binding Running, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                               Visibility="{Binding ShowEnabledState, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{loc:Loc Main_ColumnSchedule}" Binding="{Binding ScheduleSummary}" Width="200"/>
-                    <DataGridTextColumn Header="{loc:Loc Main_ColumnLastRun}" Width="140"
-                                        Binding="{Binding LastRun.StartTime, Converter={StaticResource LocalDateTimeConverter}, ConverterParameter=dd.MM.yyyy HH:mm}"/>
+                    <DataGridTemplateColumn Header="{loc:Loc Main_ColumnLastRun}" Width="200" SortMemberPath="LastRun.StartTime">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding LastRun.StartTime, Converter={StaticResource LocalDateTimeConverter}, ConverterParameter=dd.MM.yyyy HH:mm}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding LastRun.Status, Converter={StaticResource EnumTextConverter}}"
+                                               Foreground="{Binding LastRun.Status, Converter={StaticResource RunStatusToBrushConverter}}"
+                                               Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
 

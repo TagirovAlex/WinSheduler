@@ -30,9 +30,9 @@ MSI-пакет (WiX Toolset 5), установка per-machine. Контракт
 
 ## 2. Требования к сборочной машине
 
-- Windows 10 1809+ / Server 2019+.
+- Windows 10 1607+ / Server 2016+ (build 14393); UI — Desktop Experience.
 - Visual Studio 2022 Build Tools (MSVC v143, Windows 10 SDK).
-- .NET 8 SDK.
+- .NET 10 SDK.
 - WiX Toolset 5:
 
 ```powershell
@@ -141,7 +141,7 @@ Win32-приложение:
 - uninstall: `msiexec /x "{ProductCode}" /qn` (или `msiexec /x "WinSheduler.msi" /qn`);
 - detection: MSI product code или ключ реестра
   `HKLM/SOFTWARE/WinSheduler` (значение `Version`);
-- требования: Windows 10 1809+, x64, права SYSTEM (по умолчанию для Win32-приложений).
+- требования: Windows 10 1607+ / Server 2016+, x64, права SYSTEM (по умолчанию для Win32-приложений).
 
 Для кастомных путей добавьте свойства в командную строку установки.
 

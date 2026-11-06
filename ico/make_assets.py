@@ -284,6 +284,20 @@ def refresh():
     b2 = (ex-tan[0]*1.5-nor[0]*5, ey-tan[1]*1.5-nor[1]*5)
     return [L(pts, BLUE, 3.6), P([tip, b1, b2], fill=BLUE, stroke=BLUE, sw=1)]
 
+def export_icon():
+    # Лоток + стрелка наружу: выгрузка выбранных заданий.
+    return [R(4, 19, 24, 8, 2.5, fill=BLUE),
+            R(4, 19, 24, 2.5, 1.2, fill=BLUE_D),
+            L([(16, 19), (16, 8)], GREEN, 3.6),
+            P([(10.5, 10.5), (16, 4), (21.5, 10.5)], fill=GREEN, stroke=GREEN, sw=1.4)]
+
+def import_icon():
+    # Лоток + стрелка внутрь: загрузка заданий из файла.
+    return [R(4, 19, 24, 8, 2.5, fill=BLUE),
+            R(4, 19, 24, 2.5, 1.2, fill=BLUE_D),
+            L([(16, 6), (16, 18)], GREEN, 3.6),
+            P([(10.5, 16), (16, 22.5), (21.5, 16)], fill=GREEN, stroke=GREEN, sw=1.4)]
+
 def calendar():
     s = [R(4, 6, 24, 22, 3, fill=WHITE),
          R(4, 6, 24, 7, 3, fill=BLUE), R(4, 9.5, 24, 3.5, 0, fill=BLUE)]
@@ -331,6 +345,8 @@ ICONS = {
     "calendar":     (32, calendar()),
     "task":         (32, task()),
     "schedule":     (32, clock(16, 16, 12)),
+    "export":       (32, export_icon()),
+    "import":       (32, import_icon()),
 }
 CAPTIONS = {
     "app": "Главная форма", "add_task": "Добавить задание", "add_schedule": "Добавить расписание",
@@ -339,6 +355,7 @@ CAPTIONS = {
     "delete": "Удалить", "journal": "Журнал", "run": "Запустить", "open_folder": "Открыть папку",
     "save": "Сохранить", "cancel": "Отмена", "calendar": "Выбор периода",
     "task": "Задание (узел)", "schedule": "Расписание (узел)",
+    "export": "Экспорт задач", "import": "Импорт задач",
 }
 
 # ───────────── ЛОГОТИП (горизонтальный) ─────────────

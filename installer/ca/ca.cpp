@@ -622,7 +622,7 @@ bool CheckWindowsVersion(MSIHANDLE hInstall) {
     if (ReadRegistryVersion(registry)) {
         LogOsVersion(hInstall, registry);
         return registry.major > 10 ||
-               (registry.major == 10 && registry.build >= 17763);
+               (registry.major == 10 && registry.build >= 14393);
     }
 
     // Резерв — версия kernel32.dll, тоже не шимится.
@@ -630,14 +630,14 @@ bool CheckWindowsVersion(MSIHANDLE hInstall) {
     if (ReadKernelVersion(kernel)) {
         LogOsVersion(hInstall, kernel);
         return kernel.major > 10 ||
-               (kernel.major == 10 && kernel.build >= 17763);
+               (kernel.major == 10 && kernel.build >= 14393);
     }
 
     // Последний резерв — RtlGetVersion; при сомнении установку не блокируем.
     OsVersionInfo rtl;
     if (ReadRtlVersion(rtl)) {
         LogOsVersion(hInstall, rtl);
-        if (rtl.major > 10 || (rtl.major == 10 && rtl.build >= 17763)) {
+        if (rtl.major > 10 || (rtl.major == 10 && rtl.build >= 14393)) {
             return true;
         }
     }
@@ -820,7 +820,7 @@ extern "C" __declspec(dllexport) UINT __stdcall ValidatePaths(MSIHANDLE hInstall
 
         if (!CheckWindowsVersion(hInstall)) {
             return Fail(hInstall,
-                        L"WinSheduler требует Windows 10 1809 (build 17763) или Windows Server 2019 "
+                        L"WinSheduler требует Windows 10 1607 (build 14393) или Windows Server 2016 "
                         L"и новее.");
         }
 
