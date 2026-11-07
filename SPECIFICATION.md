@@ -9,7 +9,7 @@
 ## 2. Платформы
 
 - Windows 10 1607+ / Windows Server 2016+ (x64). UI требует Desktop Experience.
-- Сборка: Visual Studio 2022 Build Tools (MSVC v143), .NET 10 SDK, WiX 5 для MSI.
+- Сборка: Visual Studio 2022/2026 Build Tools (MSVC v143/v145), .NET 10 SDK, WiX 5 для MSI.
 - UI: self-contained, .NET Runtime не требуется.
 
 ## 3. Стек

@@ -249,28 +249,6 @@
         <!-- Стандартный шаблон WPF: цвета и выпадающий список системные. -->
     </Style>
 
-    <!-- Панель действий: WPF-аналог ToolStrip, без лишней рамки и фона. -->
-    <Style x:Key="AppToolBar" TargetType="ToolBar">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="MinHeight" Value="32" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <!-- Без кнопки overflow: все действия остаются видимыми. -->
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ToolBar">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}">
-                        <WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <Style x:Key="StatusBarStyle" TargetType="StatusBar">
         <Setter Property="Background" Value="{DynamicResource App_ToolbarBackgroundBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource App_ForegroundBrush}" />

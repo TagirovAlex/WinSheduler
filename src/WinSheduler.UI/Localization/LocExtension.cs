@@ -21,5 +21,16 @@ public sealed class LocExtension : MarkupExtension
     public string Key { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public override object ProvideValue(IServiceProvider serviceProvider) => Strings.Get(Key);
+    public override object ProvideValue(IServiceProvider serviceProvider)
+    {
+        try
+        {
+            return Strings.Get(Key);
+        }
+        catch
+        {
+            // Дизайнер VS может загрузить XAML до инициализации ресурсов.
+            return string.IsNullOrEmpty(Key) ? string.Empty : $"!{Key}!";
+        }
+    }
 }

@@ -55,7 +55,7 @@ WinShedulerSvc.exe (C++ Win32, /MT)
 
 - Windows 10 1607+ / Windows Server 2016+ (x64).
 - UI требует Desktop Experience и интерактивной сессии; служба работает и на Server Core.
-- Для сборки: Visual Studio 2022 Build Tools (MSVC v143), .NET 10 SDK.
+- Для сборки: Visual Studio 2022/2026 Build Tools (MSVC v143/v145), .NET 10 SDK.
 - Для MSI: WiX Toolset 5 (`dotnet tool install --global wix`).
 - Для запуска UI: .NET Runtime не требуется (self-contained).
 
@@ -70,11 +70,17 @@ UI-проект multi-target: `net8.0-windows` (для XAML-дизайнера V
 `net10.0`; VS 2026 поддерживает обе цели.
 
 1. Откройте `./WinSheduler.Design.slnf` — в нём только UI и Shared.
-2. В свойствах `WinSheduler.UI` выберите Target Framework `net8.0-windows`.
-3. Откройте `./src/WinSheduler.UI/MainWindow.xaml` — дизайнер и панель
-   «Документ» доступны для правок.
-4. Релизная сборка и публикация — `net10.0-windows`:
-   `dotnet publish ... -f net10.0-windows`.
+2. Назначьте `WinSheduler.UI` стартовым проектом (ПКМ → Set as Startup Project).
+3. В свойствах `WinSheduler.UI` выберите Target Framework: `net8.0-windows`
+   для VS 2022 или `net10.0-windows` для VS 2026.
+4. Соберите проект (`Build → Build WinSheduler.UI`).
+5. Откройте `./src/WinSheduler.UI/MainWindow.xaml`. Если открылся XML:
+   ПКМ → Open With… → XAML Designer → Set as Default.
+6. Если дизайнер выключен: Tools → Options → XAML Designer → General →
+   Enable XAML Designer, перезапустить VS.
+
+Релизная сборка и публикация — `net10.0-windows`:
+`dotnet publish ... -f net10.0-windows`.
 
 ```powershell
 # Сборка решения

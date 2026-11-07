@@ -50,7 +50,7 @@ function Find-MSBuild {
 
 $msbuild = Find-MSBuild
 if (-not $msbuild) {
-    throw 'MSBuild не найден. Установите Visual Studio 2022 (MSVC v143) или добавьте msbuild в PATH.'
+    throw 'MSBuild не найден. Установите Visual Studio 2022/2026 с C++-инструментами или добавьте msbuild в PATH.'
 }
 
 $project = Join-Path $PSScriptRoot 'ipc_tests.vcxproj'

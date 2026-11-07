@@ -98,7 +98,15 @@ function Find-MSBuild {
     foreach ($vswhere in $vswhereCandidates) {
         if (-not (Test-Path -LiteralPath $vswhere)) { continue }
 
-        $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        # Служба и DLL установщика используют toolset по умолчанию (v143/v145): сначала VS 2022,
+        # затем любой MSBuild с C++-инструментами, затем любой MSBuild.
+        $installationPath = & $vswhere -latest -version '[17.0,18.0)' -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        }
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        }
         if (-not $installationPath) { continue }
 
         $candidate = Join-Path $installationPath 'MSBuild/Current/Bin/MSBuild.exe'
@@ -205,7 +213,7 @@ foreach ($directory in @($artifacts, $uiArtifacts, $serviceArtifacts)) {
 Write-Step 'Сборка службы (C++, Release|x64)'
 $msbuild = Find-MSBuild
 if (-not $msbuild) {
-    throw 'MSBuild не найден. Установите Visual Studio 2022 Build Tools (MSVC v143).'
+    throw 'MSBuild не найден. Установите Visual Studio 2022/2026 Build Tools с C++-инструментами.'
 }
 
 & $msbuild (Join-Path $root 'src/WinShedulerSvc/WinShedulerSvc.vcxproj') `

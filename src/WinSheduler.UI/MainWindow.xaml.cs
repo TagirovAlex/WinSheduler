@@ -22,6 +22,13 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // В XAML-дизайнере не выполняем рантайм-инициализацию и не трогаем службу.
+        if (DesignerProperties.GetIsInDesignMode(this))
+        {
+            return;
+        }
+
         ApplyWorkAreaLimits();
 
         _services = App.Services;

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -29,6 +30,12 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // В XAML-дизайнере не создаём службы, не берём mutex и не открываем окно.
+        if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
+        {
+            return;
+        }
 
         Services = new AppServices();
         _servicesReady = true;

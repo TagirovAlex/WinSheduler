@@ -31,7 +31,7 @@ MSI-пакет (WiX Toolset 5), установка per-machine. Контракт
 ## 2. Требования к сборочной машине
 
 - Windows 10 1607+ / Server 2016+ (build 14393); UI — Desktop Experience.
-- Visual Studio 2022 Build Tools (MSVC v143, Windows 10 SDK).
+- Visual Studio 2022/2026 Build Tools (MSVC v143/v145, Windows 10 SDK).
 - .NET 10 SDK.
 - WiX Toolset 5:
 

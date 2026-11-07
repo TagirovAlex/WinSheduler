@@ -48,7 +48,15 @@ function Find-MSBuild {
     foreach ($vswhere in $vswhereCandidates) {
         if (-not (Test-Path -LiteralPath $vswhere)) { continue }
 
-        $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        # Контрактные тесты используют toolset v143: сначала VS 2022,
+        # затем любой MSBuild с C++-инструментами, затем любой MSBuild.
+        $installationPath = & $vswhere -latest -version '[17.0,18.0)' -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        }
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        }
         if (-not $installationPath) { continue }
 
         $candidate = Join-Path $installationPath 'MSBuild/Current/Bin/MSBuild.exe'

@@ -46,7 +46,15 @@ function Find-MSBuild {
     foreach ($vswhere in $vswhereCandidates) {
         if (-not (Test-Path -LiteralPath $vswhere)) { continue }
 
-        $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        # Проект использует toolset по умолчанию (v143/v145): сначала ищем VS 2022 (17.x),
+        # затем любой MSBuild с C++-инструментами, затем любой MSBuild.
+        $installationPath = & $vswhere -latest -version '[17.0,18.0)' -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+        }
+        if (-not $installationPath) {
+            $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath 2>$null
+        }
         if (-not $installationPath) { continue }
 
         $candidate = Join-Path $installationPath 'MSBuild/Current/Bin/MSBuild.exe'
@@ -129,7 +137,7 @@ try {
     # Нативные проекты: только MSBuild из VS 2022.
     $msbuild = Find-MSBuild
     if (-not $msbuild) {
-        throw 'MSBuild не найден. Установите Visual Studio 2022 (MSVC v143) или добавьте msbuild в PATH.'
+        throw 'MSBuild не найден. Установите Visual Studio 2022/2026 с C++-инструментами или добавьте msbuild в PATH.'
     }
 
     Write-Step "Сборка нативных проектов ($Configuration|$Platform)"

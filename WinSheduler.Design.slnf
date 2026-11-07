@@ -2,8 +2,8 @@
   "solution": {
     "path": "WinSheduler.sln",
     "projects": [
-      "src\\WinSheduler.Shared\\WinSheduler.Shared.csproj",
-      "src\\WinSheduler.UI\\WinSheduler.UI.csproj"
+      "src\\WinSheduler.UI\\WinSheduler.UI.csproj",
+      "src\\WinSheduler.Shared\\WinSheduler.Shared.csproj"
     ]
   }
 }

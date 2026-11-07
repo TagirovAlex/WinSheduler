@@ -120,7 +120,7 @@ ACL выставляется установщиком явно и повторн
 
 Требования к сборке:
 
-- Visual Studio 2022 Build Tools (MSVC v143, Windows 10 SDK).
+- Visual Studio 2022/2026 Build Tools (MSVC v143/v145, Windows 10 SDK).
 - .NET 10 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).

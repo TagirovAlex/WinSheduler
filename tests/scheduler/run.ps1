@@ -49,7 +49,7 @@ function Find-MSBuild {
 
 $msbuild = Find-MSBuild
 if (-not $msbuild) {
-    throw 'MSBuild не найден. Установите Visual Studio 2022 (MSVC v143).'
+    throw 'MSBuild не найден. Установите Visual Studio 2022/2026 с C++-инструментами.'
 }
 
 Write-Host "==> Сборка тестов планировщика ($Configuration|x64)" -ForegroundColor Cyan

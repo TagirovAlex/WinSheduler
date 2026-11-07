@@ -59,7 +59,7 @@
 
 ## Требования
 
-- Visual Studio 2022 (MSVC v143, Windows 10 SDK) или Build Tools с MSBuild.
+- Visual Studio 2022/2026 (MSVC v143/v145, Windows 10 SDK) или Build Tools с MSBuild.
 - .NET 10 SDK.
 - WiX 5 для MSI: `dotnet tool install --global wix --version 5.0.2`,
   `wix extension add -g WixToolset.UI.wixext/5.0.2`.
