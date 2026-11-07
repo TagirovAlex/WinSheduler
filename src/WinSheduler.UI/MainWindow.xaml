@@ -55,9 +55,9 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <WrapPanel x:Name="ActionsToolBar" Grid.Row="0"
-                       Orientation="Horizontal" VerticalAlignment="Center">
+            <Canvas x:Name="ActionsToolBar" Grid.Row="0" Height="34" ClipToBounds="False">
                 <Button x:Name="AddBtn" Click="AddBtn_Click"
+                        Canvas.Left="0" Canvas.Top="3"
                         AutomationProperties.Name="{loc:Loc Main_ActionAdd}"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
@@ -67,6 +67,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="EditBtn" Click="EditBtn_Click"
+                        Canvas.Left="90" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -75,6 +76,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
+                        Canvas.Left="180" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -83,6 +85,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="ToggleBtn" Click="ToggleBtn_Click"
+                        Canvas.Left="270" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -91,6 +94,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="HistoryBtn" Click="HistoryBtn_Click"
+                        Canvas.Left="420" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -99,6 +103,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="RunNowBtn" Click="RunNowBtn_Click"
+                        Canvas.Left="510" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -107,6 +112,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="RefreshBtn" Command="{Binding RefreshCommand}"
+                        Canvas.Left="600" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         ToolTip="{loc:Loc Main_ActionRefresh}"
                         Margin="0,0,4,0">
@@ -116,6 +122,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="ExportBtn" Click="ExportBtn_Click"
+                        Canvas.Left="690" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -124,6 +131,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="ImportBtn" Click="ImportBtn_Click"
+                        Canvas.Left="780" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -132,6 +140,7 @@
                     </StackPanel>
                 </Button>
                 <Button x:Name="DiagnosticsBtn" Click="DiagnosticsBtn_Click"
+                        Canvas.Left="870" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
                         Margin="0,0,0,0">
                     <StackPanel Orientation="Horizontal">
@@ -139,7 +148,7 @@
                         <TextBlock Text="{loc:Loc Main_ActionDiagnostics}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-            </WrapPanel>
+            </Canvas>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
                         VerticalAlignment="Center" Margin="0,6,160,0">

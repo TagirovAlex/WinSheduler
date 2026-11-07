@@ -29,13 +29,14 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e);
-
         // В XAML-дизайнере не создаём службы, не берём mutex и не открываем окно.
-        if (DesignerProperties.GetIsInDesignMode(new DependencyObject()))
+        if (DesignerProperties.GetIsInDesignMode(new DependencyObject()) ||
+            LicenseManager.UsageMode == LicenseUsageMode.Designtime)
         {
             return;
         }
+
+        base.OnStartup(e);
 
         Services = new AppServices();
         _servicesReady = true;

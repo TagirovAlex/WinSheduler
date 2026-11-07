@@ -24,7 +24,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // В XAML-дизайнере не выполняем рантайм-инициализацию и не трогаем службу.
-        if (DesignerProperties.GetIsInDesignMode(this))
+        if (IsDesignTime)
         {
             return;
         }
@@ -61,11 +61,16 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        if (_viewModel is null) return;
+        // Страховка: дизайнер не должен обращаться к службе, даже если Loaded сработал.
+        if (IsDesignTime || _viewModel is null) return;
 
         await _viewModel.RefreshStatusAsync();
         await _viewModel.RefreshAsync();
     }
+
+    private static bool IsDesignTime =>
+        DesignerProperties.GetIsInDesignMode(new DependencyObject()) ||
+        LicenseManager.UsageMode == LicenseUsageMode.Designtime;
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {

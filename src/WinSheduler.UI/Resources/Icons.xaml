@@ -3,37 +3,38 @@
 
     <!--
         Иконки приложения из ./ico/icons/png/16.
-        Формат pack URI: ;component = сборка по умолчанию.
+        Формат pack URI: имя сборки указано явно (WinSheduler.UI), иначе
+        XAML-дизайнер VS не находит ресурсы и рисует ошибки вместо иконок.
         Старые ключи сохранены как алиасы для совместимости экранов.
     -->
 
-    <BitmapImage x:Key="IconRefresh" UriSource="pack://application:,,,/;component/Resources/Icons/refresh.png"/>
-    <BitmapImage x:Key="IconAdd" UriSource="pack://application:,,,/;component/Resources/Icons/add.png"/>
-    <BitmapImage x:Key="IconEdit" UriSource="pack://application:,,,/;component/Resources/Icons/edit_task.png"/>
-    <BitmapImage x:Key="IconDelete" UriSource="pack://application:,,,/;component/Resources/Icons/delete.png"/>
-    <BitmapImage x:Key="IconHistory" UriSource="pack://application:,,,/;component/Resources/Icons/journal.png"/>
-    <BitmapImage x:Key="IconBrowse" UriSource="pack://application:,,,/;component/Resources/Icons/open_folder.png"/>
-    <BitmapImage x:Key="IconSave" UriSource="pack://application:,,,/;component/Resources/Icons/save.png"/>
-    <BitmapImage x:Key="IconCancel" UriSource="pack://application:,,,/;component/Resources/Icons/cancel.png"/>
-    <BitmapImage x:Key="IconOk" UriSource="pack://application:,,,/;component/Resources/Icons/save.png"/>
-    <BitmapImage x:Key="IconTrigger" UriSource="pack://application:,,,/;component/Resources/Icons/schedule.png"/>
-    <BitmapImage x:Key="IconStart" UriSource="pack://application:,,,/;component/Resources/Icons/start.png"/>
+    <BitmapImage x:Key="IconRefresh" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/refresh.png"/>
+    <BitmapImage x:Key="IconAdd" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/add.png"/>
+    <BitmapImage x:Key="IconEdit" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/edit_task.png"/>
+    <BitmapImage x:Key="IconDelete" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/delete.png"/>
+    <BitmapImage x:Key="IconHistory" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/journal.png"/>
+    <BitmapImage x:Key="IconBrowse" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/open_folder.png"/>
+    <BitmapImage x:Key="IconSave" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/save.png"/>
+    <BitmapImage x:Key="IconCancel" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/cancel.png"/>
+    <BitmapImage x:Key="IconOk" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/save.png"/>
+    <BitmapImage x:Key="IconTrigger" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/schedule.png"/>
+    <BitmapImage x:Key="IconStart" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/start.png"/>
 
     <!-- Новый набор -->
-    <BitmapImage x:Key="IconAddTask" UriSource="pack://application:,,,/;component/Resources/Icons/add_task.png"/>
-    <BitmapImage x:Key="IconAddSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/add_schedule.png"/>
-    <BitmapImage x:Key="IconApp" UriSource="pack://application:,,,/;component/Resources/Icons/app.png"/>
-    <BitmapImage x:Key="IconCalendar" UriSource="pack://application:,,,/;component/Resources/Icons/calendar.png"/>
-    <BitmapImage x:Key="IconJournal" UriSource="pack://application:,,,/;component/Resources/Icons/journal.png"/>
-    <BitmapImage x:Key="IconOpenFolder" UriSource="pack://application:,,,/;component/Resources/Icons/open_folder.png"/>
-    <BitmapImage x:Key="IconPause" UriSource="pack://application:,,,/;component/Resources/Icons/pause.png"/>
-    <BitmapImage x:Key="IconRun" UriSource="pack://application:,,,/;component/Resources/Icons/run.png"/>
-    <BitmapImage x:Key="IconSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/schedule.png"/>
-    <BitmapImage x:Key="IconStop" UriSource="pack://application:,,,/;component/Resources/Icons/stop.png"/>
-    <BitmapImage x:Key="IconTask" UriSource="pack://application:,,,/;component/Resources/Icons/task.png"/>
-    <BitmapImage x:Key="IconEditTask" UriSource="pack://application:,,,/;component/Resources/Icons/edit_task.png"/>
-    <BitmapImage x:Key="IconEditSchedule" UriSource="pack://application:,,,/;component/Resources/Icons/edit_schedule.png"/>
-    <BitmapImage x:Key="IconExport" UriSource="pack://application:,,,/;component/Resources/Icons/export.png"/>
-    <BitmapImage x:Key="IconImport" UriSource="pack://application:,,,/;component/Resources/Icons/import.png"/>
+    <BitmapImage x:Key="IconAddTask" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/add_task.png"/>
+    <BitmapImage x:Key="IconAddSchedule" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/add_schedule.png"/>
+    <BitmapImage x:Key="IconApp" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/app.png"/>
+    <BitmapImage x:Key="IconCalendar" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/calendar.png"/>
+    <BitmapImage x:Key="IconJournal" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/journal.png"/>
+    <BitmapImage x:Key="IconOpenFolder" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/open_folder.png"/>
+    <BitmapImage x:Key="IconPause" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/pause.png"/>
+    <BitmapImage x:Key="IconRun" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/run.png"/>
+    <BitmapImage x:Key="IconSchedule" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/schedule.png"/>
+    <BitmapImage x:Key="IconStop" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/stop.png"/>
+    <BitmapImage x:Key="IconTask" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/task.png"/>
+    <BitmapImage x:Key="IconEditTask" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/edit_task.png"/>
+    <BitmapImage x:Key="IconEditSchedule" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/edit_schedule.png"/>
+    <BitmapImage x:Key="IconExport" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/export.png"/>
+    <BitmapImage x:Key="IconImport" UriSource="pack://application:,,,/WinSheduler.UI;component/Resources/Icons/import.png"/>
 
 </ResourceDictionary>
