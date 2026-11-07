@@ -131,17 +131,18 @@
                 </Button>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
-                        VerticalAlignment="Center" Margin="0,6,160,0">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left"
+                        VerticalAlignment="Center" Height="34" Margin="0,6,0,0">
                 <TextBlock Text="{loc:Loc Main_SearchLabel}" Style="{StaticResource CaptionText}"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBox x:Name="SearchBox" Width="220" Margin="0,0,12,0"
+                <TextBox x:Name="SearchBox" Width="220" Height="22" VerticalAlignment="Center"
+                         Margin="0,0,12,0"
                          Style="{StaticResource FormTextBox}"
                          ToolTip="{loc:Loc Main_SearchPlaceholder}"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
                 <TextBlock Text="{loc:Loc Main_FilterLabel}" Style="{StaticResource CaptionText}"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <ComboBox x:Name="FilterBox" Width="150"
+                <ComboBox x:Name="FilterBox" Width="130" Height="22" VerticalAlignment="Center"
                           Style="{StaticResource FormComboBox}"
                           SelectedValue="{Binding Filter, Mode=TwoWay}"
                           SelectedValuePath="Tag">
