@@ -6,7 +6,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        d:DesignWidth="1366" d:DesignHeight="720"
         Title="{loc:Loc Main_Title}" Height="720" Width="1366"
         MinHeight="700" MinWidth="1024"
         WindowStartupLocation="CenterScreen"
@@ -57,92 +56,82 @@
 
             <Canvas x:Name="ActionsToolBar" Grid.Row="0" Height="34" ClipToBounds="False">
                 <Button x:Name="AddBtn" Click="AddBtn_Click"
-                        Canvas.Left="0" Canvas.Top="3"
+                        Canvas.Left="1" Canvas.Top="3"
                         AutomationProperties.Name="{loc:Loc Main_ActionAdd}"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Style="{StaticResource ToolbarButton}" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconAddTask}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionAdd}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="EditBtn" Click="EditBtn_Click"
-                        Canvas.Left="90" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="95" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconEditTask}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionEdit}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
-                        Canvas.Left="180" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="190" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconDelete}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionDelete}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="ToggleBtn" Click="ToggleBtn_Click"
-                        Canvas.Left="270" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="275" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconPause}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionToggle}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="HistoryBtn" Click="HistoryBtn_Click"
-                        Canvas.Left="420" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="528" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconJournal}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionHistory}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="RunNowBtn" Click="RunNowBtn_Click"
-                        Canvas.Left="510" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="433" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconRun}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionRun}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="RefreshBtn" Command="{Binding RefreshCommand}"
-                        Canvas.Left="600" Canvas.Top="3"
+                        Canvas.Left="612" Canvas.Top="3"
                         Style="{StaticResource ToolbarButton}"
-                        ToolTip="{loc:Loc Main_ActionRefresh}"
-                        Margin="0,0,4,0">
+                        ToolTip="{loc:Loc Main_ActionRefresh}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionRefresh}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="ExportBtn" Click="ExportBtn_Click"
-                        Canvas.Left="690" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="707" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconExport}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionExport}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="ImportBtn" Click="ImportBtn_Click"
-                        Canvas.Left="780" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,4,0">
+                        Canvas.Left="793" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconImport}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionImport}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="DiagnosticsBtn" Click="DiagnosticsBtn_Click"
-                        Canvas.Left="870" Canvas.Top="3"
-                        Style="{StaticResource ToolbarButton}"
-                        Margin="0,0,0,0">
+                        Canvas.Left="877" Canvas.Top="3"
+                        Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource IconApp}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                         <TextBlock Text="{loc:Loc Main_ActionDiagnostics}" VerticalAlignment="Center" />
@@ -150,20 +139,20 @@
                 </Button>
             </Canvas>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center"
-                        VerticalAlignment="Center" Margin="0,6,160,0">
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="34">
                 <TextBlock Text="{loc:Loc Main_SearchLabel}" Style="{StaticResource CaptionText}"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <TextBox x:Name="SearchBox" Width="220" Margin="0,0,12,0"
                          Style="{StaticResource FormTextBox}"
                          ToolTip="{loc:Loc Main_SearchPlaceholder}"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" Height="22"/>
                 <TextBlock Text="{loc:Loc Main_FilterLabel}" Style="{StaticResource CaptionText}"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <ComboBox x:Name="FilterBox" Width="150"
+                <ComboBox x:Name="FilterBox" Width="130"
                           Style="{StaticResource FormComboBox}"
                           SelectedValue="{Binding Filter, Mode=TwoWay}"
-                          SelectedValuePath="Tag">
+                          SelectedValuePath="Tag" Height="22" RenderTransformOrigin="0.515,1.361" VerticalAlignment="Center" Margin="0,0,0,0">
                     <ComboBoxItem Content="{loc:Loc Main_FilterAll}" Tag="{x:Static vm:TaskFilter.All}"/>
                     <ComboBoxItem Content="{loc:Loc Main_FilterMine}" Tag="{x:Static vm:TaskFilter.Mine}"/>
                     <ComboBoxItem Content="{loc:Loc Main_FilterEnabled}" Tag="{x:Static vm:TaskFilter.Enabled}"/>
@@ -173,16 +162,16 @@
         </Grid>
 
         <!-- Ошибка загрузки / служба недоступна -->
-        <Border Grid.Row="2" Margin="12,0,12,0" Style="{StaticResource StatusBannerError}"
+        <Border Grid.Row="2" Margin="12,0,12,8" Style="{StaticResource StatusBannerError}"
                 Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel>
                 <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap"/>
                 <TextBlock Text="{loc:Loc Main_ServiceUnavailableHint}" TextWrapping="Wrap"
                            Margin="0,4,0,0"
-                           Visibility="{Binding IsServiceUnavailable, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                           Visibility="{Binding IsServiceUnavailable, Converter={StaticResource BoolToVisibilityConverter}}" Height="21"/>
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <Button Command="{Binding RefreshCommand}"
-                            Style="{StaticResource SecondaryButton}" Margin="0,0,8,0">
+                            Style="{StaticResource SecondaryButton}">
                         <StackPanel Orientation="Horizontal">
                             <Image Source="{StaticResource IconRefresh}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
                             <TextBlock Text="{loc:Loc Common_Retry}" VerticalAlignment="Center" />
@@ -200,7 +189,7 @@
         </Border>
 
         <!-- Ошибка действия (удаление, запуск, переключение) -->
-        <Border x:Name="ActionBanner" Grid.Row="3" Margin="12,0,12,0"
+        <Border x:Name="ActionBanner" Grid.Row="3" Margin="12,0,12,8"
                 Style="{StaticResource StatusBannerError}" Visibility="Collapsed">
             <TextBlock x:Name="ActionBannerText" TextWrapping="Wrap"/>
         </Border>
