@@ -64,8 +64,38 @@ public partial class MainWindow : Window
         // Страховка: дизайнер не должен обращаться к службе, даже если Loaded сработал.
         if (IsDesignTime || _viewModel is null) return;
 
+        ApplyPreferredWidth();
+
         await _viewModel.RefreshStatusAsync();
         await _viewModel.RefreshAsync();
+    }
+
+    /// <summary>
+    /// Ширина формы — по строке кнопок: уже не сделать, шире при старте не нужно.
+    /// При maximise окно расширяется, таблица тянется за ним.
+    /// </summary>
+    private void ApplyPreferredWidth()
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            return;
+        }
+
+        var toolbarWidth = ActionsToolBar.ActualWidth;
+        if (toolbarWidth <= 0)
+        {
+            toolbarWidth = ActionsToolBar.DesiredSize.Width;
+        }
+
+        if (toolbarWidth <= 0)
+        {
+            return;
+        }
+
+        var target = Math.Ceiling(
+            toolbarWidth + 24 + SystemParameters.ResizeFrameVerticalBorderWidth * 2);
+        MinWidth = Math.Max(800, target);
+        Width = target;
     }
 
     private static bool IsDesignTime =>
