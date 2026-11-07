@@ -11,7 +11,7 @@
     Включить ReadyToRun для UI.
 
 .PARAMETER Version
-    Версия продукта x.y.z. По умолчанию — 2.1.0.
+    Версия продукта x.y.z. По умолчанию — 2.1.1.
 
 .PARAMETER SkipMsi
     Собрать только службу и UI, без MSI.
@@ -19,7 +19,7 @@
 [CmdletBinding()]
 param(
     [switch]$ReadyToRun,
-    [string]$Version = '2.1.0',
+    [string]$Version = '2.1.1',
     [switch]$SkipMsi
 )
 
@@ -70,7 +70,7 @@ if (Test-Path -LiteralPath $wixpdb) {
     Remove-Item -LiteralPath $wixpdb -Force
 }
 
-$displayVersion = if ($Version) { $Version } else { '2.1.0' }
+$displayVersion = if ($Version) { $Version } else { '2.1.1' }
 $msiLine = if ($SkipMsi) {
     'MSI не собирался (SkipMsi).'
 }
