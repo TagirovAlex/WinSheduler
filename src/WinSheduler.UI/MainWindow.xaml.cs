@@ -53,8 +53,8 @@ public partial class MainWindow : Window
     private void ApplyWorkAreaLimits()
     {
         var area = SystemParameters.WorkArea;
-        MaxWidth = area.Width;
-        MaxHeight = area.Height;
+        // Не ограничиваем MaxWidth/MaxHeight: иначе на втором мониторе
+        // или при другом DPI maximize оставляет чёрные полосы по краям.
         Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 32));
         Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 32));
     }
