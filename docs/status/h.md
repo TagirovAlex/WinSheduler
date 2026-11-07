@@ -6,8 +6,11 @@
 
 - ADR 0004: .NET 10 LTS и минимальная ОС Server 2016 (build 14393).
 - `./global.json`: SDK `10.0.403`, `rollForward: latestFeature`.
-- TFM: UI и UI.Tests — `net10.0-windows`; Shared, WinSheduler.Tests,
+- TFM: UI — `net8.0-windows;net10.0-windows` (net8 — дизайнер VS 2022,
+  net10 — релиз); Shared — `net8.0;net10.0`; UI.Tests, WinSheduler.Tests,
   ContractTests — `net10.0`.
+- Добавлен `./WinSheduler.Design.slnf` для правок XAML в VS 2022; публикация
+  идёт с `-f net10.0-windows`.
 - `Directory.Build.props`: версия 2.1.0.
 - `scripts/build.ps1`: managed — `dotnet build`, native — MSBuild из VS 2022;
   lock сборки сохранён.

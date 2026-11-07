@@ -63,6 +63,19 @@ WinShedulerSvc.exe (C++ Win32, /MT)
 
 Все команды — из корня проекта.
 
+### Дизайн формы в Visual Studio
+
+UI-проект multi-target: `net8.0-windows` (для XAML-дизайнера VS 2022)
+и `net10.0-windows` (релиз). VS 2022 17.14 не поддерживает дизайнер для
+`net10.0`; VS 2026 поддерживает обе цели.
+
+1. Откройте `./WinSheduler.Design.slnf` — в нём только UI и Shared.
+2. В свойствах `WinSheduler.UI` выберите Target Framework `net8.0-windows`.
+3. Откройте `./src/WinSheduler.UI/MainWindow.xaml` — дизайнер и панель
+   «Документ» доступны для правок.
+4. Релизная сборка и публикация — `net10.0-windows`:
+   `dotnet publish ... -f net10.0-windows`.
+
 ```powershell
 # Сборка решения
 ./scripts/build.ps1

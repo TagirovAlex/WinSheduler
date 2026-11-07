@@ -72,6 +72,7 @@ public class DesignSystemAndAccessibilityTests
         Assert.Equal(System.Windows.Input.Key.Delete, ShortcutCatalog.DeleteTask.Key);
         Assert.Equal(System.Windows.Input.ModifierKeys.Control, ShortcutCatalog.RunNow.Modifiers);
         Assert.Equal(System.Windows.Input.Key.R, ShortcutCatalog.RunNow.Key);
+        Assert.Equal(System.Windows.Input.Key.F1, ShortcutCatalog.Help.Key);
 
         foreach (var shortcut in ShortcutCatalog.All)
         {

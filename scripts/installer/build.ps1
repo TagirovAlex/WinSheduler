@@ -230,7 +230,7 @@ if (Test-Path -LiteralPath $uiPublish) {
 
 $publishArguments = @(
     'publish', (Join-Path $root 'src/WinSheduler.UI/WinSheduler.UI.csproj'),
-    '-c', $Configuration, '-r', 'win-x64', '--self-contained', 'true',
+    '-c', $Configuration, '-f', 'net10.0-windows', '-r', 'win-x64', '--self-contained', 'true',
     '-o', $uiPublish, "-p:Version=$Version", "-p:FileVersion=$Version.0",
     "-p:AssemblyVersion=$Version.0", '--nologo'
 )

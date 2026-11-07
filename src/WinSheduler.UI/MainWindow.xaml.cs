@@ -13,6 +13,8 @@ namespace WinSheduler.UI;
 
 public partial class MainWindow : Window
 {
+    private const string HelpUrl = "https://github.com/TagirovAlex/WinSheduler#readme";
+
     private readonly AppServices? _services;
     private readonly DashboardViewModel? _viewModel;
     private readonly TaskExchangeService? _exchange;
@@ -332,6 +334,38 @@ public partial class MainWindow : Window
         if (_viewModel is not null) await _viewModel.RefreshAsync();
     }
 
+    private void ResetFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        _viewModel.SearchText = string.Empty;
+        _viewModel.Filter = TaskFilter.All;
+    }
+
+    private void ExitMenu_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void HelpMenu_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(HelpUrl) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(Strings.Format("Menu_HelpError", ex.Message));
+        }
+    }
+
+    private void AboutMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null) return;
+
+        var version = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "2.1.0";
+        _services.Dialogs.ShowInfo(
+            Strings.Format("About_Message", version),
+            Strings.Get("About_Title"));
+    }
+
     private void OpenServicesBtn_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -387,6 +421,11 @@ public partial class MainWindow : Window
         if (Matches(e, ShortcutCatalog.Refresh))
         {
             if (_viewModel is not null) _ = _viewModel.RefreshAsync();
+            e.Handled = true;
+        }
+        else if (Matches(e, ShortcutCatalog.Help))
+        {
+            HelpMenu_Click(sender, e);
             e.Handled = true;
         }
         else if (Matches(e, ShortcutCatalog.AddTask))

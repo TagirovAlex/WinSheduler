@@ -159,8 +159,8 @@
     <!-- Кнопка панели действий: компактная, без рамки. -->
     <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="MinWidth" Value="0" />
-        <Setter Property="Padding" Value="8,4" />
-        <Setter Property="Margin" Value="{StaticResource Margin_ButtonGap}" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="Margin" Value="0,0,4,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="Template" Value="{StaticResource ButtonTemplate_Toolbar}" />
@@ -247,6 +247,28 @@
         <Setter Property="FocusVisualStyle" Value="{StaticResource Control_FocusVisual}" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource FormComboBoxItem}" />
         <!-- Стандартный шаблон WPF: цвета и выпадающий список системные. -->
+    </Style>
+
+    <!-- Панель действий: WPF-аналог ToolStrip, без лишней рамки и фона. -->
+    <Style x:Key="AppToolBar" TargetType="ToolBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <!-- Без кнопки overflow: все действия остаются видимыми. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBar">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <WrapPanel IsItemsHost="True" Orientation="Horizontal"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="StatusBarStyle" TargetType="StatusBar">

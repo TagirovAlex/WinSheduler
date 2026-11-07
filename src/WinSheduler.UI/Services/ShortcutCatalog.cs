@@ -26,6 +26,9 @@ public static class ShortcutCatalog
     /// <summary>Ctrl+R — запустить выбранную задачу.</summary>
     public static KeyGesture RunNow { get; } = new(Key.R, ModifierKeys.Control);
 
+    /// <summary>F1 — открыть справку.</summary>
+    public static KeyGesture Help { get; } = new(Key.F1);
+
     /// <summary>Esc — отмена текущего действия или закрытие диалога.</summary>
     public static KeyGesture Cancel { get; } = new(Key.Escape);
 
@@ -37,6 +40,7 @@ public static class ShortcutCatalog
         new("Main_ActionEdit", EditTask),
         new("Main_ActionDelete", DeleteTask),
         new("Main_ActionRun", RunNow),
+        new("Menu_HelpHelp", Help),
         new("Common_Cancel", Cancel),
     ];
 }

@@ -1112,4 +1112,45 @@
   <data name="Main_RunFailed" xml:space="preserve">
     <value>Задача «{0}» завершилась с ошибкой (код {1})</value>
   </data>
+  <data name="Menu_File" xml:space="preserve">
+    <value>Файл</value>
+  </data>
+  <data name="Menu_FileExit" xml:space="preserve">
+    <value>Выход</value>
+  </data>
+  <data name="Menu_View" xml:space="preserve">
+    <value>Вид</value>
+  </data>
+  <data name="Menu_ViewResetFilter" xml:space="preserve">
+    <value>Сбросить фильтр</value>
+  </data>
+  <data name="Menu_Actions" xml:space="preserve">
+    <value>Действия</value>
+  </data>
+  <data name="Menu_ActionNewTask" xml:space="preserve">
+    <value>Новое задание</value>
+  </data>
+  <data name="Menu_ActionImportTask" xml:space="preserve">
+    <value>Импорт задания</value>
+  </data>
+  <data name="Menu_Help" xml:space="preserve">
+    <value>Справка</value>
+  </data>
+  <data name="Menu_HelpHelp" xml:space="preserve">
+    <value>Помощь</value>
+  </data>
+  <data name="Menu_HelpAbout" xml:space="preserve">
+    <value>О программе</value>
+  </data>
+  <data name="Menu_HelpError" xml:space="preserve">
+    <value>Не удалось открыть справку: {0}</value>
+  </data>
+  <data name="About_Title" xml:space="preserve">
+    <value>О программе</value>
+  </data>
+  <data name="About_Message" xml:space="preserve">
+    <value>WinSheduler {0}
+Планировщик заданий для Windows.
+https://github.com/TagirovAlex/WinSheduler</value>
+  </data>
 </root>
