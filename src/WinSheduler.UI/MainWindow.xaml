@@ -143,6 +143,7 @@
                 <TextBlock Text="{loc:Loc Main_FilterLabel}" Style="{StaticResource CaptionText}"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <ComboBox x:Name="FilterBox" Width="130" Height="22" VerticalAlignment="Center"
+                          Margin="0"
                           Style="{StaticResource FormComboBox}"
                           SelectedValue="{Binding Filter, Mode=TwoWay}"
                           SelectedValuePath="Tag">
