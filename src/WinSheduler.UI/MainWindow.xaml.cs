@@ -397,7 +397,7 @@ public partial class MainWindow : Window
     private async void CheckUpdatesMenu_Click(object sender, RoutedEventArgs e)
         => await CheckUpdatesAsync(manual: true);
 
-    /// <summary>При старте: результат прошлой установки, отложенная установка или недельная проверка.</summary>
+    /// <summary>При старте: результат прошлой установки и проверка обновлений.</summary>
     private async Task CheckUpdatesOnStartupAsync()
     {
         if (_updates is null || _services is null)
@@ -411,14 +411,6 @@ public partial class MainWindow : Window
             _services.Dialogs.ShowError(
                 Strings.Format("Update_InstallError", installCode, UpdateService.InstallLogPath),
                 Strings.Get("Update_Title"));
-        }
-
-        var pending = _services.WindowState.State.PendingUpdateVersion;
-        var last = _services.WindowState.State.LastUpdateCheckUtc;
-        if (pending is null && last is { } value &&
-            DateTimeOffset.UtcNow - value < TimeSpan.FromDays(7))
-        {
-            return;
         }
 
         await CheckUpdatesAsync(manual: false);
@@ -435,11 +427,6 @@ public partial class MainWindow : Window
         try
         {
             var result = _updates.Check();
-
-            if (result.Status is UpdateCheckStatus.UpToDate or UpdateCheckStatus.Available)
-            {
-                _services.WindowState.RememberUpdateCheck(DateTimeOffset.UtcNow);
-            }
 
             switch (result.Status)
             {
@@ -479,39 +466,22 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!_services.Elevation.IsProcessElevated)
+        {
+            _services.Dialogs.ShowInfo(
+                Strings.Format("Update_AvailableUser", result.Version!),
+                Strings.Get("Update_Title"));
+            return;
+        }
+
         var message = Strings.Format(
-            "Update_Available",
+            "Update_AvailableAdmin",
             result.Version!,
             UpdateService.CurrentVersion,
             UpdateService.FormatSize(result.Size));
 
         if (!_services.Dialogs.Confirm(message, Strings.Get("Update_Title")))
         {
-            _services.WindowState.ClearPendingUpdate();
-            return;
-        }
-
-        if (!_services.Elevation.IsProcessElevated)
-        {
-            _services.WindowState.RememberPendingUpdate(result.Version!);
-
-            if (_services.Dialogs.Confirm(
-                    Strings.Get("Update_AdminRequired"),
-                    Strings.Get("Update_Title")))
-            {
-                if (!_services.Elevation.RelaunchAsAdmin())
-                {
-                    _services.WindowState.ClearPendingUpdate();
-                    _services.Dialogs.ShowError(
-                        Strings.Get("Admin_RelaunchFailed"),
-                        Strings.Get("Update_Title"));
-                }
-            }
-            else
-            {
-                _services.WindowState.ClearPendingUpdate();
-            }
-
             return;
         }
 
@@ -534,7 +504,6 @@ public partial class MainWindow : Window
                 Strings.Format("Update_RunningTasks", running),
                 Strings.Get("Update_Title")))
         {
-            _services.WindowState.ClearPendingUpdate();
             return;
         }
 
@@ -547,7 +516,6 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _services.WindowState.ClearPendingUpdate();
             _services.Dialogs.ShowError(
                 Strings.Format("Update_PrepareError", ex.Message),
                 Strings.Get("Update_Title"));
@@ -562,7 +530,6 @@ public partial class MainWindow : Window
         {
             var uiPath = Path.Combine(AppContext.BaseDirectory, "WinSheduler.UI.exe");
             UpdateService.StartInstall(msiPath, uiPath);
-            _services.WindowState.ClearPendingUpdate();
             Application.Current.Shutdown();
         }
         catch (Exception ex)

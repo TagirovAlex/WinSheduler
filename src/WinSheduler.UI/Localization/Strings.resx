@@ -1165,16 +1165,16 @@ https://github.com/TagirovAlex/WinSheduler</value>
   <data name="Update_UpToDate" xml:space="preserve">
     <value>Установлена последняя версия: {0}.</value>
   </data>
-  <data name="Update_Available" xml:space="preserve">
+  <data name="Update_AvailableAdmin" xml:space="preserve">
     <value>Доступна версия {0} (текущая {1}).
 
 Размер: {2}.
 
 Установить сейчас?</value>
   </data>
-  <data name="Update_AdminRequired" xml:space="preserve">
-    <value>Для установки нужны права администратора.
-Перезапустить приложение с повышением?</value>
+  <data name="Update_AvailableUser" xml:space="preserve">
+    <value>Доступна новая версия {0}.
+Для установки запустите WinSheduler от имени администратора.</value>
   </data>
   <data name="Update_RunningTasks" xml:space="preserve">
     <value>Выполняются задачи: {0}.
