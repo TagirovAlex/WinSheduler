@@ -35,3 +35,11 @@ delete
 start
 scheduler.db*
 screen.png
+
+# Certificates и ключи подписи (не коммитим; .cer — публичный, но локальный)
+scripts/cert/*.cer
+scripts/cert/*.crt
+scripts/cert/*.pfx
+scripts/cert/*.p12
+scripts/cert/*.req
+scripts/cert/*.b64

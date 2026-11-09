@@ -61,7 +61,9 @@ param(
     [switch]$EnforceBudgets,
     [string]$CertificatePath,
     [string]$CertificatePassword,
-    [string]$TimestampUrl = 'http://timestamp.digicert.com'
+    [string]$CertificateThumbprint,
+    [string]$TimestampUrl = 'http://timestamp.digicert.com',
+    [string]$UpdateUrl = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -174,13 +176,25 @@ function Invoke-Sign {
 
     $signTool = Find-SignTool
     if (-not $signTool) {
-        throw 'signtool не найден: установите Windows SDK или уберите CertificatePath.'
+        throw 'signtool не найден: установите Windows SDK.'
     }
 
-    $arguments = @('sign', '/fd', 'SHA256', '/tr', $TimestampUrl, '/td', 'SHA256',
-        '/f', $CertificatePath)
-    if ($CertificatePassword) {
-        $arguments += @('/p', $CertificatePassword)
+    $arguments = @('sign', '/fd', 'SHA256')
+    if ($CertificateThumbprint) {
+        $arguments += @('/sha1', $CertificateThumbprint)
+    }
+    elseif ($CertificatePath) {
+        $arguments += @('/f', $CertificatePath)
+        if ($CertificatePassword) {
+            $arguments += @('/p', $CertificatePassword)
+        }
+    }
+    else {
+        throw 'Не задан сертификат: укажите -CertificateThumbprint или -CertificatePath.'
+    }
+
+    if ($TimestampUrl) {
+        $arguments += @('/td', 'SHA256', '/tr', $TimestampUrl)
     }
     $arguments += $FilePath
 
@@ -256,13 +270,13 @@ if (-not (Test-Path -LiteralPath $uiExe)) {
     throw "В публикации UI нет WinSheduler.UI.exe: $uiPublish"
 }
 
-Copy-Item -Path (Join-Path $uiPublish '*') -Destination $uiArtifacts -Recurse -Force
-
-if ($CertificatePath) {
+if ($CertificatePath -or $CertificateThumbprint) {
     Write-Step 'Подпись бинарников'
-    Invoke-Sign -FilePath (Join-Path $uiPublish 'WinSheduler.UI.exe')
+    Invoke-Sign -FilePath $uiExe
     Invoke-Sign -FilePath (Join-Path $serviceArtifacts 'WinShedulerSvc.exe')
 }
+
+Copy-Item -Path (Join-Path $uiPublish '*') -Destination $uiArtifacts -Recurse -Force
 
 if ($SkipMsi) {
     Write-Step 'MSI пропущен (-SkipMsi)'
@@ -326,6 +340,7 @@ $wixArguments = @(
     '-d', "LicenseTxt=$(Join-Path $root 'installer/LICENSE.txt')",
     '-d', "ThirdPartyNotices=$(Join-Path $root 'installer/THIRD-PARTY-NOTICES.txt')",
     '-d', "LicenseRtf=$(Join-Path $root 'installer/License.rtf')",
+    '-d', "UpdateUrl=$UpdateUrl",
     '-o', $msiPath,
     (Join-Path $root 'installer/Package.wxs'),
     (Join-Path $root 'installer/Components.wxs'),
@@ -344,7 +359,7 @@ if (-not (Test-Path -LiteralPath $msiPath)) {
 
 # --- Подпись и манифест ----------------------------------------------------
 
-if ($CertificatePath) {
+if ($CertificatePath -or $CertificateThumbprint) {
     Write-Step 'Подпись MSI'
     Invoke-Sign -FilePath $msiPath
 }

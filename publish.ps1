@@ -15,12 +15,28 @@
 
 .PARAMETER SkipMsi
     Собрать только службу и UI, без MSI.
+
+.PARAMETER CertificateThumbprint
+    Thumbprint сертификата подписи кода в CurrentUser\My.
+
+.PARAMETER UpdateShare
+    SMB-шара для публикации обновления. По умолчанию \\intsrvfs\winsheduler.
+
+.PARAMETER SkipShare
+    Не публиковать MSI на шару.
+
+.PARAMETER TimestampUrl
+    Сервер меток времени. Пустая строка — без timestamp.
 #>
 [CmdletBinding()]
 param(
     [switch]$ReadyToRun,
     [string]$Version = '2.1.2',
-    [switch]$SkipMsi
+    [switch]$SkipMsi,
+    [string]$CertificateThumbprint,
+    [string]$UpdateShare = '\\intsrvfs\winsheduler',
+    [switch]$SkipShare,
+    [string]$TimestampUrl = 'http://timestamp.digicert.com'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,6 +71,9 @@ $arguments = @{ OutputDir = 'published' }
 if ($ReadyToRun) { $arguments.ReadyToRun = $true }
 if ($Version) { $arguments.Version = $Version }
 if ($SkipMsi) { $arguments.SkipMsi = $true }
+if ($CertificateThumbprint) { $arguments.CertificateThumbprint = $CertificateThumbprint }
+if ($UpdateShare) { $arguments.UpdateUrl = $UpdateShare }
+if ($PSBoundParameters.ContainsKey('TimestampUrl')) { $arguments.TimestampUrl = $TimestampUrl }
 
 & (Join-Path $root 'scripts/installer/build.ps1') @arguments
 if ($LASTEXITCODE -ne 0) {
@@ -108,6 +127,81 @@ Silent:
     (Join-Path $published 'README.txt'),
     $readme,
     (New-Object System.Text.UTF8Encoding($true)))
+
+# --- Публикация обновления на SMB-шару ------------------------------------
+if (-not $SkipMsi -and -not $SkipShare -and $UpdateShare) {
+    Write-Host "==> Публикация на $UpdateShare" -ForegroundColor Cyan
+
+    if (-not (Test-Path -LiteralPath $UpdateShare)) {
+        throw "Шара обновлений недоступна: $UpdateShare"
+    }
+
+    $msi = Join-Path $published 'WinSheduler.msi'
+    if (-not (Test-Path -LiteralPath $msi)) {
+        throw "MSI не найден: $msi"
+    }
+
+    $shareMsi = Join-Path $UpdateShare "WinSheduler-$displayVersion.msi"
+    Copy-Item -LiteralPath $msi -Destination $shareMsi -Force
+
+    $releases = Join-Path $UpdateShare 'releases'
+    New-Item -ItemType Directory -Path $releases -Force | Out-Null
+    $notes = Join-Path $root "docs/releases/v$displayVersion.md"
+    if (Test-Path -LiteralPath $notes) {
+        Copy-Item -LiteralPath $notes -Destination (Join-Path $releases "v$displayVersion.md") -Force
+    }
+
+    # Храним текущую и 2 предыдущие версии.
+    $versionPattern = '^WinSheduler-(\d+\.\d+\.\d+)\.msi$'
+    $versions = Get-ChildItem -LiteralPath $UpdateShare -Filter 'WinSheduler-*.msi' |
+        ForEach-Object {
+            if ($_.Name -match $versionPattern) {
+                [pscustomobject]@{ File = $_; Version = [version]$matches[1] }
+            }
+        } |
+        Sort-Object Version -Descending
+
+    foreach ($old in ($versions | Select-Object -Skip 3)) {
+        Remove-Item -LiteralPath $old.File.FullName -Force
+        Write-Host "    Удалена старая версия: $($old.File.Name)" -ForegroundColor DarkGray
+    }
+
+    $current = Get-Item -LiteralPath $shareMsi
+    $hash = (Get-FileHash -LiteralPath $shareMsi -Algorithm SHA256).Hash
+    $checksums = Get-ChildItem -LiteralPath $UpdateShare -Filter 'WinSheduler-*.msi' |
+        Sort-Object Name |
+        ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash, $_.Name
+        }
+    $checksums | Set-Content -LiteralPath (Join-Path $UpdateShare 'SHA256SUMS.txt') -Encoding ASCII
+
+    $notesPath = Join-Path $releases "v$displayVersion.md"
+    $manifest = [ordered]@{
+        product = 'WinSheduler'
+        version = $displayVersion
+        url = $shareMsi
+        sha256 = $hash
+        size = $current.Length
+        publishedAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        mandatory = $false
+        minVersion = '2.0.0'
+        notesUrl = $notesPath
+    } | ConvertTo-Json -Depth 3
+
+    $tempManifest = Join-Path $root 'temp/installer/latest.json'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $tempManifest) -Force | Out-Null
+    [System.IO.File]::WriteAllText(
+        $tempManifest,
+        $manifest,
+        (New-Object System.Text.UTF8Encoding($false)))
+
+    $shareManifestTmp = Join-Path $UpdateShare 'latest.json.tmp'
+    Copy-Item -LiteralPath $tempManifest -Destination $shareManifestTmp -Force
+    Move-Item -LiteralPath $shareManifestTmp -Destination (Join-Path $UpdateShare 'latest.json') -Force
+
+    Write-Host "    MSI:  $shareMsi" -ForegroundColor Green
+    Write-Host "    SHA256: $hash" -ForegroundColor Green
+}
 
 Write-Host "Готово: $published" -ForegroundColor Green
 exit 0

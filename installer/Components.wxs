@@ -71,6 +71,11 @@
         <RegistryValue Root="HKLM" Key="SOFTWARE\WinSheduler" Name="StartMenuShortcut"
                        Type="integer" Value="1" KeyPath="yes" />
       </Component>
+      <Component Id="UpdateSettingsComponent" Directory="INSTALLDIR"
+                 Guid="{5B7E3C2A-9D41-4F8B-A6C3-1E2D4F6A8B90}" Bitness="always64">
+        <RegistryValue Root="HKLM" Key="SOFTWARE\WinSheduler" Name="UpdateUrl"
+                       Type="string" Value="$(var.UpdateUrl)" KeyPath="yes" />
+      </Component>
     </ComponentGroup>
   </Fragment>
 
