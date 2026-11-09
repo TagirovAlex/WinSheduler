@@ -79,6 +79,11 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
                 auto json_str = json_helpers::status_to_json(status);
                 return IpcResponse{ true, L"", u2ws(json_str) };
             }
+            if (req.action == L"TaskChanged") {
+                // Сброс кэша расписания и состояния слотов после CRUD/импорта.
+                g_sched->on_task_changed(req.payload);
+                return IpcResponse{ true, L"", L"{}" };
+            }
             if (req.action == L"RunNow") {
                 auto task_opt = g_db->get_task(req.payload);
                 if (!task_opt.has_value())

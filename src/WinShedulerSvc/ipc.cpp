@@ -788,6 +788,11 @@ IpcServer::IpcServer(Database& db, RequestHandler handler, const std::wstring& l
 
 IpcServer::~IpcServer() { stop(); }
 
+void IpcServer::notify_scheduler_task_changed(const std::wstring& task_id) {
+    if (!scheduler_handler_ || task_id.empty()) return;
+    scheduler_handler_(IpcRequest{ L"TaskChanged", task_id });
+}
+
 void IpcServer::start() {
     if (running_.exchange(true)) return;
     // SID группы операторов читается один раз при старте (реестр GroupSid
@@ -1370,6 +1375,7 @@ IpcReply IpcServer::handle_create_task(const ParsedRequest& req, const auth::Ide
         if (is_empty_or_zero_guid(window.id)) window.id = new_guid();
     }
     replace_windows(db_, task.id, windows);
+    notify_scheduler_task_changed(task.id);
 
     write_audit(identity, L"CreateTask", L"task", task.id, audit::Result::Ok, L"создана");
     if (req.legacy) return IpcReply::Ok(json_helpers::task_to_json(task));
@@ -1451,6 +1457,8 @@ IpcReply IpcServer::handle_update_task(const ParsedRequest& req, const auth::Ide
         windows = db_.get_time_windows(task.id);
     }
 
+    notify_scheduler_task_changed(task.id);
+
     write_audit(identity, L"UpdateTask", L"task", task.id, audit::Result::Ok,
                 password.empty() ? L"изменена" : L"изменена, пароль обновлён");
     if (req.legacy) return IpcReply::Ok(json_helpers::task_to_json(task));
@@ -1467,6 +1475,7 @@ IpcReply IpcServer::handle_delete_task(const ParsedRequest& req, const auth::Ide
     if (!task.has_value()) return denial;
 
     db_.delete_task(task->id);
+    notify_scheduler_task_changed(task->id);
     write_audit(identity, L"DeleteTask", L"task", task->id, audit::Result::Ok, L"удалена");
     return IpcReply::Ok("{}");
 }
@@ -1482,6 +1491,7 @@ IpcReply IpcServer::handle_set_enabled(const ParsedRequest& req, const auth::Ide
     if (!task.has_value()) return denial;
 
     db_.set_task_enabled(task->id, enabled);
+    notify_scheduler_task_changed(task->id);
     write_audit(identity, L"SetTaskEnabled", L"task", task->id, audit::Result::Ok,
                 enabled ? L"включена" : L"выключена");
     return IpcReply::Ok("{}");

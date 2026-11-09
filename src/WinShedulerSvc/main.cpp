@@ -22,6 +22,10 @@ static void run_standalone(const std::wstring& db_path, const std::wstring& log_
             auto status = sched.get_status();
             return IpcResponse{ true, L"", u2ws(json_helpers::status_to_json(status)) };
         }
+        if (req.action == L"TaskChanged") {
+            sched.on_task_changed(req.payload);
+            return IpcResponse{ true, L"", L"{}" };
+        }
         if (req.action == L"RunNow") {
             auto task_opt = db.get_task(req.payload);
             if (!task_opt.has_value())

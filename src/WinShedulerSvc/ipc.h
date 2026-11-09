@@ -94,6 +94,10 @@ private:
     IpcReply handle_get_settings();
     IpcReply handle_set_settings(const ParsedRequest& req, const auth::Identity& identity);
 
+    // Сообщает планировщику, что задача создана/изменена/удалена/включена.
+    // Без этого кэш расписания не увидит импортированные задачи до рестарта.
+    void notify_scheduler_task_changed(const std::wstring& task_id);
+
     // Вспомогательные: доступ к задаче с фильтрацией по владельцу.
     std::optional<TaskDefinition> load_task_checked(const std::wstring& task_id,
                                                     const auth::Identity& identity,

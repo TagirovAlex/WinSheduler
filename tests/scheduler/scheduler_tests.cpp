@@ -625,6 +625,36 @@ void test_schedule_cache() {
     CHECK(cache.rebuild_count() == rebuilds + 1);
 }
 
+void test_scheduler_task_changed_invalidates_cache() {
+    std::printf("Новая задача после старта: on_task_changed обновляет кэш\n");
+    TestDatabase database;
+    CHECK(database.opened());
+
+    auto runner = std::make_unique<FakeProcessRunner>();
+    auto* runner_ptr = runner.get();
+    auto clock = std::make_unique<TestClock>(dt(2026, 11, 1, 9, 0));
+
+    Scheduler scheduler(database.db(), L"temp/scheduler/logs",
+        std::move(runner), std::make_unique<MemoryTriggerStateStore>(), std::move(clock));
+
+    // Прогрев кэша без задач.
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 0);
+
+    auto task = make_task(L"22222222-2222-2222-2222-222222222222");
+    database.db().insert_task(task);
+    insert_daily_window(database.db(), task.id, L"bbbbbbbb-2222-2222-2222-222222222222", L"09:00");
+
+    // Без уведомления кэш ещё пуст — задача не должна запуститься.
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 0);
+
+    // После CRUD/импорта IPC обязан вызвать on_task_changed.
+    scheduler.on_task_changed(task.id);
+    scheduler.tick_once();
+    CHECK(runner_ptr->launches == 1);
+}
+
 void test_scheduler_idempotent_slot() {
     std::printf("Тик: один запуск на слот в минуту\n");
     TestDatabase database;
@@ -914,6 +944,7 @@ int main() {
     test_state_store_database();
     test_path_validation();
     test_schedule_cache();
+    test_scheduler_task_changed_invalidates_cache();
     test_scheduler_idempotent_slot();
     test_scheduler_overlap_wait_complete();
     test_scheduler_overlap_start_another();
