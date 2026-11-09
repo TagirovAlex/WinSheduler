@@ -2,8 +2,8 @@
 
 // Версия и сведения о службе WinSheduler.
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,1,1,0
- PRODUCTVERSION 2,1,1,0
+ FILEVERSION 2,1,2,0
+ PRODUCTVERSION 2,1,2,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS 0x40004L
@@ -16,11 +16,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "WinSheduler\0"
             VALUE "FileDescription", "WinSheduler Task Scheduler Service\0"
-            VALUE "FileVersion", "2.1.1.0\0"
+            VALUE "FileVersion", "2.1.2.0\0"
             VALUE "InternalName", "WinShedulerSvc\0"
             VALUE "OriginalFilename", "WinShedulerSvc.exe\0"
             VALUE "ProductName", "WinSheduler\0"
-            VALUE "ProductVersion", "2.1.1.0\0"
+            VALUE "ProductVersion", "2.1.2.0\0"
         END
     END
     BLOCK "VarFileInfo"

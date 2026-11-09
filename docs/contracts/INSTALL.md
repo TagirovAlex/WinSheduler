@@ -124,7 +124,7 @@ ACL выставляется установщиком явно и повторн
 - .NET 10 SDK.
 - WiX Toolset (`dotnet tool install --global wix`).
 - Опционально: `signtool` (если появится сертификат).
-- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.1.1` из `./Directory.Build.props`.
+- Версия пакета — из git-тега `vX.Y.Z`; при отсутствии тега используется `2.1.2` из `./Directory.Build.props`.
 
 ## 9. Установка
 
@@ -144,7 +144,7 @@ msiexec /x ./published/WinSheduler.msi /qn
 
 ## 10. Обновление и удаление
 
-- `MajorUpgrade` разрешает same-version upgrade (2.1.1 поверх 2.1.1 с другим ProductCode).
+- `MajorUpgrade` разрешает same-version upgrade (2.1.2 поверх 2.1.2 с другим ProductCode).
 - Перед заменой файлов `CloseUi` закрывает `WinSheduler.UI.exe`; служба останавливается через `ServiceControl`.
 
 - Major upgrade, `Schedule="afterInstallValidate"`, блокировка downgrade.

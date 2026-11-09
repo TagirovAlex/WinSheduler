@@ -5,9 +5,9 @@
     Файл подключается автоматически через Microsoft.Common.props.
   -->
   <PropertyGroup>
-    <Version>2.1.1</Version>
-    <FileVersion>2.1.1.0</FileVersion>
-    <AssemblyVersion>2.1.1.0</AssemblyVersion>
+    <Version>2.1.2</Version>
+    <FileVersion>2.1.2.0</FileVersion>
+    <AssemblyVersion>2.1.2.0</AssemblyVersion>
     <Company>WinSheduler</Company>
     <Product>WinSheduler</Product>
     <Copyright>Copyright (c) WinSheduler</Copyright>

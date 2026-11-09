@@ -1,6 +1,8 @@
 # История изменений
 
-## 2.1.2 — в работе
+## 2.1.2 — 2026-11-09
+
+Релиз: https://github.com/TagirovAlex/WinSheduler/releases/tag/v2.1.2
 
 ### Исправлено
 
