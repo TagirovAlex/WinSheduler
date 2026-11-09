@@ -16,6 +16,7 @@ public sealed class AppServices : IAsyncDisposable
         Elevation = new ElevationService();
         Ipc = new IpcService();
         WindowState = new WindowStateService();
+        Updates = new UpdateService();
     }
 
     /// <summary>Файловый журнал UI.</summary>
@@ -35,6 +36,9 @@ public sealed class AppServices : IAsyncDisposable
 
     /// <summary>Размер, позиция окна и последний выбор.</summary>
     public WindowStateService WindowState { get; }
+
+    /// <summary>Проверка обновлений по адресу, заданному при сборке.</summary>
+    public UpdateService Updates { get; }
 
     /// <summary>Создаёт ViewModel главного экрана с общими сервисами.</summary>
     public DashboardViewModel CreateDashboardViewModel()

@@ -44,6 +44,10 @@
             <MenuItem Header="{loc:Loc Menu_Help}">
                 <MenuItem Header="{loc:Loc Menu_HelpHelp}" Click="HelpMenu_Click"
                           InputGestureText="F1"/>
+                <MenuItem x:Name="CheckUpdatesMenuItem"
+                          Header="{loc:Loc Menu_HelpCheckUpdates}"
+                          Click="CheckUpdatesMenu_Click"
+                          Visibility="Collapsed"/>
                 <MenuItem Header="{loc:Loc Menu_HelpAbout}" Click="AboutMenu_Click"/>
             </MenuItem>
         </Menu>

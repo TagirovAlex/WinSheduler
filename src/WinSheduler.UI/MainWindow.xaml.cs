@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -18,6 +19,7 @@ public partial class MainWindow : Window
     private readonly AppServices? _services;
     private readonly DashboardViewModel? _viewModel;
     private readonly TaskExchangeService? _exchange;
+    private readonly UpdateService? _updates;
 
     public MainWindow()
     {
@@ -40,6 +42,10 @@ public partial class MainWindow : Window
 
         _viewModel = _services.CreateDashboardViewModel();
         _exchange = new TaskExchangeService(_services.Ipc, _services.Logger);
+        _updates = _services.Updates;
+        CheckUpdatesMenuItem.Visibility = _updates.IsConfigured
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         DataContext = _viewModel;
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         _viewModel.RefreshCompleted += ViewModel_RefreshCompleted;
@@ -68,6 +74,8 @@ public partial class MainWindow : Window
 
         await _viewModel.RefreshStatusAsync();
         await _viewModel.RefreshAsync();
+
+        await CheckUpdatesOnStartupAsync();
     }
 
     /// <summary>
@@ -385,6 +393,185 @@ public partial class MainWindow : Window
     }
 
     private void ExitMenu_Click(object sender, RoutedEventArgs e) => Close();
+
+    private async void CheckUpdatesMenu_Click(object sender, RoutedEventArgs e)
+        => await CheckUpdatesAsync(manual: true);
+
+    /// <summary>При старте: результат прошлой установки, отложенная установка или недельная проверка.</summary>
+    private async Task CheckUpdatesOnStartupAsync()
+    {
+        if (_updates is null || _services is null)
+        {
+            return;
+        }
+
+        var installCode = UpdateService.ReadInstallResult();
+        if (installCode is not null and not 0)
+        {
+            _services.Dialogs.ShowError(
+                Strings.Format("Update_InstallError", installCode, UpdateService.InstallLogPath),
+                Strings.Get("Update_Title"));
+        }
+
+        var pending = _services.WindowState.State.PendingUpdateVersion;
+        var last = _services.WindowState.State.LastUpdateCheckUtc;
+        if (pending is null && last is { } value &&
+            DateTimeOffset.UtcNow - value < TimeSpan.FromDays(7))
+        {
+            return;
+        }
+
+        await CheckUpdatesAsync(manual: false);
+    }
+
+    private async Task CheckUpdatesAsync(bool manual)
+    {
+        if (_updates is null || _services is null)
+        {
+            return;
+        }
+
+        CheckUpdatesMenuItem.IsEnabled = false;
+        try
+        {
+            var result = _updates.Check();
+
+            if (result.Status is UpdateCheckStatus.UpToDate or UpdateCheckStatus.Available)
+            {
+                _services.WindowState.RememberUpdateCheck(DateTimeOffset.UtcNow);
+            }
+
+            switch (result.Status)
+            {
+                case UpdateCheckStatus.NotConfigured when manual:
+                    _services.Dialogs.ShowInfo(
+                        Strings.Get("Update_NotConfigured"),
+                        Strings.Get("Update_Title"));
+                    break;
+
+                case UpdateCheckStatus.UpToDate when manual:
+                    _services.Dialogs.ShowInfo(
+                        Strings.Format("Update_UpToDate", UpdateService.CurrentVersion),
+                        Strings.Get("Update_Title"));
+                    break;
+
+                case UpdateCheckStatus.Error when manual:
+                    _services.Dialogs.ShowError(
+                        Strings.Format("Update_Error", result.Error ?? string.Empty),
+                        Strings.Get("Update_Title"));
+                    break;
+
+                case UpdateCheckStatus.Available:
+                    await OfferInstallAsync(result);
+                    break;
+            }
+        }
+        finally
+        {
+            CheckUpdatesMenuItem.IsEnabled = true;
+        }
+    }
+
+    private async Task OfferInstallAsync(UpdateCheckResult result)
+    {
+        if (_services is null || _updates is null)
+        {
+            return;
+        }
+
+        var message = Strings.Format(
+            "Update_Available",
+            result.Version!,
+            UpdateService.CurrentVersion,
+            UpdateService.FormatSize(result.Size));
+
+        if (!_services.Dialogs.Confirm(message, Strings.Get("Update_Title")))
+        {
+            _services.WindowState.ClearPendingUpdate();
+            return;
+        }
+
+        if (!_services.Elevation.IsProcessElevated)
+        {
+            _services.WindowState.RememberPendingUpdate(result.Version!);
+
+            if (_services.Dialogs.Confirm(
+                    Strings.Get("Update_AdminRequired"),
+                    Strings.Get("Update_Title")))
+            {
+                if (!_services.Elevation.RelaunchAsAdmin())
+                {
+                    _services.WindowState.ClearPendingUpdate();
+                    _services.Dialogs.ShowError(
+                        Strings.Get("Admin_RelaunchFailed"),
+                        Strings.Get("Update_Title"));
+                }
+            }
+            else
+            {
+                _services.WindowState.ClearPendingUpdate();
+            }
+
+            return;
+        }
+
+        int running;
+        try
+        {
+            var dashboard = await _services.Ipc.GetDashboardAsync();
+            running = dashboard.Tasks.Count(task => task.Running);
+        }
+        catch (Exception ex)
+        {
+            _services.Dialogs.ShowError(
+                Strings.Format("Update_Error", ex.Message),
+                Strings.Get("Update_Title"));
+            return;
+        }
+
+        if (running > 0 &&
+            !_services.Dialogs.Confirm(
+                Strings.Format("Update_RunningTasks", running),
+                Strings.Get("Update_Title")))
+        {
+            _services.WindowState.ClearPendingUpdate();
+            return;
+        }
+
+        string msiPath;
+        try
+        {
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            msiPath = _updates.PrepareForInstall(result);
+            UpdateService.BackupDatabase(_updates.UpdateUrl!, result.Version!);
+        }
+        catch (Exception ex)
+        {
+            _services.WindowState.ClearPendingUpdate();
+            _services.Dialogs.ShowError(
+                Strings.Format("Update_PrepareError", ex.Message),
+                Strings.Get("Update_Title"));
+            return;
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+        }
+
+        try
+        {
+            var uiPath = Path.Combine(AppContext.BaseDirectory, "WinSheduler.UI.exe");
+            UpdateService.StartInstall(msiPath, uiPath);
+            _services.WindowState.ClearPendingUpdate();
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            _services.Dialogs.ShowError(
+                Strings.Format("Update_StartError", ex.Message),
+                Strings.Get("Update_Title"));
+        }
+    }
 
     private void HelpMenu_Click(object sender, RoutedEventArgs e)
     {

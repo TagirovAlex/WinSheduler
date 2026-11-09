@@ -18,6 +18,12 @@ public sealed class UiState
 
     /// <summary>Режим темы: <c>System</c>, <c>Light</c>, <c>Dark</c>.</summary>
     public string? Theme { get; set; }
+
+    /// <summary>Время последней успешной проверки обновлений (UTC).</summary>
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
+
+    /// <summary>Версия, установку которой нужно продолжить после перезапуска с правами.</summary>
+    public string? PendingUpdateVersion { get; set; }
 }
 
 /// <summary>
@@ -113,6 +119,32 @@ public sealed class WindowStateService
     public void RememberSelection(Guid? taskId)
     {
         State.LastSelectedTaskId = taskId;
+        Persist();
+    }
+
+    /// <summary>Запоминает время успешной проверки обновлений.</summary>
+    public void RememberUpdateCheck(DateTimeOffset checkedAt)
+    {
+        State.LastUpdateCheckUtc = checkedAt;
+        Persist();
+    }
+
+    /// <summary>Запоминает версию для продолжения установки после перезапуска.</summary>
+    public void RememberPendingUpdate(string version)
+    {
+        State.PendingUpdateVersion = version;
+        Persist();
+    }
+
+    /// <summary>Сбрасывает отложенную установку.</summary>
+    public void ClearPendingUpdate()
+    {
+        if (State.PendingUpdateVersion is null)
+        {
+            return;
+        }
+
+        State.PendingUpdateVersion = null;
         Persist();
     }
 

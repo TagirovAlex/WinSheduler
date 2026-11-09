@@ -1153,4 +1153,48 @@
 Планировщик заданий для Windows.
 https://github.com/TagirovAlex/WinSheduler</value>
   </data>
+  <data name="Menu_HelpCheckUpdates" xml:space="preserve">
+    <value>Проверить обновления</value>
+  </data>
+  <data name="Update_Title" xml:space="preserve">
+    <value>Проверка обновлений</value>
+  </data>
+  <data name="Update_NotConfigured" xml:space="preserve">
+    <value>Источник обновлений не задан. Установите сборку с параметром UpdateUrl.</value>
+  </data>
+  <data name="Update_UpToDate" xml:space="preserve">
+    <value>Установлена последняя версия: {0}.</value>
+  </data>
+  <data name="Update_Available" xml:space="preserve">
+    <value>Доступна версия {0} (текущая {1}).
+
+Размер: {2}.
+
+Установить сейчас?</value>
+  </data>
+  <data name="Update_AdminRequired" xml:space="preserve">
+    <value>Для установки нужны права администратора.
+Перезапустить приложение с повышением?</value>
+  </data>
+  <data name="Update_RunningTasks" xml:space="preserve">
+    <value>Выполняются задачи: {0}.
+При установке служба остановится, задачи будут прерваны.
+
+Продолжить?</value>
+  </data>
+  <data name="Update_PrepareError" xml:space="preserve">
+    <value>Не удалось подготовить обновление: {0}
+
+Установка отменена.</value>
+  </data>
+  <data name="Update_InstallError" xml:space="preserve">
+    <value>Установка завершилась с ошибкой (код {0}).
+Журнал: {1}</value>
+  </data>
+  <data name="Update_StartError" xml:space="preserve">
+    <value>Не удалось запустить установку: {0}</value>
+  </data>
+  <data name="Update_Error" xml:space="preserve">
+    <value>Не удалось проверить обновления: {0}</value>
+  </data>
 </root>
