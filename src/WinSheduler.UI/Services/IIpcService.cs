@@ -58,6 +58,9 @@ public interface IIpcService : IAsyncDisposable
     /// <summary>Немедленный запуск задачи через планировщик.</summary>
     Task RunNowAsync(Guid taskId, CancellationToken cancellationToken = default);
 
+    /// <summary>Принудительная остановка запущенного задания.</summary>
+    Task StopTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
+
     /// <summary>Аудит за период. Только администратор.</summary>
     Task<IReadOnlyList<AuditEntryDto>> GetAuditAsync(
         DateTimeOffset from,

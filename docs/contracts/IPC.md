@@ -63,7 +63,7 @@
 2. Получает SID клиента.
 3. Проверяет членство в `WinSheduler Users` (оператор) или `Administrators` (админ).
 4. Для не-админа фильтрует задачи по `owner_sid`.
-5. Пишет запись в аудит для мутаций и `RunNow`.
+5. Пишет запись в аудит для мутаций, `RunNow` и `StopTask`.
 
 | Действие | Гость | Оператор (группа) | Администратор |
 |----------|-------|-------------------|---------------|
@@ -72,6 +72,7 @@
 | `GetDashboard`, `ListTasks`, `GetTask`, `GetTimeWindows`, `GetHistory` | нет | только свои | все |
 | `CreateTask`, `UpdateTask`, `DeleteTask`, `SetTaskEnabled` | нет | только свои; без `RunAs`; `SessionMode=Headless` | все |
 | `RunNow` | нет | только свои; от своего имени | все |
+| `StopTask` | нет | только свои | все |
 | `GetAudit`, `GetSettings`, `SetSettings` | нет | нет | да |
 
 Не-админ не может задать `RunAsUser`, `RunAsDomain`, `Password` и `SessionMode=ActiveUser`.
@@ -118,6 +119,7 @@ Payload: `{}`. Ответ: `{ "pong": true, "serviceVersion": "1.0.0" }`.
       "ownerLabel": "Вы",
       "programPath": "d:/scripts/backup.cmd",
       "scheduleSummary": "Ежедневно 02:00",
+      "nextRun": "2026-11-02T02:00:00Z",
       "lastRun": {
         "startTime": "2026-11-01T02:00:00Z",
         "status": "Completed",
@@ -159,6 +161,10 @@ Payload: `{ "taskId": "guid", "enabled": true }` для `SetTaskEnabled`; для
 ### `RunNow`
 
 Payload: `{ "taskId": "guid" }`. Запуск проходит через планировщик с учётом `onOverlap`. Не-админ запускает от своего имени.
+
+### `StopTask`
+
+Payload: `{ "taskId": "guid" }`. Принудительно завершает дерево процессов всех запущенных экземпляров задачи и помечает запуск статусом `Killed`. Если задача не выполняется, возвращается ошибка `INTERNAL`.
 
 ### `GetAudit`
 

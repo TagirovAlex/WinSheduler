@@ -39,6 +39,9 @@ public sealed class DashboardTaskDto
     /// <summary>Последний запуск, если он был.</summary>
     public DashboardLastRunDto? LastRun { get; init; }
 
+    /// <summary>Время следующего запланированного запуска; <c>null</c> — запусков не будет.</summary>
+    public DateTimeOffset? NextRun { get; init; }
+
     /// <summary>Задача выполняется прямо сейчас.</summary>
     public bool Running { get; init; }
 }

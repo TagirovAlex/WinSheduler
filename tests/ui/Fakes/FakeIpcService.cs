@@ -106,6 +106,9 @@ internal sealed class FakeIpcService : IIpcService
     public Task RunNowAsync(Guid taskId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    public Task StopTaskAsync(Guid taskId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     public Task<IReadOnlyList<AuditEntryDto>> GetAuditAsync(
         DateTimeOffset from,
         DateTimeOffset to,

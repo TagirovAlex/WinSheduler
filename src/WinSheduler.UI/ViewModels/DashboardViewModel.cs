@@ -390,6 +390,15 @@ public sealed class DashboardViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Прекращает сопровождение одной задачи (например, после принудительной
+    /// остановки), чтобы завершение не показывалось как ошибка запуска.
+    /// </summary>
+    public void StopTracking(Guid taskId)
+    {
+        StopFollowing(taskId);
+    }
+
+    /// <summary>
     /// Останавливает сопровождение всех задач и отменяет цикл опроса.
     /// Вызывается при закрытии окна.
     /// </summary>

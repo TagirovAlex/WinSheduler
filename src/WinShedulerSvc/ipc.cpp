@@ -5,6 +5,7 @@
 #include "auth_validate.h"
 #include "auth_secret.h"
 #include "json.h"
+#include "trigger_engine.h"
 #include <sddl.h>
 #include <rpc.h>
 #include <rpcdce.h>
@@ -215,6 +216,16 @@ const wchar_t* day_of_week_name(int day) {
                                       L"Thursday", L"Friday", L"Saturday" };
     if (day < 0 || day > 6) return L"Sunday";
     return names[day];
+}
+
+// Лексикографическое сравнение локального времени (для выбора ближайшего слота).
+bool local_before(const LocalDateTime& left, const LocalDateTime& right) {
+    if (left.year != right.year) return left.year < right.year;
+    if (left.month != right.month) return left.month < right.month;
+    if (left.day != right.day) return left.day < right.day;
+    if (left.hour != right.hour) return left.hour < right.hour;
+    if (left.minute != right.minute) return left.minute < right.minute;
+    return left.second < right.second;
 }
 
 // Краткое описание расписания для GetDashboard.
@@ -1165,6 +1176,7 @@ IpcReply IpcServer::dispatch(const ParsedRequest& req, const auth::Identity& ide
         return handle_set_enabled(req, identity, enabled);
     }
     case auth::Action::RunNow: return handle_run_now(req, identity);
+    case auth::Action::StopTask: return handle_stop_task(req, identity);
     case auth::Action::GetAudit: return handle_get_audit(req);
     case auth::Action::GetSettings: return handle_get_settings();
     case auth::Action::SetSettings: return handle_set_settings(req, identity);
@@ -1229,6 +1241,9 @@ IpcReply IpcServer::handle_list_tasks(const ParsedRequest& req, const auth::Iden
 
 IpcReply IpcServer::handle_dashboard(const auth::Identity& identity) {
     auto tasks = list_tasks_for(db_, identity);
+    const SystemClock clock;
+    const LocalDateTime now_local = clock.to_local(clock.now_utc());
+
     json::Array arr;
     for (auto& task : tasks) {
         const bool is_own = auth::equal_sid(task.owner_sid, identity.sid);
@@ -1244,6 +1259,23 @@ IpcReply IpcServer::handle_dashboard(const auth::Identity& identity) {
         item["programPath"] = json::Value(ws2u(task.program_path));
         item["scheduleSummary"] = json::Value(ws2u(schedule_summary(windows)));
         item["running"] = json::Value(!history.empty() && history.front().status == RunStatus::Running);
+
+        // Ближайший слот по всем окнам задачи. Отключённая задача не запустится.
+        std::optional<LocalDateTime> next_run;
+        if (task.enabled) {
+            for (const auto& window : windows) {
+                const auto candidate = trigger::next_run(window, now_local);
+                if (!candidate.has_value()) continue;
+                if (!next_run.has_value() || local_before(candidate.value(), next_run.value())) {
+                    next_run = candidate;
+                }
+            }
+        }
+        if (next_run.has_value()) {
+            item["nextRun"] = json::Value(ws2u(trigger::format_utc_iso(clock.from_local(next_run.value()))));
+        } else {
+            item["nextRun"] = json::Value(nullptr);
+        }
 
         if (!history.empty()) {
             const RunHistory& h = history.front();
@@ -1518,6 +1550,29 @@ IpcReply IpcServer::handle_run_now(const ParsedRequest& req, const auth::Identit
     }
 
     write_audit(identity, L"RunNow", L"task", task->id, audit::Result::Ok, L"ручной запуск");
+    return IpcReply::Ok("{}");
+}
+
+IpcReply IpcServer::handle_stop_task(const ParsedRequest& req, const auth::Identity& identity) {
+    const std::wstring task_id = task_id_from(req.payload);
+    if (!auth::is_guid(task_id)) {
+        return IpcReply::Fail("VALIDATION", L"taskId должен быть GUID");
+    }
+    IpcReply denial;
+    auto task = load_task_checked(task_id, identity, denial);
+    if (!task.has_value()) return denial;
+
+    if (!scheduler_handler_) {
+        return IpcReply::Fail("INTERNAL", L"Планировщик недоступен");
+    }
+
+    const IpcResponse response = scheduler_handler_(IpcRequest{ L"StopTask", task->id });
+    if (!response.success) {
+        write_audit(identity, L"StopTask", L"task", task->id, audit::Result::Error, response.error);
+        return IpcReply::Fail("INTERNAL", response.error.empty() ? L"Остановка отклонена" : response.error);
+    }
+
+    write_audit(identity, L"StopTask", L"task", task->id, audit::Result::Ok, L"принудительная остановка");
     return IpcReply::Ok("{}");
 }
 

@@ -37,6 +37,7 @@ Action action_from_name(const std::wstring& name) {
     if (name == L"EnableTask") return Action::SetTaskEnabled;
     if (name == L"DisableTask") return Action::SetTaskEnabled;
     if (name == L"RunNow") return Action::RunNow;
+    if (name == L"StopTask") return Action::StopTask;
     if (name == L"GetAudit") return Action::GetAudit;
     if (name == L"GetSettings") return Action::GetSettings;
     if (name == L"SetSettings") return Action::SetSettings;
@@ -61,6 +62,7 @@ bool Policy::is_mutation(Action action) {
     case Action::DeleteTask:
     case Action::SetTaskEnabled:
     case Action::RunNow:
+    case Action::StopTask:
     case Action::SetSettings:
         return true;
     default:
@@ -90,6 +92,7 @@ bool Policy::allows(const Identity& id, Action action) {
     case Action::DeleteTask:
     case Action::SetTaskEnabled:
     case Action::RunNow:
+    case Action::StopTask:
         return true;
     case Action::Unknown:
         return false;

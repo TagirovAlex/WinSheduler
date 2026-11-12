@@ -90,6 +90,7 @@ private:
     IpcReply handle_delete_task(const ParsedRequest& req, const auth::Identity& identity);
     IpcReply handle_set_enabled(const ParsedRequest& req, const auth::Identity& identity, bool enabled);
     IpcReply handle_run_now(const ParsedRequest& req, const auth::Identity& identity);
+    IpcReply handle_stop_task(const ParsedRequest& req, const auth::Identity& identity);
     IpcReply handle_get_audit(const ParsedRequest& req);
     IpcReply handle_get_settings();
     IpcReply handle_set_settings(const ParsedRequest& req, const auth::Identity& identity);

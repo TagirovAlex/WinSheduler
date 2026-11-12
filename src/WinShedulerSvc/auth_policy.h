@@ -20,6 +20,7 @@ enum class Action {
     DeleteTask,
     SetTaskEnabled,
     RunNow,
+    StopTask,
     GetAudit,
     GetSettings,
     SetSettings,

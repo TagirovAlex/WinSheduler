@@ -36,6 +36,10 @@ public:
     // Вариант для IPC: токен вызывающего и признак администратора.
     std::wstring run_now(const std::wstring& task_id, HANDLE client_token, bool caller_is_admin, std::wstring& error);
 
+    // Принудительная остановка всех запущенных экземпляров задачи.
+    // Возвращает false, если задача не выполняется.
+    bool stop_task(const std::wstring& task_id, std::wstring& error);
+
     // Совместимость с service.cpp: запуск уже загруженной задачи.
     void launch_task(const TaskDefinition& task);
 

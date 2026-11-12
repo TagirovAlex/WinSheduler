@@ -831,6 +831,34 @@ void test_scheduler_run_now_overlap() {
     CHECK(!history.empty() && history[0].status == RunStatus::Running);
 }
 
+void test_scheduler_stop_task() {
+    std::printf("StopTask: принудительная остановка\n");
+    TestDatabase database;
+    CHECK(database.opened());
+
+    auto task = make_task(L"11111111-1111-1111-1111-111111111111");
+    database.db().insert_task(task);
+
+    auto runner = std::make_unique<FakeProcessRunner>();
+    auto* runner_ptr = runner.get();
+    Scheduler scheduler(database.db(), L"temp/scheduler/logs",
+        std::move(runner), std::make_unique<MemoryTriggerStateStore>(),
+        std::make_unique<TestClock>(dt(2026, 11, 1, 9, 0)));
+
+    std::wstring error;
+    CHECK(!scheduler.run_now(task.id, error).empty());
+    CHECK(scheduler.stop_task(task.id, error));
+    CHECK(runner_ptr->terminations == 1);
+    CHECK(scheduler.running_task_count() == 0);
+
+    const auto history = database.db().get_history(task.id, 10);
+    CHECK(!history.empty() && history[0].status == RunStatus::Killed);
+
+    // Повторная остановка невыполняющейся задачи отклоняется.
+    CHECK(!scheduler.stop_task(task.id, error));
+    CHECK(!error.empty());
+}
+
 void test_scheduler_recovery() {
     std::printf("Recovery: осиротевшие Running → Aborted\n");
     TestDatabase database;
@@ -951,6 +979,7 @@ int main() {
     test_scheduler_timeout();
     test_scheduler_retry();
     test_scheduler_run_now_overlap();
+    test_scheduler_stop_task();
     test_scheduler_recovery();
     test_scheduler_interval_no_storm();
     test_scheduler_active_user_rejected();

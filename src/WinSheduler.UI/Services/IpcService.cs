@@ -85,6 +85,10 @@ public sealed class IpcService : IIpcService
         => _client.CallAsync("RunNow", new { taskId }, idempotent: false, cancellationToken);
 
     /// <inheritdoc />
+    public Task StopTaskAsync(Guid taskId, CancellationToken cancellationToken = default)
+        => _client.CallAsync("StopTask", new { taskId }, idempotent: false, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<AuditEntryDto>> GetAuditAsync(
         DateTimeOffset from,
         DateTimeOffset to,

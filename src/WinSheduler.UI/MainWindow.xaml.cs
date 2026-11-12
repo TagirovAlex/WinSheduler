@@ -79,7 +79,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Ширина формы — по строке кнопок: уже не сделать, шире при старте не нужно.
+    /// Ширина формы — по строке кнопок и минимальной ширине всех колонок:
+    /// при старте таблица видна целиком, без горизонтальной прокрутки.
     /// При maximise окно расширяется, таблица тянется за ним.
     /// </summary>
     private void ApplyPreferredWidth()
@@ -89,22 +90,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        var toolbarWidth = ActionsToolBar.ActualWidth;
-        if (toolbarWidth <= 0)
-        {
-            toolbarWidth = ActionsToolBar.DesiredSize.Width;
-        }
-
-        if (toolbarWidth <= 0)
+        var toolbarWidth = Math.Max(
+            MeasureToolbar(ActionsToolBar),
+            MeasureToolbar(SearchToolBar));
+        var columnsWidth = TaskGrid.Columns.Sum(column => column.MinWidth)
+            + SystemParameters.VerticalScrollBarWidth + 16;
+        var contentWidth = Math.Max(toolbarWidth, columnsWidth);
+        if (contentWidth <= 0)
         {
             return;
         }
 
-        var target = Math.Ceiling(
-            toolbarWidth + 24 + SystemParameters.ResizeFrameVerticalBorderWidth * 2);
+        var chrome = 24 + SystemParameters.ResizeFrameVerticalBorderWidth * 2;
+        var maxWidth = Math.Max(800, SystemParameters.WorkArea.Width - 32);
+        var target = Math.Min(Math.Ceiling(contentWidth + chrome), maxWidth);
+
         MinWidth = Math.Max(800, target);
         Width = target;
     }
+
+    private static double MeasureToolbar(FrameworkElement toolbar)
+        => toolbar.ActualWidth > 0 ? toolbar.ActualWidth : toolbar.DesiredSize.Width;
 
     private static bool IsDesignTime =>
         DesignerProperties.GetIsInDesignMode(new DependencyObject()) ||
@@ -135,11 +141,13 @@ public partial class MainWindow : Window
         {
             HideActionError();
             StatusSummaryText.Text = Strings.Format("Main_RunCompleted", e.Name);
+            UpdateUi();
             return;
         }
 
         var code = e.ExitCode?.ToString(Strings.Culture) ?? Strings.Get("Common_Dash");
         ShowActionError(Strings.Format("Main_RunFailed", e.Name, code));
+        UpdateUi();
     }
 
     private void UpdateUi()
@@ -177,6 +185,7 @@ public partial class MainWindow : Window
         DeleteBtn.IsEnabled = canAct;
         HistoryBtn.IsEnabled = canAct;
         RunNowBtn.IsEnabled = canAct;
+        StopBtn.IsEnabled = canAct && _viewModel.SelectedTask?.Running == true;
         ToggleBtn.IsEnabled = canAct;
         ExportBtn.IsEnabled = !_viewModel.IsLoading
             && !_viewModel.IsServiceUnavailable
@@ -260,6 +269,28 @@ public partial class MainWindow : Window
             StatusSummaryText.Text = Strings.Format("Main_RunStarted", task.Name);
             _viewModel.TrackRun(task.Id);
             await _viewModel.RefreshSilentlyAsync();
+        }
+        catch (IpcException ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+        catch (Exception ex)
+        {
+            ShowActionError(IpcErrorText.Describe(ex));
+        }
+    }
+
+    private async void StopBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null || _viewModel?.SelectedTask is not { } task) return;
+
+        try
+        {
+            await _services.Ipc.StopTaskAsync(task.Id);
+            _viewModel.StopTracking(task.Id);
+            StatusSummaryText.Text = Strings.Format("Main_StopStarted", task.Name);
+            await _viewModel.RefreshSilentlyAsync();
+            UpdateUi();
         }
         catch (IpcException ex)
         {

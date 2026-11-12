@@ -104,6 +104,14 @@
                         <TextBlock Text="{loc:Loc Main_ActionRun}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+                <Button x:Name="StopBtn" Click="StopBtn_Click"
+                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                        ToolTip="{loc:Loc Main_ActionStopHint}">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource IconStop}" Width="16" Height="16" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="{loc:Loc Main_ActionStop}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="RefreshBtn" Command="{Binding RefreshCommand}"
                         Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                         ToolTip="{loc:Loc Main_ActionRefresh}">
@@ -112,6 +120,29 @@
                         <TextBlock Text="{loc:Loc Main_ActionRefresh}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+            </StackPanel>
+
+            <StackPanel x:Name="SearchToolBar" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left"
+                        VerticalAlignment="Center" Height="34" Margin="0,6,0,0">
+                <TextBlock Text="{loc:Loc Main_SearchLabel}" Style="{StaticResource CaptionText}"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox x:Name="SearchBox" Width="220" Height="22" VerticalAlignment="Center"
+                         Margin="0,0,12,0"
+                         Style="{StaticResource FormTextBox}"
+                         ToolTip="{loc:Loc Main_SearchPlaceholder}"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="{loc:Loc Main_FilterLabel}" Style="{StaticResource CaptionText}"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox x:Name="FilterBox" Width="130" Height="22" VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          Style="{StaticResource FormComboBox}"
+                          SelectedValue="{Binding Filter, Mode=TwoWay}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="{loc:Loc Main_FilterAll}" Tag="{x:Static vm:TaskFilter.All}"/>
+                    <ComboBoxItem Content="{loc:Loc Main_FilterMine}" Tag="{x:Static vm:TaskFilter.Mine}"/>
+                    <ComboBoxItem Content="{loc:Loc Main_FilterEnabled}" Tag="{x:Static vm:TaskFilter.Enabled}"/>
+                    <ComboBoxItem Content="{loc:Loc Main_FilterDisabled}" Tag="{x:Static vm:TaskFilter.Disabled}"/>
+                </ComboBox>
                 <Button x:Name="ExportBtn" Click="ExportBtn_Click"
                         Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
@@ -133,29 +164,6 @@
                         <TextBlock Text="{loc:Loc Main_ActionDiagnostics}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-            </StackPanel>
-
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left"
-                        VerticalAlignment="Center" Height="34" Margin="0,6,0,0">
-                <TextBlock Text="{loc:Loc Main_SearchLabel}" Style="{StaticResource CaptionText}"
-                           VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <TextBox x:Name="SearchBox" Width="220" Height="22" VerticalAlignment="Center"
-                         Margin="0,0,12,0"
-                         Style="{StaticResource FormTextBox}"
-                         ToolTip="{loc:Loc Main_SearchPlaceholder}"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                <TextBlock Text="{loc:Loc Main_FilterLabel}" Style="{StaticResource CaptionText}"
-                           VerticalAlignment="Center" Margin="0,0,6,0"/>
-                <ComboBox x:Name="FilterBox" Width="130" Height="22" VerticalAlignment="Center"
-                          Margin="0"
-                          Style="{StaticResource FormComboBox}"
-                          SelectedValue="{Binding Filter, Mode=TwoWay}"
-                          SelectedValuePath="Tag">
-                    <ComboBoxItem Content="{loc:Loc Main_FilterAll}" Tag="{x:Static vm:TaskFilter.All}"/>
-                    <ComboBoxItem Content="{loc:Loc Main_FilterMine}" Tag="{x:Static vm:TaskFilter.Mine}"/>
-                    <ComboBoxItem Content="{loc:Loc Main_FilterEnabled}" Tag="{x:Static vm:TaskFilter.Enabled}"/>
-                    <ComboBoxItem Content="{loc:Loc Main_FilterDisabled}" Tag="{x:Static vm:TaskFilter.Disabled}"/>
-                </ComboBox>
             </StackPanel>
         </Grid>
 
@@ -244,6 +252,9 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="{loc:Loc Main_ColumnSchedule}" Binding="{Binding ScheduleSummary}"
                                         Width="1.5*" MinWidth="130"/>
+                    <DataGridTextColumn Header="{loc:Loc Main_ColumnNextRun}"
+                                        Binding="{Binding NextRun, Converter={StaticResource LocalDateTimeConverter}, ConverterParameter=dd.MM.yyyy HH:mm}"
+                                        Width="1.3*" MinWidth="130" SortMemberPath="NextRun"/>
                     <DataGridTemplateColumn Header="{loc:Loc Main_ColumnLastRun}" Width="1.4*"
                                             MinWidth="130" SortMemberPath="LastRun.StartTime">
                         <DataGridTemplateColumn.CellTemplate>

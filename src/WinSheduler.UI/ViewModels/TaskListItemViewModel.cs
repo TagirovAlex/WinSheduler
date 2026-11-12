@@ -32,6 +32,9 @@ public sealed class TaskListItemViewModel : ViewModelBase
 
     public DashboardLastRunDto? LastRun { get; private set; }
 
+    /// <summary>Время следующего запланированного запуска; <c>null</c> — запусков не будет.</summary>
+    public DateTimeOffset? NextRun { get; private set; }
+
     public bool Running { get; private set; }
 
     /// <summary>Статус последнего запуска; <c>null</c>, если запусков не было.</summary>
@@ -59,6 +62,7 @@ public sealed class TaskListItemViewModel : ViewModelBase
         OwnerLabel = task.OwnerLabel;
         ScheduleSummary = task.ScheduleSummary;
         LastRun = task.LastRun;
+        NextRun = task.NextRun;
         Running = task.Running;
 
         // Одно уведомление на все поля: строка списка перерисовывается целиком.
@@ -70,6 +74,7 @@ public sealed class TaskListItemViewModel : ViewModelBase
             nameof(OwnerLabel),
             nameof(ScheduleSummary),
             nameof(LastRun),
+            nameof(NextRun),
             nameof(LastRunStatus),
             nameof(HasRunError),
             nameof(ShowRunError),

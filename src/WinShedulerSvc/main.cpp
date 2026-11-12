@@ -33,6 +33,12 @@ static void run_standalone(const std::wstring& db_path, const std::wstring& log_
             sched.launch_task(task_opt.value());
             return IpcResponse{ true, L"", L"{}" };
         }
+        if (req.action == L"StopTask") {
+            std::wstring error;
+            if (!sched.stop_task(req.payload, error))
+                return IpcResponse{ false, error.empty() ? L"Остановка отклонена" : error, L"" };
+            return IpcResponse{ true, L"", L"{}" };
+        }
         return IpcResponse{ false, L"Unhandled", L"" };
     }, log_dir);
 

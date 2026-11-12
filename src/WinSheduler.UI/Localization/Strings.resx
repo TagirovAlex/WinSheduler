@@ -98,6 +98,12 @@
   <data name="Main_ActionRun" xml:space="preserve">
     <value>Запустить</value>
   </data>
+  <data name="Main_ActionStop" xml:space="preserve">
+    <value>Остановить</value>
+  </data>
+  <data name="Main_ActionStopHint" xml:space="preserve">
+    <value>Принудительно остановить выбранное задание</value>
+  </data>
   <data name="Main_ActionEnable" xml:space="preserve">
     <value>Включить</value>
   </data>
@@ -121,6 +127,9 @@
   </data>
   <data name="Main_ColumnLastRun" xml:space="preserve">
     <value>Последний запуск</value>
+  </data>
+  <data name="Main_ColumnNextRun" xml:space="preserve">
+    <value>Следующий запуск</value>
   </data>
   <data name="Main_FilterAll" xml:space="preserve">
     <value>Все</value>
@@ -433,7 +442,7 @@
     <value>Фильтр:</value>
   </data>
   <data name="Main_ActionToggle" xml:space="preserve">
-    <value>Включить/отключить</value>
+    <value>Вкл/Выкл</value>
   </data>
   <data name="Main_Running" xml:space="preserve">
     <value>Выполняется</value>
@@ -464,6 +473,9 @@
   </data>
   <data name="Main_RunStarted" xml:space="preserve">
     <value>Задача «{0}» запущена</value>
+  </data>
+  <data name="Main_StopStarted" xml:space="preserve">
+    <value>Задача «{0}» остановлена</value>
   </data>
 
   <data name="Editor_TitleNew" xml:space="preserve">

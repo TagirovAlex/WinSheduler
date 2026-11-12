@@ -689,6 +689,28 @@ std::wstring Scheduler::run_now(const std::wstring& task_id, HANDLE client_token
     return history_id;
 }
 
+bool Scheduler::stop_task(const std::wstring& task_id, std::wstring& error) {
+    std::vector<RunningProcess> targets;
+    {
+        std::lock_guard<std::mutex> guard(mutex_);
+        for (const auto& [history_id, run] : running_processes_) {
+            if (run.task_id == task_id) targets.push_back(run);
+        }
+    }
+
+    if (targets.empty()) {
+        error = L"Задача не выполняется";
+        return false;
+    }
+
+    // При StartAnother у задачи может быть несколько процессов — завершаем все.
+    for (auto& run : targets) {
+        runner_->terminate(run.handle);
+        finish_run(run, RunStatus::Killed, std::optional<int>(1), L"Остановлено пользователем");
+    }
+    return true;
+}
+
 void Scheduler::launch_task(const TaskDefinition& task) {
     request_start(task, L"", L"", TriggeredBy::Manual, 0, nullptr, true);
 }

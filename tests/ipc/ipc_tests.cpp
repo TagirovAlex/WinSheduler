@@ -253,6 +253,7 @@ void test_auth_policy() {
     CHECK(Policy::allows(op, Action::DeleteTask));
     CHECK(Policy::allows(op, Action::SetTaskEnabled));
     CHECK(Policy::allows(op, Action::RunNow));
+    CHECK(Policy::allows(op, Action::StopTask));
     CHECK(!Policy::allows(op, Action::GetAudit));
     CHECK(!Policy::allows(op, Action::GetSettings));
     CHECK(!Policy::allows(op, Action::SetSettings));
@@ -285,6 +286,7 @@ void test_auth_policy() {
     // Имена действий.
     CHECK(auth::action_from_name(L"GetStatus") == Action::GetStatus);
     CHECK(auth::action_from_name(L"SetTaskEnabled") == Action::SetTaskEnabled);
+    CHECK(auth::action_from_name(L"StopTask") == Action::StopTask);
     CHECK(auth::action_from_name(L"EnableTask") == Action::SetTaskEnabled);
     CHECK(auth::action_from_name(L"DisableTask") == Action::SetTaskEnabled);
     CHECK(auth::action_from_name(L"Bogus") == Action::Unknown);

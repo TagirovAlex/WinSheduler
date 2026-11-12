@@ -101,6 +101,12 @@ void WINAPI Service::service_main(DWORD argc, wchar_t** argv) {
                     return IpcResponse{ false, error.empty() ? L"Запуск отклонён" : error, L"" };
                 return IpcResponse{ true, L"", L"{}" };
             }
+            if (req.action == L"StopTask") {
+                std::wstring error;
+                if (!g_sched->stop_task(req.payload, error))
+                    return IpcResponse{ false, error.empty() ? L"Остановка отклонена" : error, L"" };
+                return IpcResponse{ true, L"", L"{}" };
+            }
             return IpcResponse{ false, L"Unhandled by scheduler", L"" };
         }, svc.log_dir_);
 
